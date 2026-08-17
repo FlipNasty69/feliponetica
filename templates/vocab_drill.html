@@ -888,7 +888,7 @@ button:active {
     font-size:
         clamp(42px, 7vw, 78px);
 
-    font-weight: 900;
+    font-weight: 500;
 
     letter-spacing: -2px;
 
@@ -1220,6 +1220,14 @@ button:active {
     }
 }
 
+.spanish-word {
+    color: red;
+}
+
+#wordDisplay .spanish-word {
+    color: red !important;
+}
+
 </style>
 
 </head>
@@ -1328,57 +1336,37 @@ button:active {
 
     <div class="set-grid">
 
-
-        <!-- =================================================
-             SET 1
-             ================================================= -->
+        {% for set_id, vocabulary_set in vocabulary_sets.items() %}
 
         <article class="set-card">
 
             <div class="set-number">
-                Set 01
+                Set {{ "%02d"|format(loop.index) }}
             </div>
 
             <h3>
-                Basic Adjectives
+                {{ vocabulary_set.title }}
             </h3>
 
             <p>
-                Common adjectives for describing
-                people, things, and situations.
+                {{ vocabulary_set.description }}
             </p>
 
             <div class="set-words">
 
-                <span class="word-tag">
-                    good
-                </span>
+                {% for word in vocabulary_set.words %}
 
                 <span class="word-tag">
-                    bad
+                    {{ word.split(" = ")[0] }}
                 </span>
 
-                <span class="word-tag">
-                    easy
-                </span>
-
-                <span class="word-tag">
-                    difficult
-                </span>
-
-                <span class="word-tag">
-                    big
-                </span>
-
-                <span class="word-tag">
-                    small
-                </span>
+                {% endfor %}
 
             </div>
 
             <button
                 class="use-set-btn"
-                onclick="loadVocabularySet(0)">
+                onclick="loadVocabularySet('{{ set_id }}')">
 
                 Use This Set →
 
@@ -1386,189 +1374,11 @@ button:active {
 
         </article>
 
-
-
-        <!-- =================================================
-             SET 2
-             ================================================= -->
-
-        <article class="set-card">
-
-            <div class="set-number">
-                Set 02
-            </div>
-
-            <h3>
-                Everyday Vocabulary
-            </h3>
-
-            <p>
-                Useful words that appear constantly
-                in everyday English.
-            </p>
-
-            <div class="set-words">
-
-                <span class="word-tag">
-                    thing
-                </span>
-
-                <span class="word-tag">
-                    way
-                </span>
-
-                <span class="word-tag">
-                    place
-                </span>
-
-                <span class="word-tag">
-                    time
-                </span>
-
-                <span class="word-tag">
-                    people
-                </span>
-
-                <span class="word-tag">
-                    stuff
-                </span>
-
-            </div>
-
-            <button
-                class="use-set-btn"
-                onclick="loadVocabularySet(1)">
-
-                Use This Set →
-
-            </button>
-
-        </article>
-
-
-
-        <!-- =================================================
-             SET 3
-             ================================================= -->
-
-        <article class="set-card">
-
-            <div class="set-number">
-                Set 03
-            </div>
-
-            <h3>
-                Essential Verbs
-            </h3>
-
-            <p>
-                High-frequency verbs used to build
-                everyday English sentences.
-            </p>
-
-            <div class="set-words">
-
-                <span class="word-tag">
-                    be
-                </span>
-
-                <span class="word-tag">
-                    have
-                </span>
-
-                <span class="word-tag">
-                    do
-                </span>
-
-                <span class="word-tag">
-                    go
-                </span>
-
-                <span class="word-tag">
-                    make
-                </span>
-
-                <span class="word-tag">
-                    take
-                </span>
-
-            </div>
-
-            <button
-                class="use-set-btn"
-                onclick="loadVocabularySet(2)">
-
-                Use This Set →
-
-            </button>
-
-        </article>
-
-
-
-        <!-- =================================================
-             SET 4
-             ================================================= -->
-
-        <article class="set-card">
-
-            <div class="set-number">
-                Set 04
-            </div>
-
-            <h3>
-                Work Vocabulary
-            </h3>
-
-            <p>
-                Practical vocabulary for talking about
-                work, jobs, and daily responsibilities.
-            </p>
-
-            <div class="set-words">
-
-                <span class="word-tag">
-                    job
-                </span>
-
-                <span class="word-tag">
-                    shift
-                </span>
-
-                <span class="word-tag">
-                    worker
-                </span>
-
-                <span class="word-tag">
-                    manager
-                </span>
-
-                <span class="word-tag">
-                    meeting
-                </span>
-
-                <span class="word-tag">
-                    schedule
-                </span>
-
-            </div>
-
-            <button
-                class="use-set-btn"
-                onclick="loadVocabularySet(3)">
-
-                Use This Set →
-
-            </button>
-
-        </article>
-
+        {% endfor %}
 
     </div>
 
 </section>
-
-
 
 <!-- =========================================================
      SETUP
@@ -1598,10 +1408,13 @@ button:active {
 
     <div class="textarea-wrapper">
 
-<textarea id="vocabInput">lucky = afortunado
-unusual = no común
-silly = tonto
-strong = fuerte</textarea>
+<textarea id="vocabInput">I = yo
+we = nosotros
+you = tu
+they = ellos
+he = él
+she = ella
+it = no se dice en español</textarea>
 
     </div>
 
@@ -1778,120 +1591,7 @@ strong = fuerte</textarea>
    into the vocabulary exercise.
    ========================================================= */
 
-const vocabularySets = [
-
-    {
-
-        name: "Basic Adjectives",
-
-        description:
-            "Common adjectives for describing people, things, and situations.",
-
-        words: [
-
-            "good = bueno",
-            "bad = malo",
-            "easy = fácil",
-            "difficult = difícil",
-            "big = grande",
-            "small = pequeño"
-
-        ]
-
-    },
-
-    {
-
-        name: "Sub. & Obj. Clause Vocab.",
-
-        description:
-            "Words used to begin subject and object clauses.",
-
-        words: [
-
-            "who = quien",
-            "whoes = de quien esa",
-            "what = que",
-            "when = cuando",
-            "where = donde",
-            "why = por qué",
-            "how = como",
-            "that = que",
-            "whoelse = quien mas",
-            "whatelse = que mas",
-            "whenelse = cuando mas",
-            "wherelse = donde mas",
-            "whyelse = por qué mas",
-            "how else = de que otra manera"
-            
-        ]
-
-    },
-
-
-    {
-
-        name: "Everyday Vocabulary",
-
-        description:
-            "Useful words that appear constantly in everyday English.",
-
-        words: [
-
-            "thing = cosa",
-            "way = camino, manera, forma",
-            "place = lugar",
-            "time = tiempo",
-            "people = gente",
-            "stuff = cosas"
-
-        ]
-
-    },
-
-
-    {
-
-        name: "Essential Verbs",
-
-        description:
-            "High-frequency verbs used to build everyday English sentences.",
-
-        words: [
-
-            "be = ser / estar",
-            "have = tener",
-            "do = hacer",
-            "go = ir",
-            "make = hacer / crear",
-            "take = tomar / llevar"
-
-        ]
-
-    },
-
-
-    {
-
-        name: "Work Vocabulary",
-
-        description:
-            "Practical vocabulary for talking about work, jobs, and daily responsibilities.",
-
-        words: [
-
-            "job = trabajo",
-            "shift = turno",
-            "worker = trabajador",
-            "manager = gerente",
-            "meeting = reunión",
-            "schedule = horario"
-
-        ]
-
-    }
-
-];
+const vocabularySets = {{ vocabulary_sets | tojson }};
 
 
 /* =========================================================
@@ -2172,7 +1872,7 @@ function renderScreen() {
 function renderForward() {
 
     phaseLabel.textContent =
-        "English → Spanish";
+        "TEST TEST TEST";
 
 
     roundInfo.innerHTML =
@@ -2205,10 +1905,9 @@ function renderForward() {
 
     } else {
 
-        wordDisplay.textContent =
-            pair.english +
-            " — " +
-            pair.spanish;
+        wordDisplay.innerHTML =
+            '<div>' + pair.english + '</div>' +
+            '<div style="color:red;">' + pair.spanish + '</div>';
 
 
         repeatBtn.classList.remove(
@@ -2313,10 +2012,13 @@ function renderReverse() {
 
     } else {
 
-        wordDisplay.textContent =
+        wordDisplay.innerHTML =
+            '<span class="spanish-word">' +
             pair.spanish +
-            " — " +
-            pair.english;
+            '</span> — ' +
+            '<span class="english-word">' +
+            pair.english +
+            '</span>';
 
 
         repeatBtn.classList.remove(

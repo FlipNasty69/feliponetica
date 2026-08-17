@@ -18,6 +18,12 @@
 
 <body>
 
+<div class="video-overlay"></div>
+
+<video autoplay muted loop id="bg-video">
+    <source src="{{ url_for('static', filename='video/class_pics_video.mp4') }}" type="video/mp4">
+</video>
+
 
 <!-- =========================================================
      NAVIGATION
@@ -42,6 +48,9 @@
             <a href="/feliponetica">Feliponetica</a>
 
             <a href="/about">About</a>
+
+            <a href="{{ url_for('logout') }}">Logout</a>
+
 
         </div>
 
@@ -653,7 +662,6 @@
 
 
 </main>
-
 
 
 <!-- =========================================================

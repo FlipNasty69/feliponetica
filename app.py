@@ -3,6 +3,43 @@ import re
 
 from flask import Flask, render_template, request, send_from_directory, abort
 from g2p_en import G2p
+from flask import session, redirect, url_for
+
+app = Flask(__name__)
+app.secret_key = "supersecretkey"  # change this
+
+USERS = {
+    "felipe": {"password": "stopplayin", "role": "admin"},
+    "karina": {"password": "i knew it", "role": "admin"},
+    "student": {"password": "i sent the song", "role": "student"}
+}
+
+# ============================================================
+# LOGIN
+# ============================================================
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
+        user = USERS.get(username)
+
+        if user and user["password"] == password:
+            session["username"] = username
+            session["role"] = user["role"]
+            return redirect(url_for("home"))
+        else:
+            return "Invalid credentials"
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 
 # ============================================================
@@ -23,10 +60,7 @@ nltk.download(
     download_dir=NLTK_DATA_PATH
 )
 
-
 g2p = G2p()
-
-app = Flask(__name__)
 
 
 # ============================================================
@@ -319,14 +353,16 @@ def convert_to_feliponetica(text):
 
     return "".join(converted)
 
-
 # ============================================================
 # HOME
 # ============================================================
 
-@app.route('/')
+@app.route("/")
 def home():
-    return render_template('index.html')
+    if "username" not in session:
+        return redirect(url_for("login"))
+    return render_template("index.html")
+
 
 
 # ============================================================
@@ -335,6 +371,9 @@ def home():
 
 @app.route('/feliponetica', methods=['GET', 'POST'])
 def feliponetica():
+
+    if "role" not in session or session["role"] not in ["student", "admin"]:
+        return "Access denied"
 
     result = None
     user_input = ""
@@ -362,6 +401,73 @@ def feliponetica():
 
 VOCABULARY_SETS = {
 
+    "basic-adjectives": {
+        "title": "Basic Adjectives",
+        "description": "Common adjectives for describing people, things, and situations.",
+        "words": [
+            "good = bueno",
+            "bad = malo",
+            "easy = fácil",
+            "difficult = difícil",
+            "big = grande",
+            "small = pequeño"
+        ]
+    },
+
+    "subject-object-clauses": {
+        "title": "Sub and Obj Clause Vocab",
+        "description": "Words used to begin subject and object clauses.",
+        "words": [
+            "who = quien",
+            "whose = de quien sea",
+            "what = que",
+            "when = cuando",
+            "where = donde",
+            "why = por qué",
+            "how = como",
+            "that = que", 
+        ]
+    },
+
+  "subject-object-clauses else": {
+        "title": "Sub and Obj Clause Vocab (else)",
+        "description": "Words used to begin subject and object clauses with (else).",
+        "words": [
+            "who else = quien mas",
+            "what else = que mas",
+            "when else = cuando mas",
+            "where else = donde mas",
+            "why else = por qué mas / por que otra razón",
+            "how else = como mas / de que otra manera"
+        ]
+    },
+
+    "subject-object-clauses ever": {
+        "title": "Sub and Obj Clause Vocab (ever)",
+        "description": "Words used to begin subject and object clauses with (ever).",
+        "words": [
+            "whoever = quien sea",
+            "whatever = que sea",
+            "whenever = cuando sea",
+            "wherever = donde sea",
+            "whyever = por la razon qué sea",
+            "however = como sea"
+        ]
+    },
+
+    "everyday-vocabulary": {
+        "title": "Everyday Vocabulary",
+        "description": "Useful words that appear constantly in everyday English.",
+        "words": [
+            "thing = cosa",
+            "way = camino, manera, forma",
+            "place = lugar",
+            "time = tiempo",
+            "people = gente",
+            "stuff = cosas"
+        ]
+    },
+
     "everyday-english": {
         "title": "Everyday English",
         "description": "Useful English vocabulary for everyday situations.",
@@ -381,35 +487,27 @@ VOCABULARY_SETS = {
 
     "essential-verbs": {
         "title": "Essential Verbs",
-        "description": "Some of the most useful verbs in English.",
+        "description": "High-frequency verbs used to build everyday English sentences.",
         "words": [
             "be = ser / estar",
             "have = tener",
             "do = hacer",
             "go = ir",
-            "come = venir",
             "make = hacer / crear",
-            "take = tomar / llevar",
-            "give = dar",
-            "get = obtener / conseguir",
-            "know = saber / conocer"
+            "take = tomar / llevar"
         ]
     },
 
     "work": {
-        "title": "Work",
-        "description": "Useful vocabulary for talking about work and jobs.",
+        "title": "Work Vocabulary",
+        "description": "Practical vocabulary for talking about work, jobs, and daily responsibilities.",
         "words": [
             "job = trabajo",
-            "worker = trabajador",
-            "boss = jefe",
-            "office = oficina",
-            "factory = fábrica",
-            "meeting = reunión",
-            "schedule = horario",
             "shift = turno",
-            "break = descanso",
-            "salary = salario"
+            "worker = trabajador",
+            "manager = gerente",
+            "meeting = reunión",
+            "schedule = horario"
         ]
     }
 
@@ -423,27 +521,12 @@ VOCABULARY_SETS = {
 @app.route('/vocab_drill')
 def vocab():
 
-    return render_template(
-        'vocab.html',
-        vocabulary_sets=VOCABULARY_SETS
-    )
-
-
-# ============================================================
-# START VOCABULARY SET
-# ============================================================
-
-@app.route('/vocab_drill/<set_id>')
-def vocabulary_drill(set_id):
-
-    if set_id not in VOCABULARY_SETS:
-        abort(404)
-
-    vocabulary_set = VOCABULARY_SETS[set_id]
+    if "role" not in session or session["role"] not in ["student", "admin"]:
+        return "Access denied"
 
     return render_template(
         'vocab_drill.html',
-        vocabulary_set=vocabulary_set
+        vocabulary_sets=VOCABULARY_SETS
     )
 
 
@@ -453,6 +536,9 @@ def vocabulary_drill(set_id):
 
 @app.route('/lessons')
 def lessons():
+
+    if "role" not in session or session["role"] not in ["student", "admin"]:
+        return "Access denied"
 
     import os
 
@@ -505,8 +591,12 @@ def lesson_pdf(filename):
 
 @app.route('/course')
 def course():
-    return render_template('course.html')
 
+    # ADMIN ONLY
+    if "role" not in session or session["role"] != "admin":
+        return "Access denied"
+
+    return render_template('course.html')
 
 # ============================================================
 # ABOUT
