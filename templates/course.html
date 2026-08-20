@@ -26,21 +26,18 @@
 
         <div class="nav-links">
 
-            <a href="{{ url_for('home') }}">Home</a>
+            <div class="nav-links">
 
-            <a href="{{ url_for('lessons') }}">Lessons</a>
+                <a href="/">Home</a>
+                <a href="/feliponetica">Feliponetica</a>
+                <a href="/vocab_drill">Vocabulary</a>
+                <a href="/about">About</a>
+                <a href="/contact">Contact</a>
+                <a href="/lessons">Lessons</a>
+                <a href="{{ url_for('live_classes') }}">Live Classes</a>
+                <a href="{{ url_for('logout') }}">Logout</a>
 
-            <a href="{{ url_for('course') }}">Course</a>
-
-            <a href="{{ url_for('vocab') }}">Vocabulary</a>
-
-            <a href="{{ url_for('feliponetica') }}">
-                Feliponetica
-            </a>
-
-            <a href="{{ url_for('live_classes') }}">
-                Live Classes
-            </a>
+            </div>
 
         </div>
 
@@ -74,28 +71,29 @@
 
 
         <article class="level-card">
-
             <div class="level-number">
                 LEVEL 01
             </div>
-
             <h2>A1</h2>
-
             <p>
-                Build the fundamental vocabulary and sentence
-                structures needed to begin communicating.
+                Build the fundamental vocabulary and 
+                structure needed to begin communicating.
             </p>
-
             <ul class="level-list">
-
                 <li>Core vocabulary</li>
                 <li>Basic sentence structure</li>
                 <li>Essential verbs</li>
                 <li>Basic questions</li>
                 <li>Everyday communication</li>
-
             </ul>
 
+                <!-- NEW: The button to launch the interactive module -->
+                <div style="margin-top: 20px;">
+                    <a href="/module/module_1"
+                       class="button">
+                        Start Module: Through vs. Across
+                    </a>
+                </div>
         </article>
 
 

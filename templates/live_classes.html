@@ -20,24 +20,20 @@
 
     <div class="nav-container">
 
-        <a href="{{ url_for('home') }}" class="logo">
-            English<span>Course</span>
+        <a href="/" class="logo">
+            Feliponetica <span>Inglés</span>
         </a>
 
         <div class="nav-links">
 
-            <a href="{{ url_for('home') }}">Home</a>
-            <a href="{{ url_for('lessons') }}">Lessons</a>
-            <a href="{{ url_for('course') }}">Course</a>
-            <a href="{{ url_for('vocab') }}">Vocabulary</a>
-
-            <a href="{{ url_for('feliponetica') }}">
-                Feliponetica
-            </a>
-
-            <a href="{{ url_for('live_classes') }}">
-                Live Classes
-            </a>
+            <a href="/">Home</a>
+            <a href="/feliponetica">Feliponetica</a>
+            <a href="/vocab_drill">Vocabulary</a>
+            <a href="/about">About</a>
+            <a href="/contact">Contact</a>
+            <a href="/lessons">Lessons</a>
+            <a href="/course">Course</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
 
         </div>
 

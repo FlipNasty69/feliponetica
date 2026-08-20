@@ -1,0 +1,24 @@
+{
+  "title": "Module 1: Subject Pronouns",
+  "mainAudioUrl": "/static/audio/pronouns-main.mp3",
+  "events": [
+    {
+      "time": 8,
+      "type": "image",
+      "imageUrl": "/static/images/popups/pronoun-chart.jpg"
+    },
+    {
+      "time": 22,
+      "type": "image",
+      "imageUrl": "/static/images/popups/it-raining.jpg"
+    },
+    {
+      "time": 28,
+      "type": "quiz",
+      "question": "How do you correctly say 'Llueve' in English?",
+      "options": ["Is raining", "It is raining", "Raining"],
+      "correctAnswer": "It is raining",
+      "hintAudioUrl": "/static/audio/hint-it.mp3"
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+    "module_1": {
+
+        "series": [
+
+            {
+                "id": 1,
+                "title": "Series 1",
+
+                "questions": [
+
+                    {
+                        "id": 1,
+                        "question": "She walks ____________ the street.",
+                        "options": ["through", "across"],
+                        "answer": "across",
+                        "audio_help": "audio/help.mp3",
+                        "image": "",
+                        "image_alt": ""
+                    },
+
+                    {
+                        "id": 2,
+                        "question": "Walk __________ the forest.",
+                        "options": ["through", "across"],
+                        "answer": "through",
+                        "audio_help": "audio/help_q2.mp3",
+                        "image": "",
+                        "image_alt": ""
+                    },
+
+                    {
+                        "id": 3,
+                        "question": "A fish swims ___________ the water.",
+                        "options": ["through", "across"],
+                        "answer": "through",
+                        "audio_help": "audio/help.mp3",
+                        "image": "",
+                        "image_alt": ""
+                    },
+
+                    {
+                        "id": 4,
+                        "question": "A spider crawls ____________ the wall.",
+                        "options": ["through", "across"],
+                        "answer": "across",
+                        "audio_help": "audio/help.mp3",
+                        "image": "",
+                        "image_alt": ""
+                    },
+
+                    {
+                        "id": 5,
+                        "question": "Look ___________ the window.",
+                        "options": ["through", "across"],
+                        "answer": "through",
+                        "audio_help": "audio/help.mp3",
+                        "image": "",
+                        "image_alt": ""
+                    },
+
+                    {
+                        "id": 6,
+                        "question": "Run__________ the ground.",
+                        "options": ["through", "across"],
+                        "answer": "across",
+                        "audio_help": "audio/help.mp3",
+                        "image": "",
+                        "image_alt": ""
+                    },
+
+                    {
+                        "id": 7,
+                        "question": "Drive ___________ the tunnel.",
+                        "options": ["through", "across"],
+                        "answer": "through",
+                        "audio_help": "audio/help.mp3",
+                        "image": "",
+                        "image_alt": ""
+                    },
+
+                    {
+                        "id": 8,
+                        "question": "Drive __________ the rain.",
+                        "options": ["through", "across"],
+                        "answer": "through",
+                        "audio_help": "audio/help.mp3",
+                        "image": "",
+                        "image_alt": ""
+                    }
+
+                ]
+
+            }
+
+        ]
+
+    }
+}

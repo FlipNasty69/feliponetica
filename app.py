@@ -1,3 +1,4 @@
+import json
 import nltk
 import re
 
@@ -13,6 +14,33 @@ USERS = {
     "karina": {"password": "i knew it", "role": "admin"},
     "student": {"password": "i sent the song", "role": "student"}
 }
+
+# ============================================================
+# JSON DATA
+# ============================================================
+
+def load_data(file_path):
+
+    import os
+
+    full_path = os.path.join(
+        app.root_path,
+        file_path
+    )
+
+    try:
+
+        with open(
+            full_path,
+            'r',
+            encoding='utf-8'
+        ) as f:
+
+            return json.load(f)
+
+    except FileNotFoundError:
+
+        return {}
 
 # ============================================================
 # LOGIN
@@ -410,7 +438,17 @@ VOCABULARY_SETS = {
             "easy = fácil",
             "difficult = difícil",
             "big = grande",
-            "small = pequeño"
+            "small = pequeño",
+            "tall = alto",
+            "short = corto",
+            "high = alto",
+            "low = bajo",
+            "hot = caliente",
+            "cold = frío",
+            "fast = rápido",
+            "slow = lento",
+            "happy = feliz",
+            "sad = triste",
         ]
     },
 
@@ -494,7 +532,14 @@ VOCABULARY_SETS = {
             "do = hacer",
             "go = ir",
             "make = hacer / crear",
-            "take = tomar / llevar"
+            "take = tomar / llevar",
+            "come = venir",
+            "put = poner",
+            "leave = irse / dejar",
+            "run = correr",
+            "say = decir",
+            "tell = contar / decir",
+            "call = llamar"
         ]
     },
 
@@ -509,7 +554,44 @@ VOCABULARY_SETS = {
             "meeting = reunión",
             "schedule = horario"
         ]
-    }
+    },
+
+    "colors": {
+        "title": "Colors",
+        "description": "Common colors for describing people, objects, clothes, and places.",
+        "words": [
+            "red = rojo",
+            "blue = azul",
+            "green = verde",
+            "yellow = amarillo",
+            "orange = naranja",
+            "purple = morado",
+            "pink = rosa",
+            "brown = café",
+            "black = negro",
+            "white = blanco",
+            "gray = gris",
+            "gold = dorado",
+            "silver = plateado"
+        ]
+    },
+
+    "numbers": {
+        "title": "Numbers",
+        "description": "Numbers from 1 to 10",
+        "words": [
+            "1 = one wan",
+            "2 = two tu",
+            "3 = three thri",
+            "4 = four for",
+            "5 = five faiv",
+            "6 = six siks",
+            "7 = seven",
+            "8 = eight eit",
+            "9 = nine nain",
+            "10 = ten ten"
+        ]
+    },
 
 }
 
@@ -599,6 +681,141 @@ def course():
     return render_template('course.html')
 
 # ============================================================
+# MODULES
+# ============================================================
+
+@app.route('/module/<module_id>')
+def interactive_module(module_id):
+
+    # --------------------------------------------------------
+    # LOAD JSON DATA
+    # --------------------------------------------------------
+
+    videos_data = load_data('static/data/videos.json')
+    quizzes_data = load_data('static/data/quizzes.json')
+
+
+    # --------------------------------------------------------
+    # FIND THE REQUESTED MODULE
+    # --------------------------------------------------------
+
+    video_module = videos_data.get(module_id)
+    quiz_module = quizzes_data.get(module_id)
+
+    if not video_module:
+        return f"URL module_id = [{module_id}]<br>JSON keys = {list(videos_data.keys())}"
+
+
+    # --------------------------------------------------------
+    # CREATE THE MODULE
+    # --------------------------------------------------------
+
+    module = {
+
+        "title": video_module.get(
+            "title",
+            module_id
+        ),
+
+        "description": video_module.get(
+            "description",
+            ""
+        ),
+
+        "series": []
+
+    }
+
+
+    # --------------------------------------------------------
+    # INDEX THE QUIZ SERIES
+    # --------------------------------------------------------
+
+    quiz_series = {}
+
+    if quiz_module:
+
+        for series in quiz_module.get(
+            "series",
+            []
+        ):
+
+            quiz_series[
+                series.get("id")
+            ] = series
+
+
+    # --------------------------------------------------------
+    # COMBINE VIDEO + QUIZ SERIES
+    # --------------------------------------------------------
+
+    for series in video_module.get(
+        "series",
+        []
+    ):
+
+        series_id = series.get(
+            "id"
+        )
+
+        matching_quiz_series = quiz_series.get(
+            series_id,
+            {}
+        )
+
+
+        combined_series = {
+
+            "id": series_id,
+
+            "title": series.get(
+                "title",
+                ""
+            ),
+
+            "description": series.get(
+                "description",
+                ""
+            ),
+
+            "videos": series.get(
+                "videos",
+                []
+            ),
+
+            "quiz": matching_quiz_series.get(
+                "questions",
+                []
+            ),
+
+            "audio": series.get(
+                "audio",
+                []
+            ),
+
+            "images": series.get(
+                "images",
+                []
+            )
+
+        }
+
+
+        module["series"].append(
+            combined_series
+        )
+
+
+    # --------------------------------------------------------
+    # SEND COMPLETE MODULE TO HTML
+    # --------------------------------------------------------
+
+    return render_template(
+        'module.html',
+        module=module
+    )
+
+# ============================================================
 # ABOUT
 # ============================================================
 
@@ -611,7 +828,7 @@ def about():
 # LIVE CLASSES
 # ============================================================
 
-@app.route('/live-classes')
+@app.route('/live_classes')
 def live_classes():
     return render_template('live_classes.html')
 

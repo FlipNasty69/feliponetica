@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Module</title>
+    
+    <!-- This links to your existing styles.css -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    <style>
+        /* Specific styles just for the interactive canvas */
+        .canvas-container {
+            max-width: 800px; 
+            margin: 50px auto; 
+            text-align: center;
+            background: #ffffff; 
+            padding: 40px; 
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .hidden { 
+            display: none !important; 
+        }
+        .popup-img { 
+            max-width: 100%; 
+            border-radius: 8px; 
+            margin: 20px 0; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .action-btn { 
+            margin: 10px; 
+            padding: 12px 24px; 
+            font-size: 18px; 
+            cursor: pointer;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+        }
+        .action-btn:hover {
+            background-color: #004494;
+        }
+        #hint-message {
+            color: #d9534f;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- You can optionally include your <nav> bar here if you want it on the lesson page -->
+
+    <div class="canvas-container">
+        <h2 id="module-title">Loading Module...</h2>
+        
+        <!-- The Start Button -->
+        <button id="start-btn" class="action-btn">Start Audio</button>
+
+        <!-- Area for Image Popups -->
+        <div id="visual-area" class="hidden"></div>
+
+        <!-- Area for Quiz Questions -->
+        <div id="quiz-area" class="hidden">
+            <h3 id="question-text"></h3>
+            <div id="options-container"></div>
+            <p id="hint-message" class="hidden">Listen to the hint and try again!</p>
+        </div>
+    </div>
+
+    <!-- The invisible audio players -->
+    <audio id="main-audio"></audio>
+    <audio id="hint-audio"></audio>
+
+    <!-- Pass the module_id from Python to Javascript securely -->
+    <script>
+        const MODULE_ID = "{{ module_id }}";
+    </script>
+    
+    <!-- Load the Brain (We will make this file in the next step) -->
+    <script src="{{ url_for('static', filename='scripts/lesson_engine.js') }}"></script>
+
+</body>
+</html>

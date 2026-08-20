@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ module.title }} - Feliponetica Inglés</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{{ module.title }} - Feliponetica Inglés</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/styles.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     MODULE
+     Everything on this page belongs to the current module.
+     ========================================================= -->
+
+<main class="main-container">
+
+
+    <!-- =====================================================
+         MODULE HEADER
+         ===================================================== -->
+
+    <header class="page-header">
+
+        <div class="eyebrow">
+            Module
+        </div>
+
+        <h1>
+            {{ module.title }}
+        </h1>
+
+        {% if module.description %}
+            <p>
+                {{ module.description }}
+            </p>
+        {% endif %}
+
+    </header>
+
+
+
+    <!-- =====================================================
+         SERIES LOOP
+
+         The JSON determines how many series exist.
+
+         Series 1
+         Series 2
+         Series 3
+         Series 4
+         etc.
+
+         When there are no more series in the JSON,
+         this loop automatically stops.
+         ===================================================== -->
+
+    {% for series in module.series %}
+
+
+        <section class="module-series">
+
+
+            <!-- =============================================
+                 SERIES HEADER
+                 ============================================= -->
+
+            <div class="page-header">
+
+                <div class="eyebrow">
+                    Series {{ loop.index }}
+                </div>
+
+                <h2>
+                    {{ series.title }}
+                </h2>
+
+                {% if series.description %}
+                    <p>
+                        {{ series.description }}
+                    </p>
+                {% endif %}
+
+            </div>
+
+
+
+            <!-- =============================================
+                 VIDEOS
+
+                 Any number of videos can be placed here.
+
+                 1 video  = 1 window
+                 2 videos = 2 windows
+                 10 videos = 10 windows
+                 ============================================= -->
+
+            {% if series.videos %}
+
+                <div class="video-wrapper">
+
+                    {% for video in series.videos %}
+
+                        <div class="video-container">
+
+                            <iframe
+                                src="https://www.youtube.com/embed/{{ video.video_id }}"
+                                title="{{ video.title }}"
+                                frameborder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen>
+                            </iframe>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+
+
+            <!-- =============================================
+                 QUESTIONS
+
+                 Every question can contain:
+
+                 - Question text
+                 - Multiple choice options
+                 - Correct answer
+                 - Felipe audio help
+                 - Optional image
+
+                 The JSON determines how many questions exist.
+                 ============================================= -->
+
+            {% if series.quiz %}
+
+                <section class="module-quiz">
+
+                    <h3>
+                        Knowledge Check
+                    </h3>
+
+
+                    {% for item in series.quiz %}
+
+                        <div class="quiz-card">
+
+
+                            <!-- =================================
+                                 QUESTION
+                                 ================================= -->
+
+                            <p>
+
+                                <strong>
+                                    Question {{ loop.index }}:
+                                </strong>
+
+                                {{ item.question }}
+
+                            </p>
+
+
+
+                            <!-- =================================
+                                 OPTIONAL QUESTION IMAGE
+
+                                 If an image is supplied in JSON,
+                                 it appears here.
+
+                                 If there is no image,
+                                 nothing appears.
+                                 ================================= -->
+
+                            {% if item.image %}
+
+                                <div class="question-image">
+
+                                    <img
+                                        src="{{ url_for('static', filename=item.image) }}"
+                                        alt="{{ item.image_alt | default('Question image') }}"
+                                    >
+
+                                </div>
+
+                            {% endif %}
+
+
+
+                            <!-- =================================
+                                 MULTIPLE CHOICE OPTIONS
+
+                                 Every question uses options
+                                 supplied by the JSON.
+                                 ================================= -->
+
+                            {% for option in item.options %}
+
+                                <label
+                                    style="
+                                        display: block;
+                                        margin: 10px 0;
+                                        cursor: pointer;
+                                    "
+                                >
+
+                                    <input
+                                        type="radio"
+                                        name="q_{{ series.id }}_{{ item.id }}"
+                                        value="{{ option }}"
+                                    >
+
+                                    <strong>
+                                        {{ option }}
+                                    </strong>
+
+                                </label>
+
+                            {% endfor %}
+
+
+
+                            <!-- =================================
+                                 QUESTION BUTTONS
+                                 ================================= -->
+
+                            <div>
+
+
+                                <!-- CHECK ANSWER -->
+
+                                <button
+                                    class="btn btn-check"
+                                    data-answer='{{ item.answer | tojson | forceescape }}'
+                                    onclick='checkAnswer(
+                                        "q_{{ series.id }}_{{ item.id }}",
+                                        JSON.parse(this.dataset.answer),
+                                        "feedback_{{ series.id }}_{{ item.id }}"
+                                    )'
+                                >
+                                    Check Answer
+                                </button>
+
+
+
+                                <!-- FELIPE AUDIO HELP -->
+
+                                {% if item.audio_help %}
+
+                                    <button
+                                        class="btn btn-help"
+                                        data-audio-help='{{ url_for("static", filename=item.audio_help) | tojson | forceescape }}'
+                                        onclick="playFelipeHelp(JSON.parse(this.dataset.audioHelp))"
+                                    >
+                                        🔊 Help me Felipe
+                                    </button>
+
+                                {% endif %}
+
+
+                            </div>
+
+
+
+                            <!-- =================================
+                                 FEEDBACK
+                                 ================================= -->
+
+                            <div
+                                id="feedback_{{ series.id }}_{{ item.id }}"
+                                class="feedback"
+                            >
+                            </div>
+
+
+                        </div>
+
+                    {% endfor %}
+
+                </section>
+
+            {% endif %}
+
+
+
+            <!-- =============================================
+                 SERIES AUDIO
+
+                 This is for audio that belongs to the
+                 series itself rather than a question.
+
+                 Any number of audio files can be added.
+
+                 Nothing appears if the JSON has no audio.
+                 ============================================= -->
+
+            {% if series.audio %}
+
+                <section class="module-audio">
+
+                    <h3>
+                        Audio
+                    </h3>
+
+                    {% for audio in series.audio %}
+
+                        <div class="audio-item">
+
+                            {% if audio.title %}
+                                <p>
+                                    <strong>
+                                        {{ audio.title }}
+                                    </strong>
+                                </p>
+                            {% endif %}
+
+                            <audio controls>
+
+                                <source
+                                    src="{{ url_for('static', filename=audio.file) }}"
+                                >
+
+                                Your browser does not support audio.
+
+                            </audio>
+
+                        </div>
+
+                    {% endfor %}
+
+                </section>
+
+            {% endif %}
+
+
+
+            <!-- =============================================
+                 SERIES IMAGES
+
+                 Optional image area for future use.
+
+                 Any number of images can be supplied.
+
+                 Nothing appears if there are no images.
+                 ============================================= -->
+
+            {% if series.images %}
+
+                <section class="module-images">
+
+                    {% for image in series.images %}
+
+                        <div class="module-image">
+
+                            <img
+                                src="{{ url_for('static', filename=image.file) }}"
+                                alt="{{ image.alt | default('Module image') }}"
+                            >
+
+                            {% if image.caption %}
+
+                                <p>
+                                    {{ image.caption }}
+                                </p>
+
+                            {% endif %}
+
+                        </div>
+
+                    {% endfor %}
+
+                </section>
+
+            {% endif %}
+
+
+
+            <!-- =============================================
+                 FUTURE CONTENT
+
+                 RESERVED AREA.
+
+                 When you decide to add another type of
+                 content later, this is where its section
+                 can be added.
+
+                 Examples:
+
+                 vocabulary
+                 exercises
+                 explanations
+                 pronunciation
+                 reading
+                 writing
+                 downloads
+                 etc.
+
+                 DO NOT PUT RANDOM HTML HERE.
+
+                 Add a clearly labeled section when the
+                 corresponding JSON structure is created.
+                 ============================================= -->
+
+            <!--
+            =================================================
+
+            FUTURE CONTENT GOES HERE
+
+            =================================================
+            -->
+
+
+
+        </section>
+
+
+    {% endfor %}
+
+
+</main>
+
+
+
+<!-- =========================================================
+     HIDDEN FELIPE AUDIO PLAYER
+
+     Used by the "Help me Felipe" buttons.
+     ========================================================= -->
+
+<audio id="felipe-voice-player"></audio>
+
+
+
+<!-- =========================================================
+     JAVASCRIPT
+     ========================================================= -->
+
+<script>
+
+
+    /* =====================================================
+       FELIPE AUDIO HELP
+       ===================================================== */
+
+    function playFelipeHelp(audioSrc) {
+
+        const player =
+            document.getElementById(
+                'felipe-voice-player'
+            );
+
+        player.src = audioSrc;
+
+        player.play();
+
+    }
+
+
+
+    /* =====================================================
+       CHECK ANSWER
+       ===================================================== */
+
+    function checkAnswer(
+        inputName,
+        correctAnswer,
+        feedbackId
+    ) {
+
+        const selected =
+            document.querySelector(
+                `input[name="${inputName}"]:checked`
+            );
+
+
+        const feedback =
+            document.getElementById(
+                feedbackId
+            );
+
+
+        if (!selected) {
+
+            feedback.textContent =
+                "Please select an answer first.";
+
+            feedback.style.color =
+                "#ff5b41";
+
+            return;
+
+        }
+
+
+        if (
+            selected.value ===
+            correctAnswer
+        ) {
+
+            feedback.textContent =
+                "Correct! Great job.";
+
+            feedback.style.color =
+                "#0028c7";
+
+        }
+
+        else {
+
+            feedback.textContent =
+                "Not quite. Click 'Help me Felipe' to hear a hint.";
+
+            feedback.style.color =
+                "#ff5b41";
+
+        }
+
+    }
+
+
+</script>
+
+
+</body>
+
+</html>
+

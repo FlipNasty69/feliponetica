@@ -21,28 +21,24 @@
 
         <div class="nav-container">
 
-            <a href="/" class="logo">
-                Felipe<span>netica</span>
+            <a href="{{ url_for('home') }}" class="logo">
+                English<span>Course</span>
             </a>
 
             <div class="nav-links">
                
-            <a href="{{ url_for('home') }}">Home</a>
+                <div class="nav-links">
 
-            <a href="{{ url_for('about') }}">about</a>
+                    <a href="/">Home</a>
+                    <a href="/vocab_drill">Vocabulary</a>
+                    <a href="/about">About</a>
+                    <a href="/contact">Contact</a>
+                    <a href="/lessons">Lessons</a>
+                    <a href="/course">Course</a>
+                    <a href="/live-classes">Live Classes</a>
+                    <a href="{{ url_for('logout') }}">Logout</a>
 
-            <a href="{{ url_for('course') }}">Course</a>
-
-            <a href="{{ url_for('vocab') }}">Vocabulary</a>
-
-            <a href="{{ url_for('lessons') }}">
-                Lessons
-            </a>
-
-            <a href="{{ url_for('live_classes') }}">
-                Live Classes
-            </a>
-            </div>
+                </div>
 
         </div>
 
