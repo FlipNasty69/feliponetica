@@ -452,16 +452,17 @@ body {
 
     text-decoration: none;
 
-    font-weight: 800;
+    font-weight: 1000;
 
-    border: none;
+    border: bold 1px solid
+        rgba(255, 91, 65, 0.15);
 
     cursor: pointer;
 
     transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease,
-        background 0.2s ease;
+        transform 2.0s ease,
+        box-shadow 2.0s ease,
+        background 2.0s ease;
 
     margin-top: 22px;
 }
@@ -597,7 +598,7 @@ body {
     color:
         var(--coral);
 
-    font-size: 13px;
+    font-size: 18px;
 
     font-weight: 900;
 
@@ -606,7 +607,7 @@ body {
 
 .lesson-card h3 {
 
-    margin-top: 12px;
+    margin-top: 20px;
 }
 
 .lesson-card .button {
@@ -893,7 +894,7 @@ body {
 .navbar {
     position: sticky;
     top: 20px;
-    margin: 20px;
+    margin: 10px;
     z-index: 1000;
 }
 
@@ -902,7 +903,7 @@ body {
     background: white;
     border-radius: 999px;
 
-    padding: 12px 22px;
+    padding: 8px 16px;
 
     text-decoration: none;
 
@@ -1206,4 +1207,368 @@ body {
     border-radius: 12px;
 
     font-weight: 700;
+}
+
+/* ============================================================
+   TECH SUPPORT
+   ============================================================ */
+
+.support-page {
+    min-height: 75vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 60px 20px;
+}
+
+
+.support-card {
+    width: 100%;
+    max-width: 700px;
+
+    background: rgba(255, 255, 255, 0.95);
+
+    padding: 45px;
+
+    border-radius: 25px;
+
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.12);
+}
+
+
+.support-icon {
+    font-size: 50px;
+
+    text-align: center;
+
+    margin-bottom: 10px;
+}
+
+
+.support-card h1 {
+    text-align: center;
+
+    color: #0028c7;
+
+    margin-bottom: 10px;
+}
+
+
+.support-intro {
+    text-align: center;
+
+    color: #555;
+
+    font-size: 17px;
+
+    line-height: 1.6;
+
+    margin-bottom: 35px;
+}
+
+
+.form-group {
+    margin-bottom: 22px;
+}
+
+
+.form-group label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-weight: 700;
+
+    color: #222;
+}
+
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 14px 16px;
+
+    border: 2px solid #e1e1e1;
+
+    border-radius: 12px;
+
+    font-family: inherit;
+
+    font-size: 16px;
+
+    background: white;
+
+    transition: border-color 0.25s ease,
+                box-shadow 0.25s ease;
+}
+
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+
+    border-color: #0028c7;
+
+    box-shadow: 0 0 0 3px rgba(0, 40, 199, 0.10);
+}
+
+
+.form-group textarea {
+    resize: vertical;
+
+    min-height: 160px;
+}
+
+
+.support-button {
+    display: block;
+
+    width: 100%;
+
+    padding: 15px 25px;
+
+    border: none;
+
+    border-radius: 999px;
+
+    background: #0028c7;
+
+    color: white;
+
+    font-size: 17px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: all 0.25s ease;
+
+    box-shadow: 0 5px 15px rgba(0, 40, 199, 0.20);
+}
+
+
+.support-button:hover {
+    transform: translateY(-2px);
+
+    background: #001b8f;
+
+    box-shadow: 0 8px 20px rgba(0, 40, 199, 0.30);
+}
+
+
+.support-note {
+    text-align: center;
+
+    margin-top: 25px;
+
+    color: #777;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 600px) {
+
+    .support-page {
+        padding: 30px 15px;
+    }
+
+    .support-card {
+        padding: 30px 20px;
+
+        border-radius: 20px;
+    }
+
+    .support-card h1 {
+        font-size: 28px;
+    }
+
+}
+
+/* ============================================================
+   SUPPORT MESSAGES
+   ============================================================ */
+
+.support-messages-page {
+    min-height: 80vh;
+
+    padding: 50px 20px;
+}
+
+
+.support-messages-container {
+    width: 100%;
+    max-width: 900px;
+
+    margin: 0 auto;
+}
+
+
+.support-messages-container h1 {
+    text-align: center;
+
+    color: #0028c7;
+
+    margin-bottom: 10px;
+}
+
+
+.support-messages-intro {
+    text-align: center;
+
+    color: #666;
+
+    font-size: 17px;
+
+    margin-bottom: 35px;
+}
+
+
+/* ============================================================
+   INDIVIDUAL MESSAGE
+   ============================================================ */
+
+.support-message {
+    background: white;
+
+    border-radius: 20px;
+
+    padding: 25px 30px;
+
+    margin-bottom: 25px;
+
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.10);
+
+    border-left: 6px solid #0028c7;
+}
+
+
+.message-header {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 20px;
+
+    margin-bottom: 15px;
+}
+
+
+.message-header h2 {
+    margin: 0;
+
+    color: #0028c7;
+
+    font-size: 21px;
+}
+
+
+.message-header span {
+    color: #777;
+
+    font-size: 13px;
+
+    white-space: nowrap;
+}
+
+
+/* ============================================================
+   MESSAGE INFORMATION
+   ============================================================ */
+
+.message-info {
+    padding: 15px;
+
+    background: #f5f7ff;
+
+    border-radius: 12px;
+
+    color: #444;
+
+    line-height: 1.8;
+
+    margin-bottom: 20px;
+}
+
+
+.message-info strong {
+    color: #222;
+}
+
+
+/* ============================================================
+   MESSAGE TEXT
+   ============================================================ */
+
+.message-body {
+    padding: 5px 0;
+
+    color: #333;
+
+    font-size: 16px;
+
+    line-height: 1.7;
+
+    white-space: pre-wrap;
+}
+
+
+/* ============================================================
+   NO MESSAGES
+   ============================================================ */
+
+.no-messages {
+    background: white;
+
+    border-radius: 20px;
+
+    padding: 50px 30px;
+
+    text-align: center;
+
+    color: #777;
+
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 600px) {
+
+    .support-messages-page {
+        padding: 30px 15px;
+    }
+
+    .support-message {
+        padding: 20px;
+    }
+
+    .message-header {
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 8px;
+    }
+
+    .message-header h2 {
+        font-size: 19px;
+    }
+
 }

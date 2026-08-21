@@ -1,7 +1,12 @@
+import sqlite3
+import os
+import smtplib
 import json
 import nltk
 import re
 
+from email.message import EmailMessage
+from flask import request, render_template
 from flask import Flask, render_template, request, send_from_directory, abort
 from g2p_en import G2p
 from flask import session, redirect, url_for
@@ -89,6 +94,31 @@ nltk.download(
 )
 
 g2p = G2p()
+
+# ============================================================
+# SUPPORT DATABASE
+# ============================================================
+
+def init_support_database():
+
+    conn = sqlite3.connect("support_messages.db")
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS support_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            message TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+init_support_database()
 
 
 # ============================================================
@@ -841,6 +871,56 @@ def live_classes():
 def contact():
     return render_template('contact.html')
 
+@app.route("/tech-support", methods=["GET", "POST"])
+def tech_support():
+
+    if request.method == "POST":
+
+        name = request.form["name"]
+        email = request.form["email"]
+        subject = request.form["subject"]
+        message = request.form["message"]
+
+        conn = sqlite3.connect("support_messages.db")
+
+        conn.execute("""
+            INSERT INTO support_messages
+            (name, email, subject, message)
+            VALUES (?, ?, ?, ?)
+        """, (name, email, subject, message))
+
+        conn.commit()
+        conn.close()
+
+        return render_template(
+            "tech_support.html",
+            success=True
+        )
+
+    return render_template("tech_support.html")
+
+@app.route("/support_messages")
+def support_messages():
+
+    if "role" not in session or session["role"] != "admin":
+        return "Access denied"
+
+    conn = sqlite3.connect("support_messages.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, name, email, subject, message, created_at
+        FROM support_messages
+        ORDER BY created_at DESC
+    """)
+
+    messages = cursor.fetchall()
+    conn.close()
+
+    return render_template(
+        "support_messages.html",
+        messages=messages
+    )
 
 # ============================================================
 # RUN

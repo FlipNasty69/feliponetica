@@ -292,23 +292,21 @@
 
         <div class="eyebrow">
 
-            English Course
+            Useful Information by Ferlipe Himself
 
         </div>
 
 
         <h1>
 
-            Lessons
+            PDFs
 
         </h1>
 
 
         <p>
 
-            Build your English step by step through
-            structured grammar, vocabulary,
-            pronunciation, and communication lessons.
+            El ingles finalmente es facil. Aqui estan los PDFs de las lecciones para que puedas estudiarlas a tu propio ritmo.
 
         </p>
 
@@ -334,7 +332,7 @@
 
                     <div class="lesson-number">
 
-                        LESSON {{ "%02d" | format(loop.index) }}
+                        PDF {{ "%02d" | format(loop.index) }}
 
                     </div>
 
@@ -352,8 +350,8 @@
 
                     <p>
 
-                        Open this lesson and
-                        work through the material.
+                        Open this PDF and
+                        be amazed at the material.
 
                     </p>
 
@@ -363,7 +361,7 @@
                         href="{{ url_for('lesson_pdf', filename=lesson) }}"
                         target="_blank">
 
-                        Open Lesson →
+                        Open PDF →
 
                     </a>
 

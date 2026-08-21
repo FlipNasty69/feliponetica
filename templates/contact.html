@@ -45,6 +45,9 @@
 
 </nav>
 
+<a href="{{ url_for('tech_support') }}" class="button">
+    Tech Support
+</a>
 
 <main class="main-container">
 
@@ -52,11 +55,11 @@
     <header class="page-header">
 
         <div class="eyebrow">
-            Get In Touch
+            Contact
         </div>
 
         <h1>
-            Contact
+            Get In Touch
         </h1>
 
         <p>
@@ -70,6 +73,7 @@
     <section class="card-grid">
 
 
+                <!-- EMAIL -->
         <article class="card">
 
             <div class="card-icon">
@@ -81,12 +85,80 @@
             </h2>
 
             <p>
-                Feliponetica@gmail.com
+                feliponetica@gmail.com
             </p>
 
-            <a href="#" class="button">
+            <a href="mailto:feliponetica@gmail.com" class="button">
                 Contact Us
             </a>
+
+        </article>
+
+
+        <!-- PHONE -->
+        <article class="card">
+
+            <div class="card-icon">
+                📞
+            </div>
+
+            <h2>
+                Phone
+            </h2>
+
+            <p>
+                52 (844) 443-2275
+            </p>
+
+            <a href="tel:+528444432275" class="button">
+                Call Us
+            </a>
+
+        </article>
+
+
+        <!-- SOCIAL MEDIA -->
+        <article class="card">
+
+            <div class="card-icon">
+                🌐
+            </div>
+
+            <h2>
+                Follow Us
+            </h2>
+
+            <p>
+                Facebook<br>
+                Instagram<br>
+                X<br>
+                TikTok<br>
+                WhatsApp
+            </p>
+
+            <div class="social-links">
+
+                <a href="https://www.facebook.com/share/1EniU5REVU/" class="button">
+                    Facebook
+                </a>
+
+                <a href="https://www.instagram.com/feliponetica.ingles?igsi=NTdrbWJtdDkwcTNt" class="button">
+                    Instagram
+                </a>
+
+                <a href="https://x.com/feliponetica" class="button">
+                    X
+                </a>
+
+                <a href="https://www.tiktok.com/@feliponetica?_r=1&_t=ZS-994c8iMivJM" class="button">
+                    TikTok
+                </a>
+
+                <a href="https://wa.me/qr/XRJ6AWY6VXGWC1" class="button">
+                    WhatsApp
+                </a>
+
+            </div>
 
         </article>
 
@@ -123,6 +195,8 @@
                 Report problems with the website, vocabulary
                 drills, Feliponetica, or other learning tools.
             </p>
+
+            <a href="{{ url_for('tech_support') }}" class="button">Tech Support</a>
 
         </article>
 

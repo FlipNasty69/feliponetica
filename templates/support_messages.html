@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Support Messages | Feliponetica</title>
+
+    <link rel="stylesheet"href="{{ url_for('static', filename='styles.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+    <nav class="navbar">
+
+        <div class="nav-container">
+
+            <a href="{{ url_for('home') }}" class="logo">
+                English<span>Course</span>
+            </a>
+
+            <div class="nav-links">
+
+                <div class="nav-links">
+
+                    <a href="/">Home</a>
+                    <a href="/feliponetica">Feliponetica</a>
+                    <a href="/vocab_drill">Vocabulary</a>
+                    <a href="/about">About</a>
+                    <a href="/contact">Contact</a>
+                    <a href="/lessons">Lessons</a>
+                    <a href="/course">Course</a>
+                    <a href="/live-classes">Live Classes</a>
+                    <a href="{{ url_for('logout') }}">Logout</a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </nav>
+
+    <div class="support-messages-page">
+
+        <div class="support-messages-container">
+
+            <h1>Tech Support Messages</h1>
+
+            <p class="support-messages-intro">
+                Messages submitted through the Feliponetica
+                Tech Support form.
+            </p>
+
+
+            {% if messages %}
+
+                {% for message in messages %}
+
+                    <div class="support-message">
+
+                        <div class="message-header">
+
+                            <h2>
+                                {{ message[3] }}
+                            </h2>
+
+                            <span>
+                                {{ message[5] }}
+                            </span>
+
+                        </div>
+
+
+                        <div class="message-info">
+
+                            <strong>Name:</strong>
+                            {{ message[1] }}
+
+                            <br>
+
+                            <strong>Email:</strong>
+                            {{ message[2] }}
+
+                        </div>
+
+
+                        <div class="message-body">
+
+                            {{ message[4] }}
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <div class="no-messages">
+
+                    <p>
+                        You don't have any support messages yet.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>
