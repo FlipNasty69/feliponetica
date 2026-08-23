@@ -16,7 +16,7 @@ app.secret_key = "supersecretkey"  # change this
 
 USERS = {
     "felipe": {"password": "stopplayin", "role": "admin"},
-    "karina": {"password": "i knew it", "role": "admin"},
+    "karina": {"password": "03162025", "role": "admin"},
     "student": {"password": "i sent the song", "role": "student"}
 }
 
