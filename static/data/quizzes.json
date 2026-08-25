@@ -14,8 +14,8 @@
                         "question": "She walks ____________ the street.",
                         "options": ["through", "across"],
                         "answer": "across",
-                        "audio_help": "audio/help.mp3",
-                        "image": "",
+                        "audio_help": "audio/help_through_across.mp3",
+                        "image": "images/popups/across_street.jpg",
                         "image_alt": ""
                     },
 
@@ -24,8 +24,8 @@
                         "question": "Walk __________ the forest.",
                         "options": ["through", "across"],
                         "answer": "through",
-                        "audio_help": "audio/help_q2.mp3",
-                        "image": "",
+                        "audio_help": "audio/help_through_across.mp3",
+                        "image": "images/popups/through_forest.webp",
                         "image_alt": ""
                     },
 
@@ -34,8 +34,8 @@
                         "question": "A fish swims ___________ the water.",
                         "options": ["through", "across"],
                         "answer": "through",
-                        "audio_help": "audio/help.mp3",
-                        "image": "",
+                        "audio_help": "audio/help_through_across.mp3",
+                        "image": "images/popups/through_water.jpg",
                         "image_alt": ""
                     },
 
@@ -44,8 +44,8 @@
                         "question": "A spider crawls ____________ the wall.",
                         "options": ["through", "across"],
                         "answer": "across",
-                        "audio_help": "audio/help.mp3",
-                        "image": "",
+                        "audio_help": "audio/help_through_across.mp3",
+                        "image": "images/popups/across_wall.jpg",
                         "image_alt": ""
                     },
 
@@ -54,8 +54,8 @@
                         "question": "Look ___________ the window.",
                         "options": ["through", "across"],
                         "answer": "through",
-                        "audio_help": "audio/help.mp3",
-                        "image": "",
+                        "audio_help": "audio/help_through_across.mp3",
+                        "image": "images/popups/through_window.jpg",
                         "image_alt": ""
                     },
 
@@ -64,8 +64,8 @@
                         "question": "Run__________ the ground.",
                         "options": ["through", "across"],
                         "answer": "across",
-                        "audio_help": "audio/help.mp3",
-                        "image": "",
+                        "audio_help": "audio/help_through_across.mp3",
+                        "image": "images/popups/across_ground.jpg",
                         "image_alt": ""
                     },
 
@@ -74,8 +74,8 @@
                         "question": "Drive ___________ the tunnel.",
                         "options": ["through", "across"],
                         "answer": "through",
-                        "audio_help": "audio/help.mp3",
-                        "image": "",
+                        "audio_help": "audio/help_through_across.mp3",
+                        "image": "images/popups/through_tunnel.jpg",
                         "image_alt": ""
                     },
 
@@ -84,8 +84,8 @@
                         "question": "Drive __________ the rain.",
                         "options": ["through", "across"],
                         "answer": "through",
-                        "audio_help": "audio/help.mp3",
-                        "image": "",
+                        "audio_help": "audio/help_through_across.mp3",
+                        "image": "images/popups/through_rain.jpg",
                         "image_alt": ""
                     }
 
