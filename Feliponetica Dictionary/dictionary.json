@@ -1,0 +1,30 @@
+{
+    "i": {
+        "pollito": "ai",
+        "gallo": "ai"
+    },
+    "we": {
+        "pollito": "wi",
+        "gallo": "wi"
+    },
+    "you": {
+        "pollito": "llu",
+        "gallo": "llu"
+    },
+    "they": {
+        "pollito": "dei",
+        "gallo": "th[z]ei"
+    },
+    "he": {
+        "pollito": "ji",
+        "gallo": "ji"
+    },
+    "she": {
+        "pollito": "shi",
+        "gallo": "shi"
+    },
+    "it": {
+        "pollito": "it",
+        "gallo": "i[h]t"
+    }
+}

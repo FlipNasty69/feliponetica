@@ -1,0 +1,115 @@
+{
+    "title": "Verb Conjugation",
+    "description": "Seven forms of English verb conjugation.",
+    "verbs": [
+
+        {
+            "id": "begin",
+            "base": "begin",
+            "present": "begin",
+            "third_person": "begins",
+            "future": "will begin",
+            "past": "began",
+            "infinitive": "to begin",
+            "ing": "beginning",
+            "past_participle": "begun"
+        },
+
+        {
+            "id": "drink",
+            "base": "drink",
+            "present": "drink",
+            "third_person": "drinks",
+            "future": "will drink",
+            "past": "drank",
+            "infinitive": "to drink",
+            "ing": "drinking",
+            "past_participle": "drunk"
+        },
+
+        {
+            "id": "sing",
+            "base": "sing",
+            "present": "sing",
+            "third_person": "sings",
+            "future": "will sing",
+            "past": "sang",
+            "infinitive": "to sing",
+            "ing": "singing",
+            "past_participle": "sung"
+        },
+
+        {
+            "id": "swim",
+            "base": "swim",
+            "present": "swim",
+            "third_person": "swims",
+            "future": "will swim",
+            "past": "swam",
+            "infinitive": "to swim",
+            "ing": "swimming",
+            "past_participle": "swum"
+        },
+
+        {
+            "id": "ring",
+            "base": "ring",
+            "present": "ring",
+            "third_person": "rings",
+            "future": "will ring",
+            "past": "rang",
+            "infinitive": "to ring",
+            "ing": "ringing",
+            "past_participle": "rung"
+        },
+
+        {
+            "id": "sink",
+            "base": "sink",
+            "present": "sink",
+            "third_person": "sinks",
+            "future": "will sink",
+            "past": "sank",
+            "infinitive": "to sink",
+            "ing": "sinking",
+            "past_participle": "sunk"
+        },
+
+        {
+            "id": "shrink",
+            "base": "shrink",
+            "present": "shrink",
+            "third_person": "shrinks",
+            "future": "will shrink",
+            "past": "shrank",
+            "infinitive": "to shrink",
+            "ing": "shrinking",
+            "past_participle": "shrunk"
+        },
+
+        {
+            "id": "swing",
+            "base": "swing",
+            "present": "swing",
+            "third_person": "swings",
+            "future": "will swing",
+            "past": "swung",
+            "infinitive": "to swing",
+            "ing": "swinging",
+            "past_participle": "swung"
+        },
+
+        {
+            "id": "stink",
+            "base": "stink",
+            "present": "stink",
+            "third_person": "stinks",
+            "future": "will stink",
+            "past": "stank",
+            "infinitive": "to stink",
+            "ing": "stinking",
+            "past_participle": "stunk"
+        }
+
+    ]
+}

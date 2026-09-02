@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Verb Conjugation Game | Feliponetica Inglés</title>
+
+    <!-- EXISTING SITE CSS -->
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/styles.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+<!-- =========================================================
+     NAVIGATION
+     ========================================================= -->
+
+<nav class="navbar">
+
+    <div class="nav-container">
+
+        <a href="/" class="logo">
+            Feliponetica <span>Inglés</span>
+        </a>
+
+        <div class="nav-links">
+
+            <a href="{{ url_for('home') }}">
+                Home
+            </a>
+
+            <a href="{{ url_for('about') }}">
+                About
+            </a>
+
+            <a href="{{ url_for('course') }}">
+                Course
+            </a>
+
+            <a href="{{ url_for('vocab') }}">
+                Vocabulary
+            </a>
+
+            <a href="{{ url_for('lessons') }}">
+                Lessons
+            </a>
+
+            <a href="{{ url_for('live_classes') }}">
+                Live Classes
+            </a>
+
+        </div>
+
+    </div>
+
+</nav>
+
+<div class="conjugation-game">
+
+    <!-- BASE FORM -->
+    <div class="base-form-area">
+        <div class="area-label">BASE FORM</div>
+        <div id="base-word" class="base-word">BEGIN</div>
+    </div>
+
+
+    <!-- MAIN BOARD -->
+    <div class="conjugation-board">
+
+        <!-- PAST: 1a + 1b -->
+        <div class="verb-area past-area" data-form="past">
+            <div class="area-label">PAST</div>
+
+            <div class="answer-options">
+                <button data-answer="1"></button>
+                <button data-answer="2"></button>
+                <button data-answer="3"></button>
+                <button data-answer="4"></button>
+                <button data-answer="5"></button>
+                <button data-answer="6"></button>
+                <button data-answer="7"></button>
+            </div>
+
+            <button class="help-button">HELP</button>
+        </div>
+
+
+        <!-- PRESENT: 2a -->
+        <div class="verb-area present-area" data-form="present">
+            <div class="area-label">PRESENT</div>
+
+            <div class="answer-options">
+                <button data-answer="1"></button>
+                <button data-answer="2"></button>
+                <button data-answer="3"></button>
+                <button data-answer="4"></button>
+                <button data-answer="5"></button>
+                <button data-answer="6"></button>
+                <button data-answer="7"></button>
+            </div>
+
+            <button class="help-button">HELP</button>
+        </div>
+
+
+        <!-- 3RD PERSON: 2b -->
+        <div class="verb-area third-person-area" data-form="third_person">
+            <div class="area-label">3RD PERSON SINGULAR</div>
+
+            <div class="answer-options">
+                <button data-answer="1"></button>
+                <button data-answer="2"></button>
+                <button data-answer="3"></button>
+                <button data-answer="4"></button>
+                <button data-answer="5"></button>
+                <button data-answer="6"></button>
+                <button data-answer="7"></button>
+            </div>
+
+            <button class="help-button">HELP</button>
+        </div>
+
+
+        <!-- FUTURE: 3a + 3b -->
+        <div class="verb-area future-area" data-form="future">
+            <div class="area-label">FUTURE</div>
+
+            <div class="answer-options">
+                <button data-answer="1"></button>
+                <button data-answer="2"></button>
+                <button data-answer="3"></button>
+                <button data-answer="4"></button>
+                <button data-answer="5"></button>
+                <button data-answer="6"></button>
+                <button data-answer="7"></button>
+            </div>
+
+            <button class="help-button">HELP</button>
+        </div>
+
+    </div>
+
+
+    <!-- INFINITIVE: 1d + 2d -->
+    <div class="verb-area full-width-area" data-form="infinitive">
+        <div class="area-label">INFINITIVE</div>
+
+        <div class="answer-options">
+            <button data-answer="1"></button>
+            <button data-answer="2"></button>
+            <button data-answer="3"></button>
+            <button data-answer="4"></button>
+            <button data-answer="5"></button>
+            <button data-answer="6"></button>
+            <button data-answer="7"></button>
+        </div>
+
+        <button class="help-button">HELP</button>
+    </div>
+
+
+    <!-- ING: 1f + 2f -->
+    <div class="verb-area full-width-area" data-form="ing">
+        <div class="area-label">-ING</div>
+
+        <div class="answer-options">
+            <button data-answer="1"></button>
+            <button data-answer="2"></button>
+            <button data-answer="3"></button>
+            <button data-answer="4"></button>
+            <button data-answer="5"></button>
+            <button data-answer="6"></button>
+            <button data-answer="7"></button>
+        </div>
+
+        <button class="help-button">HELP</button>
+    </div>
+
+
+    <!-- PAST PARTICIPLE: 1h + 2h -->
+    <div class="verb-area full-width-area" data-form="past_participle">
+        <div class="area-label">PAST PARTICIPLE</div>
+
+        <div class="answer-options">
+            <button data-answer="1"></button>
+            <button data-answer="2"></button>
+            <button data-answer="3"></button>
+            <button data-answer="4"></button>
+            <button data-answer="5"></button>
+            <button data-answer="6"></button>
+            <button data-answer="7"></button>
+        </div>
+
+        <button class="help-button">HELP</button>
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='scripts/conjugation_engine.js') }}"></script>
+
+</body>
+
+</html>
