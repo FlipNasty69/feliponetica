@@ -2,29 +2,45 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Course | English Course</title>
 
-   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 
 <body>
 
+    <!-- Shared depth background -->
+    <div class="depth-background"
+         id="depth-background"
+         data-image-count="50"
+         data-image-folder="{{ url_for('static', filename='images/class pics') }}">
 
-<nav class="navbar">
+        <div class="depth-layer depth-10"></div>
+        <div class="depth-layer depth-9"></div>
+        <div class="depth-layer depth-8"></div>
+        <div class="depth-layer depth-7"></div>
+        <div class="depth-layer depth-6"></div>
+        <div class="depth-layer depth-5"></div>
+        <div class="depth-layer depth-4"></div>
+        <div class="depth-layer depth-3"></div>
+        <div class="depth-layer depth-2"></div>
+        <div class="depth-layer depth-1"></div>
 
-    <div class="nav-container">
+    </div>
 
-        <a href="{{ url_for('home') }}" class="logo">
-            English<span>Course</span>
-        </a>
 
-        <div class="nav-links">
+    <!-- Navigation -->
+    <nav class="navbar">
+
+        <div class="nav-container">
+
+            <a href="{{ url_for('home') }}" class="logo">
+                English<span>Course</span>
+            </a>
 
             <div class="nav-links">
 
@@ -41,160 +57,215 @@
 
         </div>
 
-    </div>
-
-</nav>
+    </nav>
 
 
-<main class="main-container">
+    <!-- Main Content -->
+    <main class="main-container">
 
+        <!-- Page Header -->
+        <header class="page-header">
 
-    <header class="page-header">
-
-        <div class="eyebrow">
-            The Program
-        </div>
-
-        <h1>
-            Course Overview
-        </h1>
-
-        <p>
-            A gramatical analysis of the English language, designed around key concepts and vocabulary.
-        </p>
-
-    </header>
-
-
-    <section class="card-grid">
-
-
-        <article class="level-card">
-            <div class="level-number">
-                PREPOSITIONS
+            <div class="eyebrow">
+                The Program
             </div>
-            <h2>Prepositions</h2>
-            <p>
-                A systematic developmental approach to the English preposition anomaly and how it can be understood and mastered through a series of lessons that build on one another, each introducing new concepts and vocabulary.
-            </p>
-            <ul class="level-list">
-                <li>Place</li>
-                <li>Movement</li>
-                <li>Time</li>
-                <li>Manner</li>
-                <li>A Complete Individual Analysis</li>
-            </ul>
 
-                <!-- NEW: The button to launch the interactive module -->
-                <div style="margin-top: 20px;">
+            <h1>Course Overview</h1>
+
+            <p>A gramatical analysis of the English language, designed around key concepts and vocabulary.</p>
+            <div class="eyebrow">Un análisis gramatical de la lengua inglesa, estructurado en torno a conceptos clave y vocabulario.</div>
+
+        </header>
+
+
+        <!-- Course Areas -->
+        <section class="card-grid">
+
+
+            <!-- Prepositions -->
+            <article class="level-card">
+
+                <div class="level-number">
+                    PREPOSITIONS
+                </div>
+
+                <h2>Prepositions</h2>
+
+                <p>A systematic developmental approach to the English preposition anomaly and how it can be understood and mastered through a series of lessons that build on one another, each introducing new concepts and vocabulary.</p>
+                <div class="eyebrow">Un enfoque sistemático y progresivo de la «anomalía de las preposiciones» en inglés y de cómo comprenderla y dominarla mediante una serie de lecciones que se complementan entre sí, cada una de las cuales introduce nuevos conceptos y vocabulario.</div>
+
+
+                <ul class="level-list">
+                    <li>Place</li>
+                    <li>Movement</li>
+                    <li>Time</li>
+                    <li>Manner</li>
+                    <li>A Complete Individual Analysis</li>
+                </ul>
+
+                <div class="card-footer">
+
                     <a href="/module/module_1"
-                       class="button">
+                       class="button button-primary">
                         Start Module: Through vs. Across
                     </a>
+
                 </div>
-        </article>
+
+            </article>
 
 
-        <article class="level-card">
+            <!-- Verbs -->
+            <article class="level-card">
 
-            <div class="level-number">
-                VERBS
-            </div>
+                <div class="level-number">
+                    VERBS
+                </div>
 
-            <h2>Verbs</h2>
+                <h2>Verbs</h2>
+
+                <p>Verb types and a total picture analysis of their interrelationships including new terminology and concepts.</p>
+                <div class="eyebrow">Tipos de verbos y un análisis global de sus interrelaciones, que incluye nueva terminología y conceptos.</div>
+
+
+                <ul class="level-list">
+                    <li>Verb Conjugation</li>
+                    <a href="/module/module_4"
+                       class="button button-primary">
+                        Start Module: Verb Conjugation
+                    </a>
+                    <li>The Bully Verb Concept</li>
+                    <li>Linking Verbs</li>
+                    <li>Phrasal Verbs</li>
+                    <li>Infinitive VS. Gerund</li>
+                </ul>
+
+            </article>
+
+
+            <!-- Adjectives -->
+            <article class="level-card">
+
+                <div class="level-number">
+                    ADJECTIVES
+                </div>
+
+                <h2>Adjectives</h2>
+
+                <p>A comprehensive study of adjectives from their basic forms to their most complex uses, including comparative and superlative forms, and every other structure that preforms the adjective's function in English.</p>
+                <div class="eyebrow">Un estudio exhaustivo de los adjetivos, desde sus formas básicas hasta sus usos más complejos, incluyendo las formas comparativas y superlativas, así como cualquier otra estructura que desempeñe la función del adjetivo en inglés.</div>
+
+                <ul class="level-list">
+                    <li>Basic Adjective Forms</li>
+                    <li>Comparative and Superlative Adjectives</li>
+                    <li>Participle Adjectives</li>
+                    <li>Relative (Adjective) Clauses</li>
+                    <li>And Everything Else</li>
+                </ul>
+
+            </article>
+
+
+            <!-- Adverbs -->
+            <article class="level-card">
+
+                <div class="level-number">
+                    ADVERBS
+                </div>
+
+                <h2>Adverbs</h2>
+
+                <p>Adverbs and their many forms, functions, and uses in English, with a focus on placement.</p>
+                <div class="eyebrow">Los adverbios y sus múltiples formas, funciones y usos en inglés, con especial atención a su ubicación.</div>
+
+
+                <ul class="level-list">
+                    <li>Time &amp; Place</li>
+                    <li>Frequency</li>
+                    <li>Manner, Certainty, &amp; Degree</li>
+                    <li>Certainty &amp; Others</li>
+                    <li>Adverbial Clauses</li>
+                </ul>
+
+                <div class="card-footer">
+
+                    <a href="/module/module_2"
+                       class="button button-primary">
+                        Start Module: Reduced Relative Clauses
+                    </a>
+
+                </div>
+
+            </article>
+
+
+            <!-- Passive Voice -->
+            <article class="level-card">
+
+                <div class="level-number">
+                    PASSIVE VOICE
+                </div>
+
+                <h2>Passive Voice</h2>
+
+                <p>
+                    The passive voice grammatical structure.
+                </p>
+
+                <ul class="level-list">
+                    <li>
+                        Simple, continuous, perfect, perfect continuous,
+                        and modals
+                    </li>
+                    <li>Negatives</li>
+                    <li>Questions</li>
+                </ul>
+
+                <div class="card-footer">
+
+                    <a href="/module/module_3"
+                       class="button button-primary">
+                        Start Module: Passive Voice
+                    </a>
+
+                </div>
+
+            </article>
+
+
+        </section>
+
+
+        <!-- How the Course Works -->
+        <section class="info-section section-lg">
+
+            <h2>
+                How the course works
+            </h2>
 
             <p>
-                Verb types and a total picture analysis of their interrelationships including new terminology and concepts.
+                There is no place to start. Any lesson may be taken at any
+                time. The lessons are designed to be taken in any order,
+                and each lesson is self-contained. Each lesson is designed
+                to build from an elementary point and develop into a more
+                complex understanding of the English language.
             </p>
 
-            <ul class="level-list">
+        </section>
 
-                <li>Verb Conjugation</li>
-                <li>The Bully Verb Concept</li>
-                <li>Linking Verbs</li>
-                <li>Phrasal Verbs</li>
-                <li>Infinitive VS. Gerund</li>
-
-            </ul>
-
-        </article>
+    </main>
 
 
-        <article class="level-card">
+    <!-- Footer -->
+    <footer class="footer">
 
-            <div class="level-number">
-                ADJECTIVES
-            </div>
+        English Grammar Course · Course Overview
 
-            <h2>Adjectives</h2>
-
-            <p>
-                A comprehensive study of adjectives from their basic forms to their most complex uses, including comparative and superlative forms, and every other structure that preforms the adjective's function in English.
-            </p>
-
-            <ul class="level-list">
-
-                <li>Basic Adjective Forms</li>
-                <li>Comparative and Superlative Adjectives</li>
-                <li>Participle Adjectives</li>
-                <li>Relative(adjective) Clauses</li>
-                <li>And Everything Else</li>
-
-            </ul>
-
-        </article>
+    </footer>
 
 
-        <article class="level-card">
-
-            <div class="level-number">
-                ADVERBS
-            </div>
-
-            <h2>Adverbs</h2>
-
-            <p>
-                Adverbs and their many forms, functions, and uses in English, with a focus on placement.
-            </p>
-
-            <ul class="level-list">
-
-                <li>Time & Place</li>
-                <li>Frequency</li>
-                <li>Manner, Certainty, & Degree...</li>
-                <li>Certainty & Others</li>
-                <li>Adverbial Clauses</li>
-
-            </ul>
-
-        </article>
-
-
-    </section>
-
-
-    <section class="info-section">
-
-        <h2>
-            How the course works
-        </h2>
-
-        <p>
-            There is no place to start. Any lesson may be taken at any time. The lessons are designed to be taken in any order, and each lesson is self-contained. Each of the lessons is designed to build from an elementary point and develop into a more complex understanding of the English language.
-        </p>
-
-    </section>
-
-
-</main>
-
-
-<footer class="footer">
-
-    English Grammar Course · Course Overview
-
-</footer>
-
+    <!-- Shared depth background JavaScript -->
+    <script src="{{ url_for('static', filename='js/depth-background.js') }}"></script>
 
 </body>
 </html>

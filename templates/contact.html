@@ -2,29 +2,45 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Contact | English Course</title>
 
-   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 
 <body>
 
+    <!-- Shared depth background -->
+    <div class="depth-background"
+         id="depth-background"
+         data-image-count="50"
+         data-image-folder="{{ url_for('static', filename='images/class pics') }}">
 
-<nav class="navbar">
+        <div class="depth-layer depth-10"></div>
+        <div class="depth-layer depth-9"></div>
+        <div class="depth-layer depth-8"></div>
+        <div class="depth-layer depth-7"></div>
+        <div class="depth-layer depth-6"></div>
+        <div class="depth-layer depth-5"></div>
+        <div class="depth-layer depth-4"></div>
+        <div class="depth-layer depth-3"></div>
+        <div class="depth-layer depth-2"></div>
+        <div class="depth-layer depth-1"></div>
 
-    <div class="nav-container">
+    </div>
 
-        <a href="{{ url_for('home') }}" class="logo">
-            English<span>Course</span>
-        </a>
 
-        <div class="nav-links">
+    <!-- Navigation -->
+    <nav class="navbar">
+
+        <div class="nav-container">
+
+            <a href="{{ url_for('home') }}" class="logo">
+                English<span>Course</span>
+            </a>
 
             <div class="nav-links">
 
@@ -41,178 +57,177 @@
 
         </div>
 
-    </div>
-
-</nav>
-
-<a href="{{ url_for('tech_support') }}" class="button">
-    Tech Support
-</a>
-
-<main class="main-container">
+    </nav>
 
 
-    <header class="page-header">
+    <!-- Main Content -->
+    <main class="main-container">
 
-        <div class="eyebrow">
-            Contact
-        </div>
+        <!-- Page Header -->
+        <header class="page-header">
 
-        <h1>
-            Get In Touch
-        </h1>
-
-        <p>
-            Questions about the course, lessons, classes,
-            or technical support? Get in touch.
-        </p>
-
-    </header>
-
-
-    <section class="card-grid">
-
-
-                <!-- EMAIL -->
-        <article class="card">
-
-            <div class="card-icon">
-                ✉️
+            <div class="eyebrow">
+                Contact
             </div>
 
-            <h2>
-                Email
-            </h2>
+            <h1>Get In Touch</h1>
 
             <p>
-                feliponetica@gmail.com
+                Questions about the course, lessons, classes,
+                or technical support? Get in touch.
             </p>
 
-            <a href="mailto:feliponetica@gmail.com" class="button">
-                Contact Us
-            </a>
-
-        </article>
+        </header>
 
 
-        <!-- PHONE -->
-        <article class="card">
-
-            <div class="card-icon">
-                📞
-            </div>
-
-            <h2>
-                Phone
-            </h2>
-
-            <p>
-                52 (844) 443-2275
-            </p>
-
-            <a href="tel:+528444432275" class="button">
-                Call Us
-            </a>
-
-        </article>
+        <!-- Contact Options -->
+        <section class="card-grid">
 
 
-        <!-- SOCIAL MEDIA -->
-        <article class="card">
+            <!-- Email -->
+            <article class="card">
 
-            <div class="card-icon">
-                🌐
-            </div>
+                <div class="card-icon">
+                    ✉️
+                </div>
 
-            <h2>
-                Follow Us
-            </h2>
+                <h2>Email</h2>
 
-            <p>
-                Facebook<br>
-                Instagram<br>
-                X<br>
-                TikTok<br>
-                WhatsApp
-            </p>
+                <p>
+                    feliponetica@gmail.com
+                </p>
 
-            <div class="social-links">
-
-                <a href="https://www.facebook.com/share/1EniU5REVU/" class="button">
-                    Facebook
+                <a href="mailto:feliponetica@gmail.com"
+                   class="button button-primary">
+                    Contact Us
                 </a>
 
-                <a href="https://www.instagram.com/feliponetica.ingles?igsi=NTdrbWJtdDkwcTNt" class="button">
-                    Instagram
+            </article>
+
+
+            <!-- Phone -->
+            <article class="card">
+
+                <div class="card-icon">
+                    📞
+                </div>
+
+                <h2>Phone</h2>
+
+                <p>
+                    52 (844) 443-2275
+                </p>
+
+                <a href="tel:+528444432275"
+                   class="button button-primary">
+                    Call Us
                 </a>
 
-                <a href="https://x.com/feliponetica" class="button">
-                    X
-                </a>
+            </article>
 
-                <a href="https://www.tiktok.com/@feliponetica?_r=1&_t=ZS-994c8iMivJM" class="button">
-                    TikTok
-                </a>
 
-                <a href="https://wa.me/qr/XRJ6AWY6VXGWC1" class="button">
+            <!-- Social Media -->
+            <article class="card">
+
+                <div class="card-icon">
+                    🌐
+                </div>
+
+                <h2>Follow Us</h2>
+
+                <p>
+                    Facebook<br>
+                    Instagram<br>
+                    X<br>
+                    TikTok<br>
                     WhatsApp
+                </p>
+
+                <div class="social-links">
+
+                    <a href="https://www.facebook.com/share/1EniU5REVU/"
+                       class="button button-secondary">
+                        Facebook
+                    </a>
+
+                    <a href="https://www.instagram.com/feliponetica.ingles?igsi=NTdrbWJtdDkwcTNt"
+                       class="button button-secondary">
+                        Instagram
+                    </a>
+
+                    <a href="https://x.com/feliponetica"
+                       class="button button-secondary">
+                        X
+                    </a>
+
+                    <a href="https://www.tiktok.com/@feliponetica?_r=1&_t=ZS-994c8iMivJM"
+                       class="button button-secondary">
+                        TikTok
+                    </a>
+
+                    <a href="https://wa.me/qr/XRJ6AWY6VXGWC1"
+                       class="button button-secondary">
+                        WhatsApp
+                    </a>
+
+                </div>
+
+            </article>
+
+
+            <!-- Questions -->
+            <article class="card">
+
+                <div class="card-icon">
+                    💬
+                </div>
+
+                <h2>Questions</h2>
+
+                <p>
+                    Use this section for general questions about
+                    lessons, vocabulary, classes, or the program.
+                </p>
+
+            </article>
+
+
+            <!-- Technical Support -->
+            <article class="card">
+
+                <div class="card-icon">
+                    🛠️
+                </div>
+
+                <h2>Technical Support</h2>
+
+                <p>
+                    Ahorita solo soy yo. Si quieren que haga algo, mandenme dinero y un mensaje. ;D
+                </p>
+
+                <a href="{{ url_for('tech_support') }}"
+                   class="button button-primary">
+                    Tech Support
                 </a>
 
-            </div>
-
-        </article>
+            </article>
 
 
-        <article class="card">
+        </section>
 
-            <div class="card-icon">
-                💬
-            </div>
-
-            <h2>
-                Questions
-            </h2>
-
-            <p>
-                Use this section for general questions about
-                lessons, vocabulary, classes, or the program.
-            </p>
-
-        </article>
+    </main>
 
 
-        <article class="card">
+    <!-- Footer -->
+    <footer class="footer">
 
-            <div class="card-icon">
-                🛠️
-            </div>
+        English Course · Contact
 
-            <h2>
-                Technical Support
-            </h2>
-
-            <p>
-                Report problems with the website, vocabulary
-                drills, Feliponetica, or other learning tools.
-            </p>
-
-            <a href="{{ url_for('tech_support') }}" class="button">Tech Support</a>
-
-        </article>
+    </footer>
 
 
-    </section>
-
-
-</main>
-
-
-<footer class="footer">
-
-    English Course · Contact
-
-</footer>
-
+    <!-- Shared depth background JavaScript -->
+    <script src="{{ url_for('static', filename='js/depth-background.js') }}"></script>
 
 </body>
 </html>
