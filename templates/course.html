@@ -16,8 +16,10 @@
     <!-- Shared depth background -->
     <div class="depth-background"
          id="depth-background"
-         data-image-count="50"
-         data-image-folder="{{ url_for('static', filename='images/class pics') }}">
+         data-image-count="42"
+         data-image-folder="{{ url_for('static', filename='images/class_pics') }}"
+         data-image-prefix="class_pics"
+         data-image-extensions="jpg,jpeg">
 
         <div class="depth-layer depth-10"></div>
         <div class="depth-layer depth-9"></div>
@@ -265,7 +267,7 @@
 
 
     <!-- Shared depth background JavaScript -->
-    <script src="{{ url_for('static', filename='js/depth-background.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/background_engine.js') }}"></script>
 
 </body>
 </html>

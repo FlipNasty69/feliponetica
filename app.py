@@ -732,8 +732,10 @@ def interactive_module(module_id):
     video_module = videos_data.get(module_id)
     quiz_module = quizzes_data.get(module_id)
 
-    if not video_module:
+    if not video_module and not quiz_module:
         return f"URL module_id = [{module_id}]<br>JSON keys = {list(videos_data.keys())}"
+
+    content_module = video_module or quiz_module
 
 
     # --------------------------------------------------------
@@ -742,12 +744,12 @@ def interactive_module(module_id):
 
     module = {
 
-        "title": video_module.get(
+        "title": content_module.get(
             "title",
             module_id
         ),
 
-        "description": video_module.get(
+        "description": content_module.get(
             "description",
             ""
         ),
@@ -779,51 +781,54 @@ def interactive_module(module_id):
     # COMBINE VIDEO + QUIZ SERIES
     # --------------------------------------------------------
 
-    for series in video_module.get(
-        "series",
-        []
-    ):
+    video_series = {
+        series.get("id"): series
+        for series in (video_module or {}).get("series", [])
+    }
 
-        series_id = series.get(
-            "id"
+    all_series_ids = list(
+        dict.fromkeys(
+            list(video_series.keys()) +
+            list(quiz_series.keys())
         )
+    )
 
-        matching_quiz_series = quiz_series.get(
-            series_id,
-            {}
-        )
+    for series_id in all_series_ids:
+
+        video_series_data = video_series.get(series_id, {})
+        quiz_series_data = quiz_series.get(series_id, {})
 
 
         combined_series = {
 
             "id": series_id,
 
-            "title": series.get(
+            "title": video_series_data.get(
                 "title",
-                ""
+                quiz_series_data.get("title", f"Series {series_id}")
             ),
 
-            "description": series.get(
+            "description": video_series_data.get(
                 "description",
-                ""
+                quiz_series_data.get("description", "")
             ),
 
-            "videos": series.get(
+            "videos": video_series_data.get(
                 "videos",
                 []
             ),
 
-            "quiz": matching_quiz_series.get(
+            "quiz": quiz_series_data.get(
                 "questions",
                 []
             ),
 
-            "audio": series.get(
+            "audio": video_series_data.get(
                 "audio",
                 []
             ),
 
-            "images": series.get(
+            "images": video_series_data.get(
                 "images",
                 []
             )

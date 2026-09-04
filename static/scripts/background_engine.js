@@ -2,346 +2,134 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const background = document.getElementById("depth-background");
 
-    if (!background) {return;}
-
-    const imageCount =
-        parseInt(
-            background.dataset.imageCount
-        );
-
-
-    /* =====================================================
-       SETTINGS
-       ===================================================== */
-
-    const IMAGE_COUNT =
-        Number(background.dataset.imageCount) || 42;
-
-    const IMAGE_FOLDER =
-        background.dataset.imageFolder;
-
-
-    /* =====================================================
-       DEPTH SETTINGS
-
-       Layer 1 = closest
-       Layer 10 = farthest
-
-       Closest image = 25vw
-
-       Each layer is smaller than the previous one,
-       but NOT by 50%.
-
-       This gives us a visible depth effect instead
-       of making the distant pictures microscopic.
-       ===================================================== */
-
-    const DEPTH_SCALES = {
-
-         1: 1,
-        2: 0.50,
-        3: 0.25,
-        4: 0.125,
-        5: 0.0625,
-        6: 0.03125,
-        7: 0.015625,
-        8: 0.0078125,
-        9: 0.00390625,
-        10: 0.001953125
-
-    };
-
-
-    /* =====================================================
-       NUMBER OF IMAGES
-
-       IMPORTANT:
-
-       Closest layers = fewer images
-       Distant layers = more images
-
-       This creates the feeling that the viewer is
-       surrounded by many distant objects while only
-       a few large objects pass close to the viewer.
-       ===================================================== */
-
-    const OBJECTS_PER_LEVEL = {
-
-        1: 10,
-        2: 6,
-        3: 10,
-        4: 10,
-        5: 10,
-        6: 5,
-        7: 4,
-        8: 7,
-        9: 8,
-        10: 10
-
-    };
-
-
-    /* =====================================================
-       DEPTH SPEED
-
-       Closest = fastest
-       Farthest = slowest
-       ===================================================== */
-
-    const DEPTH_SPEEDS = {
-
-        1: 1.00,
-        2: 0.92,
-        3: 0.84,
-        4: 0.76,
-        5: 0.68,
-        6: 0.60,
-        7: 0.52,
-        8: 0.45,
-        9: 0.38,
-        10: 0.32
-
-    };
-
-
-    /* =====================================================
-       RANDOM FUNCTIONS
-       ===================================================== */
-
-    function randomInt(min, max) {
-
-        return Math.floor(
-            Math.random() * (max - min + 1)
-        ) + min;
-
+    if (!background) {
+        return;
     }
 
+    const imageCount = Number(background.dataset.imageCount) || 0;
+    const imageFolder = (background.dataset.imageFolder || "").replace(/\/$/, "");
+    const imagePrefix = background.dataset.imagePrefix || "class_pics";
+    const extensions = (background.dataset.imageExtensions || "jpg,jpeg,png,webp")
+        .split(",")
+        .map(function (extension) {
+            return extension.trim().replace(/^\./, "");
+        })
+        .filter(Boolean);
+
+    if (!imageCount || !imageFolder) {
+        return;
+    }
+
+    const depthScales = [1, 0.72, 0.52, 0.38, 0.28, 0.20, 0.14, 0.10, 0.07, 0.05];
+    const depthOpacity = [1, 0.84, 0.66, 0.51, 0.39, 0.29, 0.21, 0.15, 0.10, 0.06];
+    const depthDuration = [75, 88, 102, 118, 136, 155, 176, 198, 222, 248];
 
     function random(min, max) {
-
-        return Math.random() *
-            (max - min) + min;
-
+        return Math.random() * (max - min) + min;
     }
 
-
-    /* =====================================================
-       RANDOM IMAGE
-       ===================================================== */
-
-    function randomImage() {
-
-        const number =
-            randomInt(1, IMAGE_COUNT);
-
-        return `${IMAGE_FOLDER}/class_pics%20(${number}).jpg`;
-
+    function randomInt(min, max) {
+        return Math.floor(random(min, max + 1));
     }
 
+    function setProperty(element, name, value) {
+        element.style.setProperty(name, value);
+    }
 
-    /* =====================================================
-       CREATE ONE PHOTO
-       ===================================================== */
+    function ensureLayers() {
+        for (let level = 10; level >= 1; level -= 1) {
+            let layer = background.querySelector(".depth-" + level);
 
-    function createObject(level) {
+            if (!layer) {
+                layer = document.createElement("div");
+                layer.className = "depth-layer depth-" + level;
+                background.appendChild(layer);
+            }
+        }
+    }
 
-        const layer =
-            background.querySelector(
-                `.depth-${level}`
-            );
+    function getTrajectory() {
+        const side = randomInt(0, 3);
+        let startX;
+        let startY;
+        let endX;
+        let endY;
 
-        if (!layer) {
-            return;
+        if (side === 0) {
+            startX = random(-25, 125);
+            startY = random(-35, -15);
+            endX = startX + random(-55, 55);
+            endY = random(115, 140);
+        } else if (side === 1) {
+            startX = random(0, 100);
+            startY = random(115, 140);
+            endX = startX + random(-55, 55);
+            endY = random(-35, -15);
+        } else if (side === 2) {
+            startX = random(-35, -15);
+            startY = random(-20, 120);
+            endX = random(115, 140);
+            endY = startY + random(-45, 45);
+        } else {
+            startX = random(115, 140);
+            startY = random(-20, 120);
+            endX = random(-35, -15);
+            endY = startY + random(-45, 45);
         }
 
+        return {
+            startX: startX,
+            startY: startY,
+            endX: endX,
+            endY: endY
+        };
+    }
 
-        const object =
-            document.createElement("div");
+    function createObject(imageNumber, level) {
+        const layer = background.querySelector(".depth-" + level);
+        const object = document.createElement("div");
+        const image = document.createElement("img");
+        const trajectory = getTrajectory();
+        const scale = depthScales[level - 1];
+        const duration = random(depthDuration[level - 1] * 0.82, depthDuration[level - 1] * 1.18);
+        let extensionIndex = 0;
 
-        object.className =
-            "depth-object depth-frame";
-
-
-        /* =================================================
-           SIZE
-
-           Layer 1 = 25vw
-
-           Everything behind it becomes progressively
-           smaller.
-           ================================================= */
-
-       const baseSize = window.innerWidth * 0.25;
-
-        const size =
-            baseSize * DEPTH_SCALES[level];
-
-        object.style.setProperty(
-            "--size",
-            `${size}px`
-        );
-
-
-        object.style.setProperty(
-            "--depth-scale",
-            DEPTH_SCALES[level]
-        );
-
-
-        /* =================================================
-           POSITION
-
-           Keep the photographs spread around the screen.
-           ================================================= */
-
-        const startX =
-            random(-20, 120);
-
-        const startY =
-            random(5, 95);
-
-
-        object.style.setProperty(
-            "--x",
-            `${startX}vw`
-        );
-
-        object.style.setProperty(
-            "--y",
-            `${startY}vh`
-        );
-
-
-        /* =================================================
-           ROTATION
-
-           Farther images rotate less.
-           ================================================= */
-
-        const rotationAmount =
-            6 * DEPTH_SCALES[level];
-
-        const rotation =
-            random(
-                -rotationAmount,
-                rotationAmount
-            );
-
-
-        object.style.setProperty(
-            "--rotation",
-            `${rotation}deg`
-        );
-
-
-        /* =================================================
-           SPEED
-
-           The farther away the object is,
-           the slower it moves.
-           ================================================= */
-
-        const speed =
-            DEPTH_SPEEDS[level];
-
-
-        const baseDuration =
-            random(45, 65);
-
-
-        const duration =
-            baseDuration / speed;
-
-
-        object.style.setProperty(
-            "--duration",
-            `${duration}s`
-        );
-
-
-        /* =================================================
-           RANDOM START
-
-           Negative delay means the animation begins
-           somewhere in the middle rather than making
-           every photograph appear simultaneously.
-           ================================================= */
-
-        const delay =
-            random(-duration, 0);
-
-
-        object.style.setProperty(
-            "--delay",
-            `${delay}s`
-        );
-
-
-        /* =================================================
-           DIRECTION
-           ================================================= */
-
-        const direction =
-            Math.random() < 0.5
-                ? "depth-moving-left"
-                : "depth-moving-right";
-
-
-        object.classList.add(direction);
-
-
-        /* =================================================
-           IMAGE
-           ================================================= */
-
-        const image =
-            document.createElement("img");
-
-
-        image.src =
-            randomImage();
-
-
+        object.className = "depth-object depth-frame";
         image.alt = "";
+        image.decoding = "async";
 
+        setProperty(object, "--size", window.innerWidth * 0.25 + "px");
+        setProperty(object, "--depth-scale", scale);
+        setProperty(object, "--depth-opacity", depthOpacity[level - 1]);
+        setProperty(object, "--start-x", trajectory.startX + "vw");
+        setProperty(object, "--start-y", trajectory.startY + "vh");
+        setProperty(object, "--end-x", trajectory.endX + "vw");
+        setProperty(object, "--end-y", trajectory.endY + "vh");
+        setProperty(object, "--start-rotation", random(-14, 14) + "deg");
+        setProperty(object, "--end-rotation", random(-14, 14) + "deg");
+        setProperty(object, "--duration", duration + "s");
+        setProperty(object, "--delay", random(-duration, 0) + "s");
 
-        image.onerror =
-            function () {
-
+        function loadImage() {
+            if (extensionIndex >= extensions.length) {
                 object.remove();
+                return;
+            }
 
-            };
-
-
-        object.appendChild(image);
-
-
-        layer.appendChild(object);
-
-    }
-
-
-   /* =====================================================
-       BUILD BACKGROUND
-
-       Farthest layers first.
-       Closest layers last.
-
-       This makes the depth order explicit.
-       ===================================================== */
-
-    for (let level = 10; level >= 1; level--) {
-
-        const count =
-            OBJECTS_PER_LEVEL[level];
-
-
-        for (let i = 0; i < count; i++) {
-
-            createObject(level);
-
+            image.src = imageFolder + "/" + imagePrefix + "%20(" + imageNumber + ")." + extensions[extensionIndex];
+            extensionIndex += 1;
         }
 
+        image.onerror = loadImage;
+        loadImage();
+        object.appendChild(image);
+        layer.appendChild(object);
     }
 
+    ensureLayers();
+
+    for (let imageNumber = 1; imageNumber <= imageCount; imageNumber += 1) {
+        const level = ((imageNumber - 1) % 10) + 1;
+        createObject(imageNumber, level);
+    }
 });

@@ -2,7 +2,6 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
 
     <meta name="viewport"
@@ -12,18 +11,25 @@
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/styles.css') }}">
-
 </head>
 
 
 <body>
 
-<div class="video-overlay"></div>
 
-<video autoplay muted loop id="bg-video">
-    <source src="{{ url_for('static', filename='video/class_pics_video.mp4') }}" type="video/mp4">
-</video>
+<!-- =========================================================
+     DEPTH BACKGROUND
+     ========================================================= -->
 
+<div
+    class="depth-background"
+    id="depth-background"
+    data-image-count="42"
+    data-image-folder="{{ url_for('static', filename='images/class_pics') }}"
+    data-image-prefix="class_pics"
+    data-image-extensions="jpg,jpeg"
+>
+</div>
 
 <!-- =========================================================
      NAVIGATION
@@ -39,14 +45,37 @@
 
         <div class="nav-links">
 
-            <a href="/feliponetica">Feliponetica</a>
-            <a href="/vocab_drill">Vocabulary</a>
-            <a href="/about">About</a>
-            <a href="/contact">Contact</a>
-            <a href="/lessons">Lessons</a>
-            <a href="/course">Course</a>
-            <a href="/live-classes">Live Classes</a>
-            <a href="{{ url_for('logout') }}">Logout</a>
+            <a href="/feliponetica">
+                Feliponetica
+            </a>
+
+            <a href="/vocab_drill">
+                Vocabulary
+            </a>
+
+            <a href="/about">
+                About
+            </a>
+
+            <a href="/contact">
+                Contact
+            </a>
+
+            <a href="/lessons">
+                Lessons
+            </a>
+
+            <a href="/course">
+                Course
+            </a>
+
+            <a href="/live-classes">
+                Live Classes
+            </a>
+
+            <a href="{{ url_for('logout') }}">
+                Logout
+            </a>
 
         </div>
 
@@ -84,21 +113,16 @@
             practice, and real communication.
         </p>
 
-        <div style="margin-top: 35px;">
+        <div class="hero-actions">
 
             <a href="/course"
                class="button">
-
                 Start the Course
-
             </a>
 
             <a href="/lessons"
-               class="button secondary"
-               style="margin-left: 10px;">
-
+               class="button button-secondary">
                 Explore Lessons
-
             </a>
 
         </div>
@@ -113,14 +137,8 @@
 
     <section class="info-section">
 
-        <div class="eyebrow"
-             style="color: #ff5b41;
-                    font-size: 13px;
-                    font-weight: 900;
-                    letter-spacing: 2px;">
-
+        <div class="eyebrow">
             WELCOME
-
         </div>
 
         <h2>
@@ -146,7 +164,7 @@
          WHAT YOU'LL FIND
          ===================================================== -->
 
-    <section style="margin-top: 130px;">
+    <section class="section section-lg">
 
         <div class="page-header">
 
@@ -191,9 +209,7 @@
 
                 <a href="/course"
                    class="button">
-
                     Explore the Course
-
                 </a>
 
             </div>
@@ -220,9 +236,7 @@
 
                 <a href="/lessons"
                    class="button">
-
                     View Lessons
-
                 </a>
 
             </div>
@@ -249,9 +263,7 @@
 
                 <a href="/feliponetica"
                    class="button">
-
                     Try Feliponetica
-
                 </a>
 
             </div>
@@ -277,13 +289,10 @@
 
                 <a href="/vocab_drill"
                    class="button">
-
                     Practice Vocabulary
-
                 </a>
 
             </div>
-
 
         </div>
 
@@ -295,7 +304,7 @@
          HOW IT WORKS
          ===================================================== -->
 
-    <section style="margin-top: 150px;">
+    <section class="section section-lg">
 
         <div class="page-header">
 
@@ -338,6 +347,7 @@
             </div>
 
 
+
             <div class="card">
 
                 <div class="card-icon">
@@ -354,6 +364,7 @@
                 </p>
 
             </div>
+
 
 
             <div class="card">
@@ -374,6 +385,7 @@
             </div>
 
 
+
             <div class="card">
 
                 <div class="card-icon">
@@ -391,7 +403,6 @@
 
             </div>
 
-
         </div>
 
     </section>
@@ -402,17 +413,10 @@
          FELIPONETICA FEATURE
          ===================================================== -->
 
-    <section class="info-section"
-             style="margin-top: 150px;">
+    <section class="info-section section-lg">
 
-        <div class="eyebrow"
-             style="color: #ff5b41;
-                    font-size: 13px;
-                    font-weight: 900;
-                    letter-spacing: 2px;">
-
+        <div class="eyebrow">
             PRONUNCIATION
-
         </div>
 
         <h2>
@@ -432,9 +436,7 @@
 
         <a href="/feliponetica"
            class="button">
-
             Explore Feliponetica
-
         </a>
 
     </section>
@@ -445,7 +447,7 @@
          COURSE MATERIAL
          ===================================================== -->
 
-    <section style="margin-top: 150px;">
+    <section class="section section-lg">
 
         <div class="page-header">
 
@@ -487,12 +489,11 @@
 
                 <a href="/lessons"
                    class="button">
-
                     View Lessons
-
                 </a>
 
             </div>
+
 
 
             <div class="card">
@@ -512,12 +513,11 @@
 
                 <a href="/lessons"
                    class="button">
-
                     Practice
-
                 </a>
 
             </div>
+
 
 
             <div class="card">
@@ -537,13 +537,10 @@
 
                 <a href="/course"
                    class="button">
-
                     Review the Course
-
                 </a>
 
             </div>
-
 
         </div>
 
@@ -555,17 +552,10 @@
          ABOUT
          ===================================================== -->
 
-    <section class="info-section"
-             style="margin-top: 150px;">
+    <section class="info-section section-lg">
 
-        <div class="eyebrow"
-             style="color: #ff5b41;
-                    font-size: 13px;
-                    font-weight: 900;
-                    letter-spacing: 2px;">
-
+        <div class="eyebrow">
             ABOUT FELIPONETICA INGLÉS
-
         </div>
 
         <h2>
@@ -585,10 +575,8 @@
         </p>
 
         <a href="/about"
-           class="button secondary">
-
+           class="button button-secondary">
             About the Course
-
         </a>
 
     </section>
@@ -599,84 +587,59 @@
          FINAL CALL TO ACTION
          ===================================================== -->
 
-    <section
-        style="
-            text-align: center;
-            padding: 150px 20px 120px;
-        ">
+    <section class="cta-section">
 
-        <div class="eyebrow"
-             style="color: #ff5b41;
-                    font-size: 13px;
-                    font-weight: 900;
-                    letter-spacing: 2px;">
-
+        <div class="eyebrow">
             READY?
-
         </div>
 
-        <h1 style="
-            font-size: clamp(45px, 7vw, 85px);
-            color: #0028c7;
-            margin: 15px 0 25px;
-            letter-spacing: -4px;
-        ">
-
+        <h1>
             Let's learn
-            <span style="color: #ff5b41;">
-                English.
-            </span>
-
+            <span>English.</span>
         </h1>
 
-        <p style="
-            max-width: 650px;
-            margin: 0 auto;
-            color: #5d6d8c;
-            font-size: 20px;
-            line-height: 1.7;
-        ">
-
+        <p>
             Start learning, practicing, and building
             your English today.
-
         </p>
 
         <a href="/course"
-           class="button"
-           style="
-               margin-top: 35px;
-               font-size: 18px;
-               padding: 16px 28px;
-           ">
-
+           class="button button-large">
             Start the Course
-
         </a>
 
     </section>
 
+
+
+    <!-- =====================================================
+         TECH SUPPORT
+         ===================================================== -->
+
     <article class="card">
 
-    <div class="card-icon">
-        🛠️
-    </div>
+        <div class="card-icon">
+            🛠️
+        </div>
 
-    <h2>
-        Tech Support
-    </h2>
+        <h2>
+            Tech Support
+        </h2>
 
-    <p>
-        View support messages.
-    </p>
+        <p>
+            View support messages.
+        </p>
 
-    <a href="{{ url_for('support_messages') }}" class="button">
-        Support Messages
-    </a>
+        <a href="{{ url_for('support_messages') }}"
+           class="button">
+            Support Messages
+        </a>
 
-</article>
+    </article>
+
 
 </main>
+
 
 
 <!-- =========================================================
@@ -689,14 +652,14 @@
         Feliponetica Inglés
     </strong>
 
-    <br><br>
+    <br>
+    <br>
 
     Learn English. Understand English. Speak English.
 
-
 </footer>
 
+<script src="{{ url_for('static', filename='scripts/background_engine.js') }}"></script>
 
 </body>
-
 </html>

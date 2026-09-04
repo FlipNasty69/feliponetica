@@ -107,6 +107,14 @@
     --transition-fast: 0.15s ease;
     --transition: 0.25s ease;
     --transition-slow: 0.4s ease;
+
+    /* ---------- Translator ---------- */
+
+    --input-bg: #06152f;
+    --input-text: #b9e6ff;
+
+    --output-bg: #b9e6ff;
+    --output-text: #06152f;
 }
 
 
@@ -170,17 +178,17 @@ body {
     background:
         radial-gradient(
             circle at 5% 5%,
-            rgba(59, 247, 243, 0.35),
+            rgba(8, 0, 71, 0.35),
             transparent 32%
         ),
         radial-gradient(
             circle at 95% 15%,
-            rgba(255, 91, 65, 0.18),
+            rgba(58, 55, 252, 0.18),
             transparent 30%
         ),
         radial-gradient(
             circle at 90% 75%,
-            rgba(170, 73, 120, 0.20),
+            rgba(10, 0, 59, 0.2),
             transparent 32%
         ),
         var(--sky);
@@ -534,45 +542,45 @@ p {
         transform 0.18s ease,
         box-shadow 0.18s ease,
         filter 0.18s ease;
-}
+    }
 
-/* shiny upper highlight */
-.button::before {
-    content: "";
-    position: absolute;
-    pointer-events: none;
-}
+    /* shiny upper highlight */
+    .button::before {
+        content: "";
+        position: absolute;
+        pointer-events: none;
+    }
 
-/* lift when hovering */
-.button:hover {
-    transform: translateY(-3px);
+    /* lift when hovering */
+    .button:hover {
+        transform: translateY(-3px);
 
-    filter: brightness(1.05);
+        filter: brightness(1.05);
 
-    box-shadow:
-        0 4px 0 #c83d2c,
-        0 10px 18px rgba(100, 35, 25, 0.25),
-        0 16px 30px rgba(100, 35, 25, 0.14),
-        inset 0 2px 3px rgba(255, 255, 255, 0.62),
-        inset 0 -3px 4px rgba(120, 20, 10, 0.16);
-}
+        box-shadow:
+            0 4px 0 #c83d2c,
+            0 10px 18px rgba(100, 35, 25, 0.25),
+            0 16px 30px rgba(100, 35, 25, 0.14),
+            inset 0 2px 3px rgba(255, 255, 255, 0.62),
+            inset 0 -3px 4px rgba(120, 20, 10, 0.16);
+    }
 
-/* press down */
-.button:active {
-    transform: translateY(2px);
+    /* press down */
+    .button:active {
+        transform: translateY(2px);
 
-    box-shadow:
-        0 1px 0 #c83d2c,
-        0 3px 7px rgba(100, 35, 25, 0.20),
-        inset 0 2px 4px rgba(100, 20, 10, 0.18);
-}
+        box-shadow:
+            0 1px 0 #c83d2c,
+            0 3px 7px rgba(100, 35, 25, 0.20),
+            inset 0 2px 4px rgba(100, 20, 10, 0.18);
+    }
 
 
-/* ---------------------------------------------------------
-   Primary
-   --------------------------------------------------------- */
+    /* ---------------------------------------------------------
+    Primary
+    --------------------------------------------------------- */
 
-.button-primary {
+    .button-primary {
     background: linear-gradient(
         180deg,
         #ff806c 0%,
@@ -581,7 +589,7 @@ p {
     );
 
     color: #ffffff;
-}
+    }
 
 
 /* ---------------------------------------------------------
@@ -1297,6 +1305,58 @@ textarea {
     margin-top: 20px;
 }
 
+/* =========================================================
+   TRANSLATOR
+   ========================================================= */
+
+#transcript_text {
+    width: 100%;
+    padding: 15px 17px;
+    margin-top: 10px;
+
+    border-radius: var(--radius-small);
+    border: 2px solid var(--input-text);
+
+    background: var(--input-bg);
+    color: var(--input-text);
+
+    font-size: 20px;
+    font-weight: 700;
+
+    outline: none;
+    box-sizing: border-box;
+
+    transition: var(--transition);
+}
+
+#transcript_text::placeholder {
+    color: var(--input-text);
+    opacity: 0.65;
+}
+
+#transcript_text:focus {
+    border-color: var(--aqua);
+}
+
+/* ---------- Translator Output ---------- */
+
+.info-section p {
+    width: 100%;
+    padding: 15px 17px;
+    margin-top: 10px;
+
+    border-radius: var(--radius-small);
+    border: 2px solid var(--output-text);
+
+    background: var(--output-bg);
+    color: var(--output-text);
+
+    font-size: 20px;
+    font-weight: 700;
+
+    box-sizing: border-box;
+}
+
 
 /* =========================================================
    20. SUPPORT PAGE
@@ -1689,7 +1749,11 @@ textarea {
     height: 100%;
     overflow: hidden;
     pointer-events: none;
-    z-index: -10;
+    z-index: 0;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(23, 45, 88, 0.24), transparent 48%),
+        radial-gradient(circle at 20% 20%, rgba(61, 105, 160, 0.12), transparent 28%),
+        #020611;
 }
 
 
@@ -1758,16 +1822,17 @@ textarea {
 .depth-object {
     position: absolute;
 
-    left: var(--x, 50%);
-    top: var(--y, 50%);
+    left: 0;
+    top: 0;
 
     width: var(--size, 25vw);
-    max-width: 25vw;
+    max-width: none;
+
+    opacity: var(--depth-opacity, 1);
 
     transform:
         translate(-50%, -50%)
-        scale(var(--depth-scale, 1))
-        rotate(var(--rotation, 0deg));
+        scale(var(--depth-scale, 1));
 
     transform-origin: center center;
 
@@ -1782,11 +1847,11 @@ textarea {
    --------------------------------------------------------- */
 
 .depth-frame {
-  padding: 5px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
+        padding: 4px;
+        border-radius: 4px;
+        background: rgba(212, 226, 246, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.66);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.42);
 }
 
 .depth-frame img {
@@ -1796,16 +1861,16 @@ textarea {
     max-width: 100%;
     aspect-ratio: 4 / 3;
     object-fit: cover;
-    border-radius: 5px;
+    border-radius: 2px;
 }
 
 /* =========================================================
    26. DEPTH ANIMATION
    ========================================================= */
 
-.depth-moving-left {
+.depth-object {
     animation:
-        depthMoveLeft
+        depthDrift
         var(--duration, 60s)
         linear
         infinite;
@@ -1814,55 +1879,38 @@ textarea {
         var(--delay, 0s);
 }
 
-.depth-moving-right {
-    animation:
-        depthMoveRight
-        var(--duration, 60s)
-        linear
-        infinite;
-
-    animation-delay:
-        var(--delay, 0s);
-}
-
-@keyframes depthMoveLeft {
+@keyframes depthDrift {
 
     from {
 
         transform:
-            translate(110vw, -50%)
-            rotate(var(--rotation, 0deg));
+            translate(
+                calc(var(--start-x) - 50%),
+                calc(var(--start-y) - 50%)
+            )
+            scale(var(--depth-scale, 1))
+            rotate(var(--start-rotation, 0deg));
 
     }
 
     to {
 
         transform:
-            translate(-130vw, -50%)
-            rotate(var(--rotation, 0deg));
+            translate(
+                calc(var(--end-x) - 50%),
+                calc(var(--end-y) - 50%)
+            )
+            scale(var(--depth-scale, 1))
+            rotate(var(--end-rotation, 0deg));
 
     }
 
 }
 
-@keyframes depthMoveRight {
-
-    from {
-
-        transform:
-            translate(-130vw, -50%)
-            rotate(var(--rotation, 0deg));
-
+@media (prefers-reduced-motion: reduce) {
+    .depth-object {
+        animation-play-state: paused;
     }
-
-    to {
-
-        transform:
-            translate(110vw, -50%)
-            rotate(var(--rotation, 0deg));
-
-    }
-
 }
 
 

@@ -1,253 +1,264 @@
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Feliponetica</title>
+<meta charset="UTF-8">
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/styles.css') }}">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Feliponetica</title>
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}">
+
 </head>
 
 <body>
 
-    <!-- =========================
-         NAVIGATION
-         ========================= -->
+<!-- =========================================================
+     NAVIGATION
+     ========================================================= -->
 
-    <nav class="navbar">
+<nav class="navbar">
 
-        <div class="nav-container">
+<div class="nav-container">
 
-            <a href="{{ url_for('home') }}" class="logo">
-                English<span>Course</span>
-            </a>
+    <a href="{{ url_for('home') }}" class="logo">
+        Feliponetica <span>Inglés</span>
+    </a>
 
-            <div class="nav-links">
-               
-                <div class="nav-links">
+    <div class="nav-links">
 
-                    <a href="/">Home</a>
-                    <a href="/vocab_drill">Vocabulary</a>
-                    <a href="/about">About</a>
-                    <a href="/contact">Contact</a>
-                    <a href="/lessons">Lessons</a>
-                    <a href="/course">Course</a>
-                    <a href="/live-classes">Live Classes</a>
-                    <a href="{{ url_for('logout') }}">Logout</a>
+        <a href="{{ url_for('home') }}">
+            Home
+        </a>
 
-                </div>
+        <a href="{{ url_for('vocab') }}">
+            Vocabulary
+        </a>
 
+        <a href="{{ url_for('about') }}">
+            About
+        </a>
+
+        <a href="{{ url_for('contact') }}">
+            Contact
+        </a>
+
+        <a href="{{ url_for('lessons') }}">
+            Lessons
+        </a>
+
+        <a href="{{ url_for('course') }}">
+            Course
+        </a>
+
+        <a href="{{ url_for('live_classes') }}">
+            Live Classes
+        </a>
+
+        <a href="{{ url_for('logout') }}">
+            Logout
+        </a>
+
+    </div>
+
+</div>
+
+
+</nav>
+
+<!-- =========================================================
+     MAIN CONTENT
+     ========================================================= -->
+
+<main class="main-container">
+
+
+<!-- =====================================================
+     PAGE HEADER
+     ===================================================== -->
+
+<section class="page-header">
+
+    <div class="eyebrow">
+        Pronunciation System
+    </div>
+
+    <h1>
+        Feliponetica
+    </h1>
+
+    <p>
+        Deja de batallar con la pronunciación del inglés.
+        Feliponetica es un sistema de pronunciación que convierte
+        palabras y frases en inglés a una representación fonética
+        transformada para que el hispano pueda pronunciarlas correctamente.
+    </p>
+
+</section>
+
+
+
+<!-- =====================================================
+     TRANSLATOR
+     ===================================================== -->
+
+<section class="card">
+
+    <div class="card-icon">
+        🔊
+    </div>
+
+    <div class="eyebrow">
+        English → Feliponetica
+    </div>
+
+    <h2>
+        Pronunciation Translator
+    </h2>
+
+    <p>
+        Write an English word or sentence and convert it into
+        Feliponetica pronunciation.
+    </p>
+
+
+    <form method="POST">
+
+        <label for="transcript_text">
+            English text
+        </label>
+
+
+        <input
+            type="text"
+            id="transcript_text"
+            name="transcript_text"
+            placeholder="Example: hello, grammar, vocabulary..."
+            value="{{ user_input }}"
+        >
+
+
+        <button
+            type="submit"
+            class="button button-primary"
+        >
+            Translate
+        </button>
+
+    </form>
+
+</section>
+
+
+
+<!-- =====================================================
+     RESULT
+     ===================================================== -->
+
+{% if result %}
+
+<section class="info-section">
+
+    <div class="eyebrow">
+        Result
+    </div>
+
+    <h2>
+        Feliponetica
+    </h2>
+
+    <p>
+        {{ result }}
+    </p>
+
+</section>
+
+{% endif %}
+
+
+
+<!-- =====================================================
+     HOW IT WORKS
+     ===================================================== -->
+
+<section class="card-grid section">
+
+    <div class="card">
+
+        <div class="card-icon">
+            🔤
         </div>
 
-    </nav>
-
-
-    <!-- =========================
-         MAIN CONTENT
-         ========================= -->
-
-    <main class="main-container">
-
-        <section class="page-header">
-
-            <div class="eyebrow">
-                Pronunciation System
-            </div>
-
-            <h1>
-                Feliponetica
-            </h1>
-
-            <p>
-                Convert English words and phrases into Feliponetica,
-                a pronunciation system designed to make English easier
-                to read and pronounce.
-            </p>
-
-        </section>
-
-
-        <!-- =========================
-             TRANSLATOR
-             ========================= -->
-
-        <section class="card">
-
-            <div class="card-icon">
-                🔊
-            </div>
-
-            <h2>
-                English → Feliponetica
-            </h2>
-
-            <p>
-                Enter an English word, phrase, or sentence below.
-            </p>
-
-
-            <form method="POST">
-
-                <label
-                    for="transcript_text"
-                    style="display:block; margin-top:25px; margin-bottom:10px; font-weight:700;"
-                >
-                    English text
-                </label>
-
-                <input
-                    type="text"
-                    id="transcript_text"
-                    name="transcript_text"
-                    placeholder="Example: hello, grammar, vocabulary..."
-                    value="{{ user_input }}"
-                    style="
-                        width:100%;
-                        padding:15px 17px;
-                        border-radius:12px;
-                        border:1px solid rgba(255,255,255,0.12);
-                        background:rgba(0,0,0,0.22);
-                        color:#000774;
-                        font-size:20px;
-                        outline:none;
-                        font-weight:700
-                    "
-                >
-
-                <button
-                    type="submit"
-                    class="button"
-                >
-                    Translate
-                </button>
-
-            </form>
-
-        </section>
-
-
-        <!-- =========================
-             RESULT
-             ========================= -->
-
-        {% if result %}
-
-        <section class="info-section">
-
-            <div class="eyebrow"
-                 style="
-                    color:#829cff;
-                    font-size:20px;
-                    font-weight:800;
-                    text-transform:uppercase;
-                    letter-spacing:2px;
-                    margin-bottom:12px;
-                 ">
-                Result
-            </div>
-
-            <h2>
-                Feliponetica
-            </h2>
-
-            <p style="
-                width:100%;
-                padding:15px 17px;
-                border-radius:12px;
-                border:1px solid rgba(255,255,255,0.12);
-                background:rgba(0,0,0,0.22);
-                color:#000774;
-                font-size:20px;
-                outline:none;
-                font-weight:700;
-            ">
-                {{ result }}
-            </p>
-
-        </section>
-
-        {% endif %}
-
-
-        <!-- =========================
-             INFORMATION
-             ========================= -->
-
-        <section class="card-grid" style="margin-top:30px;">
-
-            <div class="card">
-
-                <div class="card-icon">
-                    🔤
-                </div>
-
-                <h3>
-                    English
-                </h3>
-
-                <p>
-                    Start with the English word or sentence you want
-                    to pronounce.
-                </p>
-
-            </div>
-
-
-            <div class="card">
-
-                <div class="card-icon">
-                    →
-                </div>
-
-                <h3>
-                    Conversion
-                </h3>
-
-                <p>
-                    Feliponetica converts the pronunciation into a
-                    simplified phonetic representation.
-                </p>
-
-            </div>
-
-
-            <div class="card">
-
-                <div class="card-icon">
-                    🗣️
-                </div>
-
-                <h3>
-                    Pronounce
-                </h3>
-
-                <p>
-                    Use the resulting spelling as a guide for
-                    pronunciation.
-                </p>
-
-            </div>
-
-        </section>
-
-
-    </main>
-
-
-    <!-- =========================
-         FOOTER
-         ========================= -->
-
-    <footer class="footer">
+        <h3>
+            English
+        </h3>
 
         <p>
-            Feliponetica · English Pronunciation System
+            Start with the English word or sentence you want
+            to pronounce.
         </p>
 
-    </footer>
+    </div>
+
+
+
+    <div class="card">
+
+        <div class="card-icon">
+            →
+        </div>
+
+        <h3>
+            Conversion
+        </h3>
+
+        <p>
+            Feliponetica converts the pronunciation into a
+            simplified phonetic representation.
+        </p>
+
+    </div>
+
+
+
+    <div class="card">
+
+        <div class="card-icon">
+            🗣️
+        </div>
+
+        <h3>
+            Pronounce
+        </h3>
+
+        <p>
+            Use the resulting spelling as a guide for
+            pronunciation.
+        </p>
+
+    </div>
+
+</section>
+
+
+</main>
+
+<!-- =========================================================
+     FOOTER
+     ========================================================= -->
+
+<footer class="footer">
+
+<p>
+    Feliponetica · English Pronunciation System
+</p>
+
+</footer>
 
 </body>
+
 </html>
