@@ -17,8 +17,20 @@ app.secret_key = "supersecretkey"  # change this
 USERS = {
     "felipe": {"password": "03162025", "role": "admin"},
     "karina": {"password": "03162025", "role": "admin"},
-    "student": {"password": "i sent the song", "role": "student"}
+    "student": {"password": "i sent the song", "role": "student"},
+    "L-English": {"password": "Flip's Class", "role": "enrolled student"},
+    "Punto Ingles": {"password": "Flip's Class", "role": "enrolled student"}
 }
+
+
+def is_logged_in():
+    return "username" in session and "role" in session
+
+
+def require_login():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+    return None
 
 # ============================================================
 # JSON DATA
@@ -417,8 +429,6 @@ def convert_to_feliponetica(text):
 
 @app.route("/")
 def home():
-    if "username" not in session:
-        return redirect(url_for("login"))
     return render_template("index.html")
 
 
@@ -430,8 +440,9 @@ def home():
 @app.route('/feliponetica', methods=['GET', 'POST'])
 def feliponetica():
 
-    if "role" not in session or session["role"] not in ["student", "admin"]:
-        return "Access denied"
+    access_error = require_login()
+    if access_error:
+        return access_error
 
     result = None
     user_input = ""
@@ -633,8 +644,9 @@ VOCABULARY_SETS = {
 @app.route('/vocab_drill')
 def vocab():
 
-    if "role" not in session or session["role"] not in ["student", "admin"]:
-        return "Access denied"
+    access_error = require_login()
+    if access_error:
+        return access_error
 
     return render_template(
         'vocab_drill.html',
@@ -649,8 +661,9 @@ def vocab():
 @app.route('/lessons')
 def lessons():
 
-    if "role" not in session or session["role"] not in ["student", "admin"]:
-        return "Access denied"
+    access_error = require_login()
+    if access_error:
+        return access_error
 
     import os
 
@@ -704,8 +717,11 @@ def lesson_pdf(filename):
 @app.route('/course')
 def course():
 
-    # ADMIN ONLY
-    if "role" not in session or session["role"] != "admin":
+    access_error = require_login()
+    if access_error:
+        return access_error
+
+    if session["role"] == "student":
         return "Access denied"
 
     return render_template('course.html')
@@ -716,6 +732,13 @@ def course():
 
 @app.route('/module/<module_id>')
 def interactive_module(module_id):
+
+    access_error = require_login()
+    if access_error:
+        return access_error
+
+    if session["role"] == "student":
+        return "Access denied"
 
     # --------------------------------------------------------
     # LOAD JSON DATA
@@ -907,7 +930,11 @@ def tech_support():
 @app.route("/support_messages")
 def support_messages():
 
-    if "role" not in session or session["role"] != "admin":
+    access_error = require_login()
+    if access_error:
+        return access_error
+
+    if session["role"] == "enrolled student":
         return "Access denied"
 
     conn = sqlite3.connect("support_messages.db")
