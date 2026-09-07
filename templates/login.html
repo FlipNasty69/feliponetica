@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -15,13 +17,16 @@
         <h1>Feliponetica Inglés</h1>
 
         <p>Welcome back</p>
+        {% if message %}<p class="login-message">{{ message }}</p>{% endif %}
 
         <form method="POST">
+
+            <input type="hidden" name="next" value="{{ next_url or '' }}">
 
             <input
                 type="text"
                 name="username"
-                placeholder="Username"
+                placeholder="Email or username"
                 required>
 
             <input
@@ -35,6 +40,8 @@
             </button>
 
         </form>
+
+        <p><a href="{{ url_for('register') }}">Create a student account</a></p>
 
     </div>
 

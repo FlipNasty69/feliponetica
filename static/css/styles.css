@@ -2898,3 +2898,36 @@ textarea {
 }
 
 }
+
+/* Lighter account registration surface. */
+.registration-page {
+    background:
+        radial-gradient(circle at 15% 10%, rgba(255, 255, 255, .9), transparent 32%),
+        linear-gradient(135deg, #eef7ff, #f8fbff 48%, #e7f5f1);
+}
+
+.registration-page .login-card {
+    border: 1px solid rgba(0, 40, 199, .12);
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 22px 55px rgba(0, 40, 199, .14);
+}
+
+.registration-page .login-card h1 {
+    color: var(--blue);
+}
+
+.registration-page .login-card button,
+.login-card button {
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.registration-page .login-card button:hover,
+.login-card button:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 40, 199, .22);
+}
+
+.login-message {
+    color: var(--coral);
+    font-weight: 700;
+}

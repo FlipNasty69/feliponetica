@@ -10,9 +10,11 @@ from flask import request, render_template
 from flask import Flask, render_template, request, send_from_directory, abort
 from g2p_en import G2p
 from flask import session, redirect, url_for
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # change this
+STUDENT_DATABASE_PATH = os.path.join(app.root_path, "student_users.db")
 
 USERS = {
     "felipe": {"password": "03162025", "role": "admin"},
@@ -21,6 +23,42 @@ USERS = {
     "L-English": {"password": "Flip's Class", "role": "enrolled student"},
     "Punto Ingles": {"password": "Flip's Class", "role": "enrolled student"}
 }
+
+
+def init_student_database():
+    with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS student_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                last_name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL
+            )
+        """)
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS conjugation_progress (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                group_name TEXT NOT NULL,
+                completed_series INTEGER NOT NULL DEFAULT 0,
+                current_verb INTEGER NOT NULL DEFAULT 0,
+                score INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(user_id, group_name),
+                FOREIGN KEY(user_id) REFERENCES student_users(id)
+            )
+        """)
+        columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(conjugation_progress)").fetchall()
+        }
+        if "current_verb" not in columns:
+            connection.execute(
+                "ALTER TABLE conjugation_progress ADD COLUMN current_verb INTEGER NOT NULL DEFAULT 0"
+            )
+
+
+init_student_database()
 
 
 def is_logged_in():
@@ -65,26 +103,133 @@ def load_data(file_path):
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    message = ""
+    next_url = request.args.get("next", "")
     if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        next_url = request.form.get("next", next_url)
 
         user = USERS.get(username)
+        registered_user = None
+        if not user:
+            with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
+                connection.row_factory = sqlite3.Row
+                registered_user = connection.execute(
+                    "SELECT * FROM student_users WHERE email = ?",
+                    (username.strip().lower(),)
+                ).fetchone()
 
-        if user and user["password"] == password:
+        registered_password_matches = registered_user and check_password_hash(
+            registered_user["password_hash"], password
+        )
+        if (user and user["password"] == password) or registered_password_matches:
             session["username"] = username
-            session["role"] = user["role"]
-            return redirect(url_for("home"))
+            session["role"] = user["role"] if user else "student"
+            if registered_user:
+                session["user_id"] = registered_user["id"]
+                session["display_name"] = f"{registered_user['name']} {registered_user['last_name']}"
+            else:
+                session.pop("user_id", None)
+                session["display_name"] = username
+            if not next_url.startswith("/") or next_url.startswith("//"):
+                next_url = url_for("home")
+            return redirect(next_url)
         else:
-            return "Invalid credentials"
+            message = "Invalid email or password."
 
-    return render_template("login.html")
+    return render_template("login.html", message=message, next_url=next_url)
 
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    message = ""
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        last_name = request.form.get("last_name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        if not all([name, last_name, email, password]):
+            message = "All fields are required."
+        else:
+            with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
+                try:
+                    connection.execute(
+                        "INSERT INTO student_users (name, last_name, email, password_hash) VALUES (?, ?, ?, ?)",
+                        (name, last_name, email, generate_password_hash(password))
+                    )
+                    connection.commit()
+                except sqlite3.IntegrityError:
+                    message = "That email is already registered."
+                else:
+                    session["username"] = email
+                    session["role"] = "student"
+                    session["user_id"] = connection.execute(
+                        "SELECT id FROM student_users WHERE email = ?", (email,)
+                    ).fetchone()[0]
+                    session["display_name"] = f"{name} {last_name}"
+                    return redirect(url_for("verb_conjugation_game"))
+    return render_template("register.html", message=message)
+
+
+@app.route("/verb-conjugation-game")
+@app.route("/verb_conjugation_game")
+def verb_conjugation_game():
+    guest_mode = request.args.get("guest") == "1"
+    saved_user = bool(session.get("user_id")) and not guest_mode
+    return render_template(
+        "verb_conjugation_game.html",
+        display_name=session.get("display_name", "Guest") if saved_user else "Guest",
+        saved_user=saved_user,
+        guest_mode=guest_mode
+    )
+
+
+@app.route("/api/conjugation-progress", methods=["GET", "POST"])
+def conjugation_progress():
+    user_id = session.get("user_id")
+    if not user_id:
+        return {"saved": False, "progress": {}}
+
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or {}
+        group_name = str(payload.get("group_name", "")).strip()
+        completed_series = max(0, int(payload.get("completed_series", 0)))
+        current_verb = max(0, int(payload.get("current_verb", 0)))
+        score = max(0, int(payload.get("score", 0)))
+        if not group_name:
+            return {"error": "group_name is required"}, 400
+        with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
+            connection.execute("""
+                INSERT INTO conjugation_progress (user_id, group_name, completed_series, current_verb, score)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, group_name) DO UPDATE SET
+                    completed_series = excluded.completed_series,
+                    current_verb = excluded.current_verb,
+                    score = excluded.score
+            """, (user_id, group_name, completed_series, current_verb, score))
+            connection.commit()
+        return {"saved": True}
+
+    with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
+        rows = connection.execute("""
+            SELECT group_name, completed_series, current_verb, score
+            FROM conjugation_progress
+            WHERE user_id = ?
+        """, (user_id,)).fetchall()
+    return {
+        "saved": True,
+        "progress": {
+            row[0]: {"completedSeries": row[1], "currentVerb": row[2], "score": row[3]}
+            for row in rows
+        }
+    }
 
 
 # ============================================================

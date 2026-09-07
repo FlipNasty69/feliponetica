@@ -1,825 +1,323 @@
-/* =========================================================
-   FELIPONETICA
-   VERB CONJUGATION GAME ENGINE
-   ========================================================= */
-
-
-/* =========================================================
-   GAME DATA
-   ========================================================= */
-
-let conjugationData = null;
-
-let currentVerbIndex = 0;
-
-let currentVerb = null;
-
-let completedAreas = new Set();
-
-
-/* =========================================================
-   THE SEVEN PLAYABLE FORMS
-   ========================================================= */
-
-const playableForms = [
-    "past",
-    "present",
-    "third_person",
-    "future",
-    "infinitive",
-    "ing",
-    "past_participle"
+const FORM_DEFINITIONS = [
+    { key: "past", label: "Past", audio: "past audio" },
+    { key: "base form", label: "Present (base form)", audio: "base form audio" },
+    { key: "3rd person singular", label: "3rd person singular", audio: "3rd person audio" },
+    { key: "future", label: "Future", audio: "future audio" },
+    { key: "ING", label: "ING", audio: "ING audio" },
+    { key: "past participle", label: "Past participle", audio: "past participle audio" },
+    { key: "infinitive", label: "Infinitive", audio: "infinitive audio" }
 ];
 
+let groups = [];
+let selectedGroupIndex = 0;
+let selectedSeriesIndex = 0;
+let currentVerbIndex = 0;
+let currentVerb = null;
+let score = 0;
+let attempts = new Map();
+let completedForms = new Set();
+const progressStorageKey = "feliponetica-conjugation-progress";
+const savedUser = document.body.dataset.savedUser === "true";
+let progressState = {};
 
-/* =========================================================
-   START
-   ========================================================= */
+document.addEventListener("DOMContentLoaded", () => {
+    if (savedUser) beginGame();
+    initializeGame();
+});
 
-document.addEventListener(
-    "DOMContentLoaded",
-    initializeConjugationGame
-);
-
-
-/* =========================================================
-   LOAD JSON
-   ========================================================= */
-
-async function initializeConjugationGame() {
-
+async function initializeGame() {
     try {
-
-        const response = await fetch(
-            "/static/data/verb_conjugation.json"
-        );
-
-        if (!response.ok) {
-            throw new Error(
-                "Could not load verb_conjugation.json"
-            );
-        }
-
-        conjugationData =
-            await response.json();
-
-
-        if (
-            !conjugationData.verbs ||
-            conjugationData.verbs.length === 0
-        ) {
-
-            throw new Error(
-                "No verbs were found in the JSON file."
-            );
-
-        }
-
-
-        loadVerb(0);
-
-
+        await loadProgress();
+        const response = await fetch("/static/data/verb_conjugation.json");
+        if (!response.ok) throw new Error("Unable to load verb_conjugation.json");
+        const data = await response.json();
+        groups = Object.entries(data).map(([name, group]) => ({ name, series: group.series || [] }));
+        if (!groups.length || !groups.some(group => group.series.length)) throw new Error("No verb series found");
+        renderSetList();
+        renderProgress();
+        selectGroup(0);
     } catch (error) {
-
         console.error(error);
-
-        const feedback =
-            document.getElementById(
-                "conjugation-feedback"
-            );
-
-        feedback.textContent =
-            "There was a problem loading the verb game.";
-
-        feedback.classList.add(
-            "feedback-error"
-        );
-
+        setStatus("The verb data could not be loaded. Check the JSON file.", "error");
     }
-
 }
 
+function beginGame() {
+    document.getElementById("entry-gate").hidden = true;
+    document.querySelector(".game").classList.add("ready");
+}
 
-/* =========================================================
-   LOAD VERB
-   ========================================================= */
+function currentSeries() {
+    return groups[selectedGroupIndex]?.series[selectedSeriesIndex];
+}
 
-function loadVerb(index) {
+function selectGroup(index) {
+    selectedGroupIndex = index;
+    const saved = getSavedProgress()[groups[index].name] || {};
+    selectedSeriesIndex = Math.min(saved.completedSeries || 0, Math.max(groups[index].series.length - 1, 0));
+    currentVerbIndex = saved.currentVerb || 0;
+    score = saved.score || 0;
+    document.getElementById("score").textContent = score;
+    renderSetList();
+    renderProgress();
+    prepareSeries();
+}
 
-    if (!conjugationData) {
+function prepareSeries() {
+    const series = currentSeries();
+    if (!series) return;
+    currentVerb = series.verbs?.[0] || null;
+    document.getElementById("start-button").hidden = false;
+    document.getElementById("start-button").textContent = "Start series";
+    document.getElementById("complete").hidden = true;
+    document.getElementById("answer-grid").innerHTML = "";
+    document.getElementById("series-title").textContent = `${groups[selectedGroupIndex].name} - ${series.title || `Series ${selectedSeriesIndex + 1}`}`;
+    document.getElementById("verb-title").textContent = currentVerb ? currentVerb.verb : "No verbs in this series";
+    document.getElementById("meaning").textContent = currentVerb ? getMeaning(currentVerb) : "";
+    document.getElementById("prompt").textContent = `${series.verbs?.length || 0} verbs in this series`;
+    setStatus("");
+}
+
+function startSeries() {
+    if (!currentSeries()?.verbs?.length) return;
+    currentVerbIndex = 0;
+    loadVerb();
+}
+
+function loadVerb() {
+    const series = currentSeries();
+    currentVerb = series.verbs[currentVerbIndex];
+    attempts = new Map();
+    completedForms = new Set();
+    document.getElementById("start-button").hidden = true;
+    document.getElementById("complete").hidden = true;
+    document.getElementById("verb-title").textContent = currentVerb.verb || currentVerb["base form"];
+    document.getElementById("meaning").textContent = getMeaning(currentVerb);
+    document.getElementById("prompt").textContent = `Verb ${currentVerbIndex + 1} of ${series.verbs.length}: choose the correct form in each area.`;
+    renderAreas();
+    setStatus("");
+}
+
+function renderAreas() {
+    const grid = document.getElementById("answer-grid");
+    grid.innerHTML = "";
+    FORM_DEFINITIONS.forEach((form, areaIndex) => {
+        const area = document.createElement("article");
+        area.className = "answer-area";
+        area.dataset.form = form.key;
+        area.innerHTML = `<div class="area-title">${form.label}</div><div class="area-answer"></div><button class="choose-button" type="button">Choose answer</button><div class="option-menu" hidden></div>`;
+        area.querySelector(".choose-button").addEventListener("click", () => showOptions(area, areaIndex));
+        grid.appendChild(area);
+    });
+}
+
+function showOptions(area, areaIndex) {
+    if (completedForms.has(area.dataset.form)) return;
+    const menu = area.querySelector(".option-menu");
+    menu.innerHTML = "";
+    menu.hidden = false;
+    area.querySelector(".choose-button").disabled = true;
+    const options = [];
+    FORM_DEFINITIONS.forEach(form => {
+        const value = currentVerb[form.key];
+        if (value !== undefined && value !== "" && !options.some(option => option.value === value)) {
+            options.push({ value, keys: FORM_DEFINITIONS.filter(match => currentVerb[match.key] === value).map(match => match.key) });
+        }
+    });
+    shuffle(options).forEach(option => {
+        const button = document.createElement("button");
+        button.className = "option";
+        button.type = "button";
+        button.textContent = option.value;
+        button.addEventListener("click", () => checkAnswer(area, areaIndex, option));
+        menu.appendChild(button);
+    });
+}
+
+function checkAnswer(area, areaIndex, selectedOption) {
+    const formKey = area.dataset.form;
+    if (completedForms.has(formKey)) return;
+    const tries = (attempts.get(formKey) || 0) + 1;
+    attempts.set(formKey, tries);
+    if (!selectedOption.keys.includes(formKey)) {
+        area.classList.remove("wrong");
+        void area.offsetWidth;
+        area.classList.add("wrong");
+        playHelpAudio(areaIndex);
+        setStatus("Not quite. Listen to the help and try again.", "error");
+        area.querySelector(".choose-button").disabled = false;
+        area.querySelector(".option-menu").hidden = true;
         return;
     }
-
-
-    if (
-        index < 0 ||
-        index >= conjugationData.verbs.length
-    ) {
-        index = 0;
-    }
-
-
-    currentVerbIndex = index;
-
-    currentVerb =
-        conjugationData.verbs[
-            currentVerbIndex
-        ];
-
-
-    completedAreas =
-        new Set();
-
-
-    clearFeedback();
-
-    displayBaseForm();
-
-    createGameAreas();
-
+    completedForms.add(formKey);
+    attempts.set(formKey, tries);
+    area.classList.remove("wrong");
+    area.classList.add("correct");
+    area.querySelector(".area-answer").textContent = currentVerb[formKey];
+    area.querySelector(".choose-button").hidden = true;
+    area.querySelector(".option-menu").hidden = true;
+    addAudioLink(area, FORM_DEFINITIONS[areaIndex], currentVerb[formKey]);
+    score += tries === 1 ? 2 : 1;
+    document.getElementById("score").textContent = score;
+    fireConfetti();
+    setStatus(tries === 1 ? "Correct! Full points." : "Correct! Half points.", "success");
+    if (completedForms.size === FORM_DEFINITIONS.length) finishVerb();
 }
 
-
-/* =========================================================
-   DISPLAY BASE FORM
-   ========================================================= */
-
-function displayBaseForm() {
-
-    const baseForm =
-        document.getElementById(
-            "base-form"
-        );
-
-
-    baseForm.textContent =
-        currentVerb.base;
-
-}
-
-
-/* =========================================================
-   CREATE THE SEVEN GAME AREAS
-   ========================================================= */
-
-function createGameAreas() {
-
-    playableForms.forEach(
-        form => {
-
-            const area =
-                document.querySelector(
-                    `[data-form="${form}"]`
-                );
-
-
-            const optionsContainer =
-                document.getElementById(
-                    `options-${form}`
-                );
-
-
-            if (!area || !optionsContainer) {
-                return;
-            }
-
-
-            area.classList.remove(
-                "correct",
-                "incorrect"
-            );
-
-
-            const helpButton =
-                area.querySelector(
-                    ".help-btn"
-                );
-
-
-            if (helpButton) {
-
-                helpButton.hidden =
-                    true;
-
-                helpButton.classList.remove(
-                    "help-active"
-                );
-
-            }
-
-
-            optionsContainer.innerHTML =
-                "";
-
-
-            createOptions(
-                form,
-                optionsContainer
-            );
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   CREATE OPTIONS
-   ========================================================= */
-
-function createOptions(
-    targetForm,
-    container
-) {
-
-    const options =
-        getAllSevenOptions();
-
-
-    shuffleArray(options);
-
-
-    options.forEach(
-        option => {
-
-            const button =
-                document.createElement(
-                    "button"
-                );
-
-
-            button.type =
-                "button";
-
-
-            button.className =
-                "verb-option";
-
-
-            button.textContent =
-                option.text;
-
-
-            /*
-               The ID is important.
-
-               Some regular verbs have duplicate
-               visible forms.
-
-               Example:
-
-               worked
-               worked
-
-               They look identical, but their internal
-               IDs are different.
-            */
-
-            button.dataset.optionId =
-                option.id;
-
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    checkAnswer(
-                        targetForm,
-                        option.id,
-                        container
-                    );
-
-                }
-            );
-
-
-            container.appendChild(
-                button
-            );
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   GET ALL SEVEN OPTIONS
-   ========================================================= */
-
-function getAllSevenOptions() {
-
-    return [
-
-        {
-            id: "past",
-            text: currentVerb.past
-        },
-
-        {
-            id: "present",
-            text: currentVerb.present
-        },
-
-        {
-            id: "third_person",
-            text: currentVerb.third_person
-        },
-
-        {
-            id: "future",
-            text: currentVerb.future
-        },
-
-        {
-            id: "infinitive",
-            text: currentVerb.infinitive
-        },
-
-        {
-            id: "ing",
-            text: currentVerb.ing
-        },
-
-        {
-            id: "past_participle",
-            text: currentVerb.past_participle
-        }
-
-    ];
-
-}
-
-
-/* =========================================================
-   CHECK ANSWER
-   ========================================================= */
-
-function checkAnswer(
-    targetForm,
-    selectedOptionId,
-    container
-) {
-
-    /*
-       Don't allow the student to keep answering
-       an area that has already been completed.
-    */
-
-    if (
-        completedAreas.has(targetForm)
-    ) {
+function finishVerb() {
+    renderProgress();
+    const series = currentSeries();
+    if (currentVerbIndex < series.verbs.length - 1) {
+        saveProgress(selectedSeriesIndex, currentVerbIndex + 1);
+        setTimeout(() => { currentVerbIndex += 1; loadVerb(); }, 700);
         return;
     }
+    saveProgress(selectedSeriesIndex + 1, 0);
+    document.getElementById("complete").hidden = false;
+    document.getElementById("complete-message").textContent = `${series.title || "This series"} is complete. Your score is ${score}.`;
+    document.getElementById("next-button").hidden = selectedSeriesIndex >= groups[selectedGroupIndex].series.length - 1;
+    setStatus("Series complete!", "success");
+}
 
+function nextSeries() {
+    if (selectedSeriesIndex >= groups[selectedGroupIndex].series.length - 1) return;
+    selectedSeriesIndex += 1;
+    currentVerbIndex = 0;
+    renderProgress();
+    prepareSeries();
+}
 
-    const area =
-        document.querySelector(
-            `[data-form="${targetForm}"]`
-        );
+function getSavedProgress() {
+    if (savedUser) return progressState;
+    try {
+        return JSON.parse(localStorage.getItem(progressStorageKey) || "{}");
+    } catch (error) {
+        return {};
+    }
+}
 
-
-    const correct =
-        selectedOptionId === targetForm;
-
-
-    if (correct) {
-
-        handleCorrectAnswer(
-            area,
-            container
-        );
-
+function saveProgress(completedSeries, currentVerb = 0) {
+    const saved = getSavedProgress();
+    saved[groups[selectedGroupIndex].name] = { completedSeries, score };
+    progressState = saved;
+    if (savedUser) {
+        fetch("/api/conjugation-progress", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                group_name: groups[selectedGroupIndex].name,
+                completed_series: completedSeries,
+                current_verb: currentVerb,
+                score
+            })
+        }).catch(error => console.error("Could not save progress", error));
     } else {
-
-        handleWrongAnswer(
-            area
-        );
-
+        localStorage.setItem(progressStorageKey, JSON.stringify(saved));
     }
-
 }
 
+async function loadProgress() {
+    if (savedUser) {
+        const response = await fetch("/api/conjugation-progress");
+        const data = await response.json();
+        progressState = data.progress || {};
+    } else {
+        progressState = getLocalProgress();
+    }
+}
 
-/* =========================================================
-   CORRECT ANSWER
-   ========================================================= */
+function getLocalProgress() {
+    try {
+        return JSON.parse(localStorage.getItem(progressStorageKey) || "{}");
+    } catch (error) {
+        return {};
+    }
+}
 
-function handleCorrectAnswer(
-    area,
-    container
-) {
+function renderSetList() {
+    const list = document.getElementById("set-list");
+    list.innerHTML = "";
+    groups.forEach((group, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `set-card${index === selectedGroupIndex ? " active" : ""}`;
+        button.innerHTML = `<strong>${group.name}</strong><span>${group.series.length} series</span>`;
+        button.addEventListener("click", () => selectGroup(index));
+        list.appendChild(button);
+    });
+}
 
-    completedAreas.add(
-        area.dataset.form
-    );
+function renderProgress() {
+    const lists = [document.getElementById("progress-list"), document.getElementById("progress-list-right")];
+    if (!groups.length) return;
+    lists.forEach(list => {
+        if (!list) return;
+        list.innerHTML = "";
+        groups[selectedGroupIndex].series.forEach((series, index) => {
+            const completed = index < selectedSeriesIndex ? series.verbs.length : index === selectedSeriesIndex ? currentVerbIndex + (completedForms.size === FORM_DEFINITIONS.length ? 1 : 0) : 0;
+            const total = series.verbs?.length || 0;
+            const row = document.createElement("div");
+            row.className = "progress-row";
+            row.innerHTML = `<div class="progress-label"><span>${series.title || `Series ${index + 1}`}</span><span>${Math.min(completed, total)}/${total}</span></div><div class="progress-track"><div class="progress-fill" style="width:${total ? Math.min(completed / total * 100, 100) : 0}%"></div></div>`;
+            list.appendChild(row);
+        });
+    });
+}
 
+function addAudioLink(area, form, text) {
+    const value = currentVerb[form.audio] || pronunciationUrl(text);
+    const link = document.createElement("a");
+    link.className = "audio-link";
+    link.href = value;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "Play verb audio";
+    area.appendChild(link);
+}
 
-    area.classList.remove(
-        "incorrect"
-    );
+function playHelpAudio(areaIndex) {
+    const helpFile = areaIndex === 0 ? "help_area_1.1.mp3" : areaIndex === 5 ? "help_area_1.2.mp3" : `help_area_${areaIndex + 1}.mp3`;
+    const audio = new Audio(`/static/audio/${helpFile}`);
+    audio.play().catch(() => {});
+}
 
+function pronunciationUrl(text) {
+    return `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(text)}&tl=en`;
+}
 
-    area.classList.add(
-        "correct"
-    );
+function getMeaning(verb) {
+    return [1, 2, 3, 4].map(number => verb[`translation ${number}`]).filter(Boolean).join(" / ");
+}
 
+function shuffle(items) {
+    for (let index = items.length - 1; index > 0; index -= 1) {
+        const randomIndex = Math.floor(Math.random() * (index + 1));
+        [items[index], items[randomIndex]] = [items[randomIndex], items[index]];
+    }
+    return items;
+}
 
-    /*
-       Disable all choices in this area.
-    */
+function setStatus(message, kind = "") {
+    const status = document.getElementById("status");
+    if (!status) return;
+    status.textContent = message;
+    status.className = `status ${kind}`;
+}
 
-    const buttons =
-        container.querySelectorAll(
-            ".verb-option"
-        );
-
-
-    buttons.forEach(
-        button => {
-
-            button.disabled =
-                true;
-
+function fireConfetti() {
+    const holder = document.getElementById("confetti");
+    holder.innerHTML = "";
+    ["#ef6f61", "#177e89", "#f4c95d", "#2d9b70"].forEach((color, colorIndex) => {
+        for (let index = 0; index < 7; index += 1) {
+            const piece = document.createElement("i");
+            piece.style.left = `${20 + Math.random() * 60}%`;
+            piece.style.top = `${10 + Math.random() * 20}%`;
+            piece.style.background = color;
+            piece.style.animationDelay = `${(colorIndex * 7 + index) * 15}ms`;
+            holder.appendChild(piece);
         }
-    );
-
-
-    /*
-       Hide Help if it was active.
-    */
-
-    const helpButton =
-        area.querySelector(
-            ".help-btn"
-        );
-
-
-    if (helpButton) {
-        helpButton.hidden =
-            true;
-    }
-
-
-    playAudio(
-        "hooray-audio"
-    );
-
-
-    showFeedback(
-        "Hooray! ✓",
-        "feedback-success"
-    );
-
-
-    /*
-       Check whether all seven areas
-       have been completed.
-    */
-
-    if (
-        completedAreas.size ===
-        playableForms.length
-    ) {
-
-        showGameComplete();
-
-    }
-
+    });
 }
 
-
-/* =========================================================
-   WRONG ANSWER
-   ========================================================= */
-
-function handleWrongAnswer(
-    area
-) {
-
-    area.classList.remove(
-        "correct"
-    );
-
-
-    area.classList.add(
-        "incorrect"
-    );
-
-
-    playAudio(
-        "too-bad-audio"
-    );
-
-
-    showFeedback(
-        "Too bad!",
-        "feedback-error"
-    );
-
-
-    /*
-       Turn on the Help button.
-    */
-
-    const helpButton =
-        area.querySelector(
-            ".help-btn"
-        );
-
-
-    if (helpButton) {
-
-        helpButton.hidden =
-            false;
-
-        helpButton.classList.add(
-            "help-active"
-        );
-
-
-        /*
-           Make sure it only gets
-           one event listener.
-        */
-
-        if (
-            helpButton.dataset.bound !== "true"
-        ) {
-
-            helpButton.addEventListener(
-                "click",
-                () => {
-
-                    showHelp(
-                        area.dataset.form
-                    );
-
-                }
-            );
-
-
-            helpButton.dataset.bound =
-                "true";
-
-        }
-
-    }
-
-
-    /*
-       Remove the red state after a moment
-       so the student can try again.
-    */
-
-    setTimeout(
-        () => {
-
-            if (
-                !completedAreas.has(
-                    area.dataset.form
-                )
-            ) {
-
-                area.classList.remove(
-                    "incorrect"
-                );
-
-            }
-
-        },
-        700
-    );
-
-}
-
-
-/* =========================================================
-   HELP
-   ========================================================= */
-
-function showHelp(form) {
-
-    const helpMessages = {
-
-        past:
-            "PAST: Use the past form of the verb.",
-
-        present:
-            "PRESENT: Use the base form.",
-
-        third_person:
-            "3RD PERSON SINGULAR: Add S to the base form.",
-
-        future:
-            "FUTURE: WILL + base form.",
-
-        infinitive:
-            "INFINITIVE: TO + base form.",
-
-        ing:
-            "-ING: Base form + ING.",
-
-        past_participle:
-            "PAST PARTICIPLE: Use the past participle form."
-
-    };
-
-
-    const message =
-        helpMessages[form] ||
-        "Look carefully at the form required.";
-
-
-    showFeedback(
-        message,
-        "feedback-help"
-    );
-
-}
-
-
-/* =========================================================
-   GAME COMPLETE
-   ========================================================= */
-
-function showGameComplete() {
-
-    showFeedback(
-        "Excellent! You found all seven forms!",
-        "feedback-success"
-    );
-
-}
-
-
-/* =========================================================
-   NEXT VERB
-   ========================================================= */
-
-document
-    .getElementById("next-verb-btn")
-    .addEventListener(
-        "click",
-        () => {
-
-            if (!conjugationData) {
-                return;
-            }
-
-
-            let nextIndex =
-                currentVerbIndex + 1;
-
-
-            if (
-                nextIndex >=
-                conjugationData.verbs.length
-            ) {
-
-                nextIndex = 0;
-
-            }
-
-
-            loadVerb(
-                nextIndex
-            );
-
-        }
-    );
-
-
-/* =========================================================
-   RESTART
-   ========================================================= */
-
-document
-    .getElementById("restart-btn")
-    .addEventListener(
-        "click",
-        () => {
-
-            loadVerb(
-                currentVerbIndex
-            );
-
-        }
-    );
-
-
-/* =========================================================
-   AUDIO
-   ========================================================= */
-
-function playAudio(
-    audioId
-) {
-
-    const audio =
-        document.getElementById(
-            audioId
-        );
-
-
-    if (!audio) {
-        return;
-    }
-
-
-    audio.currentTime = 0;
-
-
-    audio.play().catch(
-        () => {
-            /*
-               Ignore browser autoplay/audio
-               restrictions.
-            */
-        }
-    );
-
-}
-
-
-/* =========================================================
-   FEEDBACK
-   ========================================================= */
-
-function showFeedback(
-    message,
-    className
-) {
-
-    const feedback =
-        document.getElementById(
-            "conjugation-feedback"
-        );
-
-
-    feedback.textContent =
-        message;
-
-
-    feedback.className =
-        "conjugation-feedback";
-
-
-    feedback.classList.add(
-        className
-    );
-
-}
-
-
-function clearFeedback() {
-
-    const feedback =
-        document.getElementById(
-            "conjugation-feedback"
-        );
-
-
-    feedback.textContent =
-        "";
-
-
-    feedback.className =
-        "conjugation-feedback";
-
-}
-
-
-/* =========================================================
-   SHUFFLE
-   ========================================================= */
-
-function shuffleArray(array) {
-
-    for (
-        let i = array.length - 1;
-        i > 0;
-        i--
-    ) {
-
-        const j =
-            Math.floor(
-                Math.random() *
-                (i + 1)
-            );
-
-
-        [
-            array[i],
-            array[j]
-        ] = [
-            array[j],
-            array[i]
-        ];
-
-    }
-
-
-    return array;
-
-}
+document.getElementById("start-button").addEventListener("click", startSeries);
+document.getElementById("next-button").addEventListener("click", nextSeries);
