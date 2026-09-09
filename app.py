@@ -21,7 +21,8 @@ USERS = {
     "karina": {"password": "03162025", "role": "admin"},
     "student": {"password": "i sent the song", "role": "student"},
     "L-English": {"password": "Flip's Class", "role": "enrolled student"},
-    "Punto Ingles": {"password": "Flip's Class", "role": "enrolled student"}
+    "Punto Ingles": {"password": "Flip's Class", "role": "enrolled student"},
+    "Jesica": {"password": "#1", "role": "enrolled student"}
 }
 
 
