@@ -8,6 +8,14 @@
 </style>
 <style>
 /* Extra stage lights wrap the entire viewport edge. */
+.answer-grid{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(5,minmax(150px,auto));}
+.answer-area:nth-child(1){grid-column:1;grid-row:1 / span 2;}
+.answer-area:nth-child(2){grid-column:2;grid-row:1;}
+.answer-area:nth-child(3){grid-column:2;grid-row:2;}
+.answer-area:nth-child(4){grid-column:3;grid-row:1 / span 2;}
+.answer-area:nth-child(5){grid-column:1 / span 2;grid-row:3;}
+.answer-area:nth-child(6){grid-column:1 / span 2;grid-row:4;}
+.answer-area:nth-child(7){grid-column:1 / span 2;grid-row:5;}
 .light:nth-child(1),.light:nth-child(2),.light:nth-child(3),.light:nth-child(4),.light:nth-child(5),.light:nth-child(6),.light:nth-child(7),.light:nth-child(8),.light:nth-child(9),.light:nth-child(10){top:0}
 .light:nth-child(11),.light:nth-child(12),.light:nth-child(13),.light:nth-child(14),.light:nth-child(15),.light:nth-child(16),.light:nth-child(17),.light:nth-child(18),.light:nth-child(19),.light:nth-child(20){bottom:0}
 .light:nth-child(21),.light:nth-child(22),.light:nth-child(23),.light:nth-child(24),.light:nth-child(25),.light:nth-child(26){left:0}
