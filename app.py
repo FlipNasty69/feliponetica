@@ -19,6 +19,7 @@ STUDENT_DATABASE_PATH = os.path.join(app.root_path, "student_users.db")
 USERS = {
     "felipe": {"password": "03162025", "role": "admin"},
     "karina": {"password": "03162025", "role": "admin"},
+    "Olena": {"password": "2056", "role": "admin"},
     "student": {"password": "i sent the song", "role": "student"},
     "L-English": {"password": "Flip's Class", "role": "enrolled student"},
     "Punto Ingles": {"password": "Flip's Class", "role": "enrolled student"},
