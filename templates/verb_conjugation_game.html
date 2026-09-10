@@ -26,12 +26,60 @@
 .entry-card{width:min(520px,100%);padding:38px;text-align:center;border:3px solid var(--gold);background:linear-gradient(180deg,#222d68,#0e1538);box-shadow:0 0 30px rgba(255,216,77,.45),0 25px 70px rgba(0,0,0,.5)}
 .entry-kicker{color:var(--cyan);font-size:12px;font-weight:900;letter-spacing:3px;text-transform:uppercase}.entry-card h2{margin:10px 0;color:var(--gold);font-family:Georgia,serif;font-size:36px}.entry-card p{color:#fff;line-height:1.5}.entry-actions{display:flex;justify-content:center;gap:12px;margin:24px 0 16px}.entry-button{padding:13px 25px;border:2px solid var(--gold);font-weight:900;text-decoration:none}.entry-primary{color:#07132e;background:var(--gold)}.entry-secondary{color:#fff;background:#10245b}.entry-button:hover{transform:translateY(-4px);box-shadow:0 12px 25px rgba(25,191,255,.35)}.entry-register{color:var(--cyan);font-size:13px}.game{display:none}.game.ready{display:block}
 </style>
+<style>
+/* Phone layout: keep every game control inside the viewport. */
+@media (max-width: 620px) {
+	body { min-width: 0; }
+	.game { width: 100%; padding: 14px 12px 42px; }
+	.topbar { width: 100%; margin-bottom: 12px; }
+	.brand { font-size: 17px; }
+	.account { display: flex; flex-wrap: wrap; gap: 6px; line-height: 1.45; }
+	.title-sign { padding: 18px 12px; border-width: 3px; }
+	.title-sign h1 { font-size: clamp(30px, 10vw, 52px); line-height: 1.05; letter-spacing: 0; overflow-wrap: anywhere; }
+	.subtitle { margin-top: 10px; font-size: 12px; line-height: 1.35; }
+	.set-selection { margin: 14px 0; padding: 12px 8px; }
+	.selection-title { font-size: 15px; }
+	.set-buttons { grid-template-columns: 1fr; gap: 8px; }
+	.set-card { width: 100%; min-height: 44px; padding: 11px 8px; font-size: 13px; }
+	.board-shell { display: flex; flex-direction: column; gap: 12px; }
+	.board-shell > .progress-column:first-child { order: 0; }
+	.board-shell > .main-board { order: 1; }
+	.board-shell > .progress-column:last-child { display: none; }
+	.progress-column, .main-board { width: 100%; }
+	.progress-column { padding: 12px 10px; }
+	.progress-column h2 { margin: 4px 0 10px; font-size: 19px; }
+	.progress-column:first-child .progress-row:not(:first-of-type) { display: none; }
+	.verb-banner { padding: 16px 10px; }
+	.verb-banner h2 { font-size: clamp(24px, 8vw, 38px); line-height: 1.05; overflow-wrap: anywhere; }
+	.start-wrap { margin: 14px 0; }
+	.start-button, .next-button, .option { min-height: 46px; }
+	.answer-grid {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		grid-template-rows: auto;
+		gap: 8px;
+	}
+	.answer-area { min-height: 190px; padding: 10px 6px; }
+	.answer-area:nth-child(n + 5) { grid-column: 1 / -1; }
+	.area-answer { margin: 9px 0; font-size: clamp(19px, 6vw, 26px); overflow-wrap: anywhere; }
+	.entry-gate { padding: 12px; }
+	.entry-card { padding: 26px 18px; }
+	.entry-card h2 { font-size: 30px; }
+	.entry-actions { flex-direction: column; gap: 10px; }
+	.entry-button { width: 100%; min-height: 46px; display: grid; place-items: center; }
+}
+
+@media (max-width: 380px) {
+	.game { padding-right: 8px; padding-left: 8px; }
+	.light { width: 7px; height: 7px; }
+	.title-sign h1 { font-size: 29px; }
+}
+</style>
 </head>
 <body data-saved-user="{{ 'true' if saved_user else 'false' }}">
 <div class="lights">{% for number in range(32) %}<span class="light"></span>{% endfor %}</div>
 <section id="entry-gate" class="entry-gate"{% if saved_user or guest_mode %} hidden{% endif %}><div class="entry-card"><div class="entry-kicker">Conjugation Lab</div><h2>Ready to play?</h2><p>Log in to save your score and progress, or play as a guest without saving.</p><div class="entry-actions"><a class="entry-button entry-primary" href="{{ url_for('login', next=url_for('verb_conjugation_game')) }}">Log in</a><a class="entry-button entry-secondary" href="{{ url_for('verb_conjugation_game', guest=1) }}">Play as guest</a></div><a class="entry-register" href="{{ url_for('register') }}">Create a student account</a></div></section>
 <div class="game{% if saved_user or guest_mode %} ready{% endif %}">
-<nav class="topbar"><a class="brand" href="{{ url_for('home') }}">Feliponetica Ingles</a><span class="account"><span id="student-label">Student: {{ display_name }}</span> | <a href="{{ url_for('logout') }}">Log out</a></span></nav>
+<nav class="topbar"><a class="brand" href="{{ url_for('home') }}">Feliponetica Ingles</a><span class="account"><a href="{{ url_for('feliponetica_ingles') }}">Feliponetica Inglés</a> | <span id="student-label">Student: {{ display_name }}</span> | <a href="{{ url_for('logout') }}">Log out</a></span></nav>
 <header class="title-sign"><h1>Conjugate That Verb!</h1><div class="subtitle">The Easiest Way to Master Verb Conjugation</div></header>
 <section class="set-selection"><div class="selection-title">Choose Your Verb Set</div><div id="set-list" class="set-buttons"></div></section>
 <div class="board-shell">

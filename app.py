@@ -339,8 +339,63 @@ CMU_TO_FELIPONETICA = {
     "Y": "ll",
 }
 
+CMU_TO_FELIPONETICA_POLLITO = {
+    # Vowels
+    "AA": "a",
+    "AE": "a",
+    "AH": "a",
+    "AO": "a",
+    "AW": "au",
+    "AY": "ai",
+    "EH": "e",
+    "ER": "r",
+    "EY": "ei",
+    "IH": "i",
+    "IY": "ii",
+    "OW": "ou",
+    "OY": "oi",
+    "UH": "u",
+    "UW": "uu",
 
-def convert_to_feliponetica(text):
+    # Stops
+    "P": "p",
+    "B": "b",
+    "T": "t",
+    "D": "d",
+    "K": "k",
+    "G": "g",
+
+    # Fricatives
+    "F": "f",
+    "V": "v",
+    "TH": "t",
+    "DH": "d",
+    "S": "s",
+    "Z": "z",
+    "SH": "sh",
+    "ZH": "(shᶻ)",
+    "HH": "j",
+
+    # Affricates
+    "CH": "ch",
+    "JH": "ch",
+
+    # Nasals
+    "M": "m",
+    "N": "n",
+    "NG": "ng",
+
+    # Liquids
+    "L": "l",
+    "R": "r",
+
+    # Glides
+    "W": "w",
+    "Y": "ll",
+}
+
+
+def convert_to_feliponetica(text, phoneme_map=CMU_TO_FELIPONETICA):
 
     phonemes = g2p(text)
 
@@ -544,7 +599,7 @@ def convert_to_feliponetica(text):
             and next_phone == "L"
         ):
 
-            vowel = CMU_TO_FELIPONETICA.get(
+            vowel = phoneme_map.get(
                 phone,
                 phone
             )
@@ -559,7 +614,7 @@ def convert_to_feliponetica(text):
         # =================================================
 
         converted.append(
-            CMU_TO_FELIPONETICA.get(
+            phoneme_map.get(
                 phone,
                 phone
             )
@@ -568,6 +623,22 @@ def convert_to_feliponetica(text):
         i += 1
 
     return "".join(converted)
+
+
+def convert_to_feliponetica_pollito(text):
+    return convert_to_feliponetica(
+        text,
+        phoneme_map=CMU_TO_FELIPONETICA_POLLITO
+    )
+
+
+def require_admin():
+    access_error = require_login()
+    if access_error:
+        return access_error
+    if session.get("role") != "admin":
+        return {"error": "Admin access required"}, 403
+    return None
 
 # ============================================================
 # HOME
@@ -608,6 +679,83 @@ def feliponetica():
         result=result,
         user_input=user_input
     )
+
+
+@app.route('/feliponetica-ingles', methods=['GET', 'POST'])
+@app.route('/feliponetica_ingles', methods=['GET', 'POST'])
+def feliponetica_ingles():
+    access_error = require_login()
+    if access_error:
+        return access_error
+
+    pollito_result = None
+    gallo_result = None
+    pollito_input = ""
+    gallo_input = ""
+
+    if request.method == 'POST':
+        dialect = request.form.get('dialect', 'pollito')
+        text = request.form.get('transcript_text', '').strip()
+        if dialect == 'gallo':
+            gallo_input = text
+            if text:
+                gallo_result = convert_to_feliponetica(text)
+        else:
+            pollito_input = text
+            if text:
+                pollito_result = convert_to_feliponetica_pollito(text)
+
+    return render_template(
+        'feliponetica_ingles.html',
+        pollito_result=pollito_result,
+        gallo_result=gallo_result,
+        pollito_input=pollito_input,
+        gallo_input=gallo_input
+    )
+
+
+@app.route('/api/feliponetica/transcribe', methods=['POST'])
+def feliponetica_transcribe_api():
+    access_error = require_admin()
+    if access_error:
+        return access_error
+
+    payload = request.get_json(silent=True) or {}
+    text = str(payload.get('text', '')).strip()
+    dialect = str(payload.get('dialect', 'gallo')).lower()
+    if not text:
+        return {"error": "text is required"}, 400
+    if dialect not in {'pollito', 'gallo'}:
+        return {"error": "dialect must be pollito or gallo"}, 400
+
+    converter = (
+        convert_to_feliponetica_pollito
+        if dialect == 'pollito'
+        else convert_to_feliponetica
+    )
+    return {"dialect": dialect, "text": text, "result": converter(text)}
+
+
+@app.route('/api/feliponetica/transcribe-page', methods=['POST'])
+def feliponetica_transcribe_page():
+    access_error = require_login()
+    if access_error:
+        return access_error
+
+    payload = request.get_json(silent=True) or {}
+    text = str(payload.get('text', '')).strip()
+    dialect = str(payload.get('dialect', 'pollito')).lower()
+    if not text:
+        return {"error": "text is required"}, 400
+    if dialect not in {'pollito', 'gallo'}:
+        return {"error": "dialect must be pollito or gallo"}, 400
+
+    converter = (
+        convert_to_feliponetica_pollito
+        if dialect == 'pollito'
+        else convert_to_feliponetica
+    )
+    return {"dialect": dialect, "text": text, "result": converter(text)}
 
 
 # ============================================================

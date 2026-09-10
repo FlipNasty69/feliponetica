@@ -8,7 +8,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Feliponetica</title>
+<title>Feliponetica Inglés</title>
 
 <link rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}">
@@ -92,7 +92,7 @@
     </div>
 
     <h1>
-        Feliponetica
+        Feliponetica Inglés
     </h1>
 
     <p>
@@ -110,27 +110,37 @@
      TRANSLATOR
      ===================================================== -->
 
+<section class="feliponetica-dialect-banner pollito-banner">
+    <div class="feliponetica-banner-copy">
+        <span class="eyebrow">The bright, fearless pronunciation system</span>
+        <h2>Feliponetica Pollito</h2>
+        <p>Light, direct, and ready to speak.</p>
+    </div>
+    <img src="{{ url_for('static', filename='images/popups/pollito.jpg') }}"
+         alt="A small, bright yellow chick with a confident expression">
+</section>
+
 <section class="card">
 
     <div class="card-icon">
         🔊
     </div>
 
-    <div class="eyebrow">
-        English → Feliponetica
-    </div>
+    <div class="eyebrow">Feliponetica Pollito</div>
 
     <h2>
-        Pronunciation Translator
+        Pollito Translator
     </h2>
 
     <p>
         Write an English word or sentence and convert it into
-        Feliponetica pronunciation.
+        Uses the Pollito pronunciation rules.
     </p>
 
 
-    <form method="POST">
+    <form method="POST" data-feliponetica-form data-dialect="pollito" data-result-target="pollito-result">
+
+        <input type="hidden" name="dialect" value="pollito">
 
         <label for="transcript_text">
             English text
@@ -142,7 +152,7 @@
             id="transcript_text"
             name="transcript_text"
             placeholder="Example: hello, grammar, vocabulary..."
-            value="{{ user_input }}"
+            value="{{ pollito_input }}"
         >
 
 
@@ -163,8 +173,6 @@
      RESULT
      ===================================================== -->
 
-{% if result %}
-
 <section class="info-section">
 
     <div class="eyebrow">
@@ -172,16 +180,46 @@
     </div>
 
     <h2>
-        Feliponetica
+        Pollito Result
     </h2>
 
-    <p>
-        {{ result }}
-    </p>
+    <div id="pollito-result" class="feliponetica-output-screen" {% if not pollito_result %}hidden{% endif %} data-dialect="pollito"></div>
 
 </section>
 
-{% endif %}
+<section class="feliponetica-dialect-banner gallo-banner">
+    <div class="feliponetica-banner-copy">
+        <span class="eyebrow">The bold, full-voice pronunciation system</span>
+        <h2>Feliponetica Gallo</h2>
+        <p>Confident, distinctive, and impossible to ignore.</p>
+    </div>
+    <img src="{{ url_for('static', filename='images/popups/gallo.png') }}"
+         alt="A confident rooster in sunglasses">
+</section>
+
+<section class="card">
+
+    <div class="card-icon">🐓</div>
+    <div class="eyebrow">Feliponetica Gallo</div>
+    <h2>Gallo Translator</h2>
+    <p>Uses the current Feliponetica Gallo pronunciation rules.</p>
+
+    <form method="POST" data-feliponetica-form data-dialect="gallo" data-result-target="gallo-result">
+        <input type="hidden" name="dialect" value="gallo">
+        <label for="gallo_text">English text</label>
+        <input type="text" id="gallo_text" name="transcript_text"
+               placeholder="Example: hello, grammar, vocabulary..."
+               value="{{ gallo_input }}">
+        <button type="submit" class="button button-primary">Translate</button>
+    </form>
+
+</section>
+
+<section class="info-section">
+    <div class="eyebrow">Result</div>
+    <h2>Gallo Result</h2>
+    <div id="gallo-result" class="feliponetica-output-screen" {% if not gallo_result %}hidden{% endif %} data-dialect="gallo"></div>
+</section>
 
 
 
@@ -250,6 +288,8 @@
 
 
 </main>
+
+<script src="{{ url_for('static', filename='scripts/feliponetica_engine.js') }}"></script>
 
 <!-- =========================================================
      FOOTER

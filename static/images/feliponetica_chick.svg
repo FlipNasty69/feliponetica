@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 190" role="img" aria-labelledby="title desc">
+  <title id="title">Chick popping out of an egg</title>
+  <desc id="desc">A confident chick wearing sunglasses popping out of a cracked egg.</desc>
+  <ellipse cx="120" cy="168" rx="78" ry="12" fill="#071b46" opacity=".16"/>
+  <path d="M48 155c2-35 31-53 72-53s70 18 72 53Z" fill="#f5f7fb" stroke="#cbd5e1" stroke-width="5"/>
+  <path d="M73 105c1-40 24-67 55-67 32 0 54 27 55 67-17 17-93 18-110 0Z" fill="#f4c842"/>
+  <path d="M105 39c-8-22 9-32 22-16 8-21 26-14 22 7 18-8 25 8 10 20-20 14-43 9-54-11Z" fill="#e79b2d"/>
+  <path d="M66 109c-17-15-19-30-9-39 12 8 20 20 22 37ZM174 108c17-15 19-30 9-39-12 8-20 20-22 37Z" fill="#e9ae2d"/>
+  <path d="M92 78h31l6 11-6 11H92l-6-11Z" fill="#111827" stroke="#f6d365" stroke-width="5"/>
+  <path d="M132 78h31l6 11-6 11h-31l-6-11Z" fill="#111827" stroke="#f6d365" stroke-width="5"/>
+  <path d="M123 88h15" stroke="#f6d365" stroke-width="5"/>
+  <path d="M121 105l-14 14h30Z" fill="#ed8b2d"/>
+  <path d="M48 144l24-12 17 15 20-12 20 13 23-14 20 10" fill="none" stroke="#cbd5e1" stroke-width="6" stroke-linecap="round"/>
+</svg>

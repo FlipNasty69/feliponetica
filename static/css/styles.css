@@ -2931,3 +2931,140 @@ textarea {
     color: var(--coral);
     font-weight: 700;
 }
+
+/* Feliponetica's two-line word alignment display. */
+.feliponetica-output-screen {
+    width: 100%;
+    min-height: 220px;
+    margin-top: 28px;
+    padding: 42px 36px;
+    overflow-x: auto;
+    background: #f8fbff;
+    border: 2px solid #1646a3;
+    border-radius: 14px;
+    box-shadow: 0 18px 45px rgba(22, 70, 163, 0.16);
+    font-family: Georgia, 'Times New Roman', serif;
+}
+
+.feliponetica-word-row {
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: clamp(18px, 3vw, 42px);
+    min-width: max-content;
+}
+
+.feliponetica-word-cell {
+    display: flex;
+    flex: 0 0 var(--word-width);
+    flex-direction: column;
+    gap: 18px;
+    min-width: var(--word-width);
+    width: var(--word-width);
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.feliponetica-original-word,
+.feliponetica-phonetic-word {
+    display: block;
+    overflow: visible;
+    white-space: nowrap;
+    font-size: clamp(1.15rem, 2.1vw, 2rem);
+    line-height: 1.15;
+}
+
+.feliponetica-original-word {
+    color: #111827;
+    font-weight: 700;
+}
+
+.feliponetica-phonetic-word {
+    color: #1646a3;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.feliponetica-dialect-banner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 220px;
+    margin: 54px 0 28px;
+    padding: 36px clamp(24px, 5vw, 68px);
+    overflow: hidden;
+    border: 3px solid #102d68;
+    border-radius: 18px;
+    box-shadow: 0 20px 38px rgba(15, 39, 91, 0.2);
+}
+
+.pollito-banner {
+    background: linear-gradient(115deg, #ffe88a 0%, #f8c647 52%, #e99d2e 100%);
+}
+
+.gallo-banner {
+    background: linear-gradient(115deg, #ff977b 0%, #ed5b4b 52%, #bd3242 100%);
+}
+
+.feliponetica-banner-copy {
+    position: relative;
+    z-index: 1;
+    max-width: 68%;
+}
+
+.feliponetica-banner-copy .eyebrow {
+    color: #102d68;
+    font-weight: 900;
+}
+
+.feliponetica-banner-copy h2 {
+    margin: 8px 0 10px;
+    color: #102d68;
+    font-size: clamp(2.2rem, 6vw, 5rem);
+    line-height: 0.95;
+    letter-spacing: 0;
+}
+
+.feliponetica-banner-copy p {
+    margin: 0;
+    color: #17213b;
+    font-size: clamp(1rem, 2vw, 1.3rem);
+    font-weight: 700;
+}
+
+.feliponetica-dialect-banner img {
+    position: absolute;
+    right: clamp(8px, 4vw, 48px);
+    bottom: -8px;
+    width: clamp(145px, 28vw, 270px);
+    height: auto;
+    filter: drop-shadow(0 12px 8px rgba(15, 39, 91, 0.2));
+}
+
+.gallo-banner img {
+    right: clamp(-14px, 2vw, 28px);
+    width: clamp(180px, 31vw, 310px);
+}
+
+@media (max-width: 620px) {
+    .feliponetica-dialect-banner {
+        min-height: 300px;
+        align-items: flex-start;
+        padding-top: 30px;
+    }
+
+    .feliponetica-banner-copy {
+        max-width: 100%;
+    }
+
+    .feliponetica-dialect-banner img {
+        right: 50%;
+        width: 190px;
+        transform: translateX(50%);
+    }
+
+    .gallo-banner img {
+        right: 50%;
+        width: 220px;
+    }
+}
