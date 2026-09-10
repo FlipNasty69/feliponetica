@@ -1287,12 +1287,10 @@
                     "Image (translation 4)": ""
                 }
             ]
-        }
-    ],
-
-    "series": [
-
+        },
+    
         {
+  
             "id": 2,
             "title": "T-ending -- rnt",
 
@@ -1350,12 +1348,10 @@
                     "Image (translation 4)": ""
                 }
             ]
-        }
-    ],
-
-    "series": [
-
+        },
+    
         {
+
             "id": 3,
             "title": "T-ending -- ept",
 
@@ -1517,11 +1513,8 @@
                     "Image (translation 4)": ""
                 }
             ]
-        }
-    ],
-
-    "series": [
-
+        },
+    
         {
             "id": 4,
             "title": "T-ending -- (a<)t",
@@ -1580,11 +1573,8 @@
                     "Image (translation 4)": ""
                 }
             ]
-        }
-    ],
-
-    "series": [
-
+        },
+    
         {
             "id": 5,
             "title": "T-ending -- elt",
@@ -1695,10 +1685,7 @@
                     "Image (translation 4)": ""
                 }
             ]
-        }
-    ],
-
-    "series": [
+        },
 
         {
             "id": 6,
@@ -1758,10 +1745,7 @@
                     "Image (translation 4)": ""
                 }
             ]
-        }
-    ],
-
-    "series": [
+        },
 
         {
             "id": 7,
