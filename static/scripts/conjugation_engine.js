@@ -286,7 +286,7 @@ async function resolveAudioValue(form, text) {
 }
 
 async function addAudioLink(area, form, text) {
-    const value = resolveAudioValue(form, text);
+    const value = await resolveAudioValue(form, text);
     if (!value) return;
     const exists = await audioUrlExists(value);
     if (!exists) return;
@@ -301,7 +301,7 @@ async function addAudioLink(area, form, text) {
 
 async function playHelpAudio(areaIndex) {
     const form = FORM_DEFINITIONS[areaIndex];
-    const audioUrl = resolveAudioValue(form, currentVerb?.[form.key] || currentVerb?.verb || "");
+    const audioUrl = await resolveAudioValue(form, currentVerb?.[form.key] || currentVerb?.verb || "");
     if (!audioUrl) return;
     const exists = await audioUrlExists(audioUrl);
     if (!exists) return;
