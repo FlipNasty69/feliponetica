@@ -1,6 +1,6 @@
 const FORM_DEFINITIONS = [
     { key: "past", label: "Past", audio: "past audio" },
-    { key: "base form", label: "Present (base form)", audio: "base form audio" },
+    { key: "base form", label: "Present", audio: "base form audio" },
     { key: "3rd person singular", label: "3rd person singular", audio: "3rd person audio" },
     { key: "future", label: "Future", audio: "future audio" },
     { key: "ING", label: "ING", audio: "ING audio" },
