@@ -264,8 +264,32 @@ function renderProgress() {
     });
 }
 
-function addAudioLink(area, form, text) {
-    const value = currentVerb[form.audio] || pronunciationUrl(text);
+async function resolveAudioValue(form, text) {
+    const keyCandidates = [
+        form.audio,
+        `${form.key} audio`,
+        form.key === "3rd person singular" ? "3rd person audio" : "",
+        form.key === "base form" ? "base form audio" : "",
+        form.key === "past participle" ? "past participle audio" : "",
+        form.key === "infinitive" ? "infinitive audio" : "",
+        form.key === "ING" ? "ING audio" : "",
+        form.key === "future" ? "future audio" : "",
+        form.key === "past" ? "past audio" : ""
+    ].filter(Boolean);
+
+    for (const key of keyCandidates) {
+        const value = currentVerb?.[key];
+        if (value) return value;
+    }
+
+    return buildVerbAudioUrl(text, form.key);
+}
+
+async function addAudioLink(area, form, text) {
+    const value = resolveAudioValue(form, text);
+    if (!value) return;
+    const exists = await audioUrlExists(value);
+    if (!exists) return;
     const link = document.createElement("a");
     link.className = "audio-link";
     link.href = value;
@@ -275,14 +299,88 @@ function addAudioLink(area, form, text) {
     area.appendChild(link);
 }
 
-function playHelpAudio(areaIndex) {
-    const helpFile = areaIndex === 0 ? "help_area_1.1.mp3" : areaIndex === 5 ? "help_area_1.2.mp3" : `help_area_${areaIndex + 1}.mp3`;
-    const audio = new Audio(`/static/audio/${helpFile}`);
+async function playHelpAudio(areaIndex) {
+    const form = FORM_DEFINITIONS[areaIndex];
+    const audioUrl = resolveAudioValue(form, currentVerb?.[form.key] || currentVerb?.verb || "");
+    if (!audioUrl) return;
+    const exists = await audioUrlExists(audioUrl);
+    if (!exists) return;
+    const audio = new Audio(audioUrl);
     audio.play().catch(() => {});
 }
 
+function buildVerbAudioUrl(text, formKey = "") {
+    const queue = [];
+    const seen = new Set();
+    const baseValues = [
+        text,
+        currentVerb?.verb,
+        currentVerb?.["base form"],
+        currentVerb?.["3rd person singular"],
+        currentVerb?.["past"],
+        currentVerb?.["ING"],
+        currentVerb?.["past participle"],
+        currentVerb?.["infinitive"],
+        formKey ? currentVerb?.[formKey] : ""
+    ].filter(Boolean);
+
+    baseValues.forEach(value => {
+        const cleaned = String(value).trim();
+        if (!cleaned) return;
+        const simple = cleaned.toLowerCase().replace(/^(to|will|would|can|could|should|must|may|might|have|has|had)\s+/i, "").trim();
+        const words = simple.split(/\s+/).filter(Boolean);
+        const lastWord = words.at(-1) || simple;
+        const rootWord = lastWord.replace(/[^a-z]/gi, "").toLowerCase();
+        const variants = [
+            simple,
+            lastWord,
+            rootWord,
+            rootWord.replace(/ing$/, ""),
+            rootWord.replace(/s$/, ""),
+            rootWord.replace(/es$/, ""),
+            rootWord.replace(/ed$/, "")
+        ].filter(Boolean);
+
+        variants.forEach(variant => {
+            const normalized = variant.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+            if (!normalized || seen.has(normalized)) return;
+            seen.add(normalized);
+            queue.push(normalized);
+            const fbName = `FB_${normalized}`;
+            if (!seen.has(fbName)) {
+                seen.add(fbName);
+                queue.push(fbName);
+            }
+        });
+    });
+
+    const audioRoot = "/static/audio/pronunciation%20audio/";
+    for (const candidate of queue) {
+        for (const extension of [".mp3", ".wav"]) {
+            const fileName = `${candidate}${extension}`;
+            return `${audioRoot}${encodeURIComponent(fileName).replace(/%20/g, " ")}`;
+        }
+    }
+    return "";
+}
+
+async function audioUrlExists(url) {
+    if (!url) return false;
+    try {
+        const response = await fetch(url, { method: "HEAD" });
+        return response.ok;
+    } catch (error) {
+        try {
+            const response = await fetch(url, { method: "GET" });
+            return response.ok;
+        } catch {
+            return false;
+        }
+    }
+}
+
 function pronunciationUrl(text) {
-    return `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(text)}&tl=en`;
+    return "";
 }
 
 function getMeaning(verb) {
