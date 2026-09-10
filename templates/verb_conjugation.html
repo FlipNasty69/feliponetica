@@ -13,7 +13,7 @@
     <title>Verb Conjugation Game | Feliponetica Inglés</title>
 
     <!-- EXISTING SITE CSS -->
-    <link
+        <div class="conjugation-board" style="display:contents;">
         rel="stylesheet"
         href="{{ url_for('static', filename='css/styles.css') }}"
     >
@@ -71,7 +71,7 @@
 
 </nav>
 
-<div class="conjugation-game">
+<div class="conjugation-game" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto repeat(5,minmax(150px,auto));gap:16px;">
 
     <!-- BASE FORM -->
     <div class="base-form-area">
@@ -81,10 +81,10 @@
 
 
     <!-- MAIN BOARD -->
-    <div class="conjugation-board">
+    <div class="conjugation-board" style="display:contents;">
 
         <!-- PAST: 1a + 1b -->
-        <div class="verb-area past-area" data-form="past">
+        <div class="verb-area past-area" data-form="past" style="grid-column:1;grid-row:2 / span 2;">
             <div class="area-label">PAST</div>
 
             <div class="answer-options">
@@ -102,7 +102,7 @@
 
 
         <!-- PRESENT: 2a -->
-        <div class="verb-area present-area" data-form="present">
+        <div class="verb-area present-area" data-form="present" style="grid-column:2;grid-row:2;">
             <div class="area-label">PRESENT</div>
 
             <div class="answer-options">
@@ -120,7 +120,7 @@
 
 
         <!-- 3RD PERSON: 2b -->
-        <div class="verb-area third-person-area" data-form="third_person">
+        <div class="verb-area third-person-area" data-form="third_person" style="grid-column:2;grid-row:3;">
             <div class="area-label">3RD PERSON SINGULAR</div>
 
             <div class="answer-options">
@@ -138,7 +138,7 @@
 
 
         <!-- FUTURE: 3a + 3b -->
-        <div class="verb-area future-area" data-form="future">
+        <div class="verb-area future-area" data-form="future" style="grid-column:3;grid-row:2 / span 2;">
             <div class="area-label">FUTURE</div>
 
             <div class="answer-options">
@@ -158,7 +158,7 @@
 
 
     <!-- INFINITIVE: 1d + 2d -->
-    <div class="verb-area full-width-area" data-form="infinitive">
+    <div class="verb-area full-width-area" data-form="infinitive" style="grid-column:1 / span 2;grid-row:6;">
         <div class="area-label">INFINITIVE</div>
 
         <div class="answer-options">
@@ -176,7 +176,7 @@
 
 
     <!-- ING: 1f + 2f -->
-    <div class="verb-area full-width-area" data-form="ing">
+    <div class="verb-area full-width-area" data-form="ing" style="grid-column:1 / span 2;grid-row:4;">
         <div class="area-label">-ING</div>
 
         <div class="answer-options">
@@ -194,7 +194,7 @@
 
 
     <!-- PAST PARTICIPLE: 1h + 2h -->
-    <div class="verb-area full-width-area" data-form="past_participle">
+    <div class="verb-area full-width-area" data-form="past_participle" style="grid-column:1 / span 2;grid-row:5;">
         <div class="area-label">PAST PARTICIPLE</div>
 
         <div class="answer-options">
