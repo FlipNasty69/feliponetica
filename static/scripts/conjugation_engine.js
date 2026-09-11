@@ -290,13 +290,15 @@ async function addAudioLink(area, form, text) {
     if (!value) return;
     const exists = await audioUrlExists(value);
     if (!exists) return;
-    const link = document.createElement("a");
-    link.className = "audio-link";
-    link.href = value;
-    link.target = "_blank";
-    link.rel = "noopener";
-    link.textContent = "Play verb audio";
-    area.appendChild(link);
+    const button = document.createElement("button");
+    button.className = "audio-link";
+    button.type = "button";
+    button.textContent = "Play verb audio";
+    button.addEventListener("click", () => {
+        const audio = new Audio(value);
+        audio.play().catch(() => {});
+    });
+    area.appendChild(button);
 }
 
 async function playHelpAudio(areaIndex) {
