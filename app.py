@@ -46,8 +46,9 @@ def load_configured_users():
         raise RuntimeError("APP_USERS_JSON must be a JSON object")
 
     return {
-        username: details
+        username.strip().lower(): details
         for username, details in users.items()
+        if isinstance(username, str)
         if isinstance(details, dict)
         and isinstance(details.get("password_hash"), str)
         and isinstance(details.get("role"), str)
@@ -154,17 +155,18 @@ def login():
     next_url = request.args.get("next", "")
     if request.method == "POST":
         username = request.form.get("username", "").strip()
+        login_identifier = username.lower()
         password = request.form.get("password", "")
         next_url = request.form.get("next", next_url)
 
-        user = USERS.get(username)
+        user = USERS.get(login_identifier)
         registered_user = None
         if not user:
             with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
                 connection.row_factory = sqlite3.Row
                 registered_user = connection.execute(
                     "SELECT * FROM student_users WHERE email = ? OR username = ?",
-                    (username.strip().lower(), username.strip().lower())
+                    (login_identifier, login_identifier)
                 ).fetchone()
 
         configured_password_matches = user and check_password_hash(
@@ -174,7 +176,7 @@ def login():
             registered_user["password_hash"], password
         )
         if configured_password_matches or registered_password_matches:
-            session["username"] = username
+            session["username"] = login_identifier
             session["role"] = user["role"] if user else registered_user["role"]
             if registered_user:
                 session["user_id"] = registered_user["id"]
