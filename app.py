@@ -21,11 +21,16 @@ app.config.update(
     SESSION_COOKIE_SECURE=os.environ.get("FLASK_COOKIE_SECURE", "0") == "1",
 )
 STUDENT_DATABASE_PATH = os.path.join(app.root_path, "student_users.db")
+LOCAL_USERS_PATH = os.path.join(app.root_path, "admin_users.json")
 
 
 def load_configured_users():
     """Load username, role, and password hashes without storing passwords in source."""
-    configured_users = os.environ.get("APP_USERS_JSON", "{}")
+    configured_users = os.environ.get("APP_USERS_JSON")
+    if configured_users is None and os.path.exists(LOCAL_USERS_PATH):
+        with open(LOCAL_USERS_PATH, "r", encoding="utf-8") as users_file:
+            configured_users = users_file.read()
+    configured_users = configured_users or "{}"
     try:
         users = json.loads(configured_users)
     except json.JSONDecodeError:
@@ -53,8 +58,10 @@ def init_student_database():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 last_name TEXT NOT NULL,
+                username TEXT UNIQUE,
                 email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'student'
             )
         """)
         connection.execute("""
@@ -77,6 +84,19 @@ def init_student_database():
             connection.execute(
                 "ALTER TABLE conjugation_progress ADD COLUMN current_verb INTEGER NOT NULL DEFAULT 0"
             )
+        student_columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(student_users)").fetchall()
+        }
+        if "username" not in student_columns:
+            connection.execute("ALTER TABLE student_users ADD COLUMN username TEXT")
+        if "role" not in student_columns:
+            connection.execute(
+                "ALTER TABLE student_users ADD COLUMN role TEXT NOT NULL DEFAULT 'student'"
+            )
+        connection.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS student_users_username_idx ON student_users(username)"
+        )
 
 
 init_student_database()
@@ -137,8 +157,8 @@ def login():
             with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
                 connection.row_factory = sqlite3.Row
                 registered_user = connection.execute(
-                    "SELECT * FROM student_users WHERE email = ?",
-                    (username.strip().lower(),)
+                    "SELECT * FROM student_users WHERE email = ? OR username = ?",
+                    (username.strip().lower(), username.strip().lower())
                 ).fetchone()
 
         configured_password_matches = user and check_password_hash(
@@ -149,7 +169,7 @@ def login():
         )
         if configured_password_matches or registered_password_matches:
             session["username"] = username
-            session["role"] = user["role"] if user else "student"
+            session["role"] = user["role"] if user else registered_user["role"]
             if registered_user:
                 session["user_id"] = registered_user["id"]
                 session["display_name"] = f"{registered_user['name']} {registered_user['last_name']}"
@@ -185,15 +205,15 @@ def register():
             with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
                 try:
                     connection.execute(
-                        "INSERT INTO student_users (name, last_name, email, password_hash) VALUES (?, ?, ?, ?)",
-                        (name, last_name, email, generate_password_hash(password))
+                        "INSERT INTO student_users (name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
+                        (name, last_name, email, generate_password_hash(password), "student")
                     )
                     connection.commit()
                 except sqlite3.IntegrityError:
                     message = "That email is already registered."
                 else:
                     session["username"] = email
-                    session["role"] = "student"
+                    session["role"] = "enrolled student"
                     session["user_id"] = connection.execute(
                         "SELECT id FROM student_users WHERE email = ?", (email,)
                     ).fetchone()[0]
@@ -1038,9 +1058,6 @@ def course():
     if access_error:
         return access_error
 
-    if session["role"] == "student":
-        return "Access denied"
-
     return render_template('course.html')
 
 # ============================================================
@@ -1053,9 +1070,6 @@ def interactive_module(module_id):
     access_error = require_login()
     if access_error:
         return access_error
-
-    if session["role"] == "student":
-        return "Access denied"
 
     # --------------------------------------------------------
     # LOAD JSON DATA
