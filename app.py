@@ -11,7 +11,6 @@ from flask import request, render_template
 from flask import Flask, render_template, request, send_from_directory, abort
 from g2p_en import G2p
 from flask import session, redirect, url_for
-from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
@@ -21,40 +20,12 @@ app.config.update(
     SESSION_COOKIE_SECURE=os.environ.get("FLASK_COOKIE_SECURE", "0") == "1",
 )
 STUDENT_DATABASE_PATH = os.path.join(app.root_path, "student_users.db")
-LOCAL_USERS_PATH = os.path.join(app.root_path, "admin_users.json")
-
-
-def load_configured_users():
-    """Load username, role, and password hashes without storing passwords in source."""
-    configured_users = os.environ.get("APP_USERS_JSON")
-    local_users_text = None
-    if os.path.exists(LOCAL_USERS_PATH):
-        with open(LOCAL_USERS_PATH, "r", encoding="utf-8") as users_file:
-            local_users_text = users_file.read()
-
-    if configured_users is None and local_users_text:
-        configured_users = local_users_text
-    elif configured_users is None:
-        configured_users = "{}"
-
-    try:
-        users = json.loads(configured_users)
-    except json.JSONDecodeError:
-        raise RuntimeError("APP_USERS_JSON must contain valid JSON")
-
-    if not isinstance(users, dict):
-        raise RuntimeError("APP_USERS_JSON must be a JSON object")
-
-    return {
-        username: details
-        for username, details in users.items()
-        if isinstance(details, dict)
-        and isinstance(details.get("password_hash"), str)
-        and isinstance(details.get("role"), str)
+USERS = {
+    "felipe": {
+        "password": "felipe",
+        "role": "admin",
     }
-
-
-USERS = load_configured_users()
+}
 
 
 def init_student_database():
@@ -167,11 +138,9 @@ def login():
                     (username.strip().lower(), username.strip().lower())
                 ).fetchone()
 
-        configured_password_matches = user and check_password_hash(
-            user["password_hash"], password
-        )
-        registered_password_matches = registered_user and check_password_hash(
-            registered_user["password_hash"], password
+        configured_password_matches = user and user["password"] == password
+        registered_password_matches = (
+            registered_user and registered_user["password_hash"] == password
         )
         if configured_password_matches or registered_password_matches:
             session["username"] = username
@@ -212,7 +181,7 @@ def register():
                 try:
                     connection.execute(
                         "INSERT INTO student_users (name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
-                        (name, last_name, email, generate_password_hash(password), "student")
+                        (name, last_name, email, password, "student")
                     )
                     connection.commit()
                 except sqlite3.IntegrityError:
