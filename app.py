@@ -27,10 +27,16 @@ LOCAL_USERS_PATH = os.path.join(app.root_path, "admin_users.json")
 def load_configured_users():
     """Load username, role, and password hashes without storing passwords in source."""
     configured_users = os.environ.get("APP_USERS_JSON")
-    if configured_users is None and os.path.exists(LOCAL_USERS_PATH):
+    local_users_text = None
+    if os.path.exists(LOCAL_USERS_PATH):
         with open(LOCAL_USERS_PATH, "r", encoding="utf-8") as users_file:
-            configured_users = users_file.read()
-    configured_users = configured_users or "{}"
+            local_users_text = users_file.read()
+
+    if configured_users is None and local_users_text:
+        configured_users = local_users_text
+    elif configured_users is None:
+        configured_users = "{}"
+
     try:
         users = json.loads(configured_users)
     except json.JSONDecodeError:
