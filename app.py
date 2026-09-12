@@ -23,6 +23,7 @@ USERS = {
     "student": {"password": "i sent the song", "role": "student"},
     "L-English": {"password": "Flip's Class", "role": "enrolled student"},
     "Punto Ingles": {"password": "Flip's Class", "role": "enrolled student"},
+    "Mariana": {"password": "Veracruz", "role": "enrolled student"},
     "Jesica": {"password": "#1", "role": "enrolled student"}
 }
 
