@@ -19,19 +19,21 @@
         <p>Welcome back</p>
         {% if message %}<p class="login-message">{{ message }}</p>{% endif %}
 
-        <form method="POST">
+        <form method="POST" autocomplete="on">
 
             <input type="hidden" name="next" value="{{ next_url or '' }}">
 
             <input
                 type="text"
                 name="username"
+                autocomplete="username"
                 placeholder="Email or username"
                 required>
 
             <input
                 type="password"
                 name="password"
+                autocomplete="current-password"
                 placeholder="Password"
                 required>
 

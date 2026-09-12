@@ -4,6 +4,7 @@ import smtplib
 import json
 import nltk
 import re
+import secrets
 
 from email.message import EmailMessage
 from flask import request, render_template
@@ -13,19 +14,36 @@ from flask import session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # change this
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("FLASK_COOKIE_SECURE", "0") == "1",
+)
 STUDENT_DATABASE_PATH = os.path.join(app.root_path, "student_users.db")
 
-USERS = {
-    "felipe": {"password": "03162025", "role": "admin"},
-    "karina": {"password": "03162025", "role": "admin"},
-    "Olena": {"password": "2056", "role": "admin"},
-    "student": {"password": "i sent the song", "role": "student"},
-    "L-English": {"password": "Flip's Class", "role": "enrolled student"},
-    "Punto Ingles": {"password": "Flip's Class", "role": "enrolled student"},
-    "Mariana": {"password": "Veracruz", "role": "enrolled student"},
-    "Jesica": {"password": "#1", "role": "enrolled student"}
-}
+
+def load_configured_users():
+    """Load username, role, and password hashes without storing passwords in source."""
+    configured_users = os.environ.get("APP_USERS_JSON", "{}")
+    try:
+        users = json.loads(configured_users)
+    except json.JSONDecodeError:
+        raise RuntimeError("APP_USERS_JSON must contain valid JSON")
+
+    if not isinstance(users, dict):
+        raise RuntimeError("APP_USERS_JSON must be a JSON object")
+
+    return {
+        username: details
+        for username, details in users.items()
+        if isinstance(details, dict)
+        and isinstance(details.get("password_hash"), str)
+        and isinstance(details.get("role"), str)
+    }
+
+
+USERS = load_configured_users()
 
 
 def init_student_database():
@@ -123,10 +141,13 @@ def login():
                     (username.strip().lower(),)
                 ).fetchone()
 
+        configured_password_matches = user and check_password_hash(
+            user["password_hash"], password
+        )
         registered_password_matches = registered_user and check_password_hash(
             registered_user["password_hash"], password
         )
-        if (user and user["password"] == password) or registered_password_matches:
+        if configured_password_matches or registered_password_matches:
             session["username"] = username
             session["role"] = user["role"] if user else "student"
             if registered_user:
