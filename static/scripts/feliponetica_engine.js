@@ -1,46 +1,6 @@
 (() => {
 	const forms = document.querySelectorAll('[data-feliponetica-form]');
 
-	const vowelUnits = new Set([
-		'a', 'e', 'i', 'o', 'u', 'au', 'ai', 'ei', 'ou', 'oi', 'ii', 'uu'
-	]);
-
-	function phoneticUnits(word) {
-		return word.match(/au|ai|ei|ou|oi|ii|uu|sh|ch|ng|[a-z]|[^a-z]/gi) || [];
-	}
-
-	function syllabify(word) {
-		const units = phoneticUnits(word);
-		const nuclei = units.reduce((positions, unit, index) => {
-			if (vowelUnits.has(unit.toLowerCase())) {
-				positions.push(index);
-			}
-			return positions;
-		}, []);
-
-		if (nuclei.length < 2) {
-			return word;
-		}
-
-		const syllables = [];
-		let start = 0;
-		for (let index = 0; index < nuclei.length - 1; index += 1) {
-			const gapStart = nuclei[index] + 1;
-			const gapEnd = nuclei[index + 1];
-			let split = gapEnd;
-			for (let gapIndex = gapEnd - 1; gapIndex >= gapStart; gapIndex -= 1) {
-				if (/^[a-z]+$/i.test(units[gapIndex])) {
-					split = gapIndex;
-					break;
-				}
-			}
-			syllables.push(units.slice(start, split).join(''));
-			start = split;
-		}
-		syllables.push(units.slice(start).join(''));
-		return syllables.join('-');
-	}
-
 	function renderOutput(result, originalText, output, dialect) {
 		output.replaceChildren();
 		output.classList.add('feliponetica-output-screen');
@@ -52,7 +12,7 @@
 		row.className = 'feliponetica-word-row';
 
 		originalWords.forEach((originalWord, index) => {
-			const phoneticWord = syllabify(phoneticWords[index] || '');
+			const phoneticWord = phoneticWords[index] || '';
 			const cell = document.createElement('div');
 			cell.className = 'feliponetica-word-cell';
 			const widthUnits = Math.max(originalWord.length, phoneticWord.length);
