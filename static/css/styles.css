@@ -3068,3 +3068,654 @@ textarea {
         width: 220px;
     }
 }
+
+/* =========================================================
+   FELIPONETICA LANDING PAGE
+   NEW COLD-BLUE VISUAL SYSTEM
+   Add this at the VERY END of styles.css.
+   ========================================================= */
+
+
+/* =========================================================
+   1. LANDING PAGE COLORS + FOUNDATION
+   ========================================================= */
+
+body:has(.hero) {
+    --lp-navy: #020817;
+    --lp-deep: #06152f;
+    --lp-blue: #0028c7;
+    --lp-electric: #1769ff;
+    --lp-ice: #dff7ff;
+    --lp-frost: #f3fbff;
+    --lp-text: #0a1830;
+    --lp-muted: #45617f;
+
+    background:
+        linear-gradient(
+            180deg,
+            var(--lp-navy) 0%,
+            var(--lp-deep) 34%,
+            var(--lp-frost) 34%,
+            var(--lp-frost) 100%
+        );
+
+    color: var(--lp-text);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body:has(.hero) h1,
+body:has(.hero) h2,
+body:has(.hero) h3,
+body:has(.hero) h4,
+body:has(.hero) p {
+    margin: 0;
+}
+
+body:has(.hero) h1,
+body:has(.hero) h2,
+body:has(.hero) h3 {
+    letter-spacing: -1px;
+    line-height: 1.05;
+}
+
+body:has(.hero) p {
+    line-height: 1.7;
+}
+
+
+/* =========================================================
+   2. NAVIGATION
+   ========================================================= */
+
+body:has(.hero) .navbar {
+    background: rgba(2, 8, 23, .88);
+    border-bottom: 1px solid rgba(223, 247, 255, .12);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, .35);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+body:has(.hero) .logo {
+    color: var(--lp-ice);
+}
+
+body:has(.hero) .logo span {
+    color: #8fdcff;
+}
+
+body:has(.hero) .nav-links a {
+    position: relative;
+    background: #0a2043;
+    color: var(--lp-ice);
+    border: 1px solid rgba(143, 220, 255, .20);
+
+    box-shadow:
+        0 5px 0 #020b1b,
+        0 12px 25px rgba(0, 0, 0, .42),
+        0 20px 40px rgba(0, 40, 199, .16);
+
+    transition:
+        transform .16s ease,
+        box-shadow .16s ease,
+        background .16s ease;
+}
+
+body:has(.hero) .nav-links a:hover {
+    transform: translateY(-5px);
+    background: var(--lp-blue);
+    color: #fff;
+
+    box-shadow:
+        0 7px 0 #00166f,
+        0 18px 35px rgba(0, 0, 0, .48),
+        0 25px 50px rgba(0, 40, 199, .25);
+}
+
+body:has(.hero) .nav-links a:active {
+    transform: translateY(3px);
+
+    box-shadow:
+        0 2px 0 #00166f,
+        0 6px 12px rgba(0, 0, 0, .35);
+}
+
+
+/* =========================================================
+   3. HERO
+   ========================================================= */
+
+body:has(.hero) .main-container {
+    width: 100%;
+    max-width: none;
+    padding: 0;
+}
+
+body:has(.hero) .hero {
+    position: relative;
+    width: 100%;
+    max-width: none;
+    min-height: 92vh;
+    margin: 0;
+    padding: clamp(90px, 10vw, 150px) 6% 100px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+    isolation: isolate;
+
+    background:
+        radial-gradient(
+            circle at 50% 20%,
+            rgba(35, 110, 255, .22),
+            transparent 38%
+        ),
+        linear-gradient(
+            180deg,
+            #010611,
+            #06152f 72%,
+            #09214a
+        );
+
+    color: var(--lp-ice);
+}
+
+body:has(.hero) .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+
+    background:
+        radial-gradient(
+            ellipse at 50% 100%,
+            rgba(109, 216, 255, .14),
+            transparent 45%
+        ),
+        linear-gradient(
+            120deg,
+            transparent 25%,
+            rgba(255,255,255,.035) 50%,
+            transparent 75%
+        );
+
+    pointer-events: none;
+}
+
+body:has(.hero) .hero h1 {
+    max-width: 1000px;
+
+    color: var(--lp-ice);
+    font-size: clamp(48px, 8vw, 100px);
+    font-weight: 800;
+    letter-spacing: -2px;
+
+    text-shadow:
+        0 3px 18px rgba(143, 220, 255, .18),
+        0 12px 45px rgba(0, 0, 0, .55);
+}
+
+body:has(.hero) .hero h1 span {
+    color: #8fdcff;
+    text-shadow:
+        0 0 25px rgba(143, 220, 255, .25);
+}
+
+body:has(.hero) .hero p {
+    max-width: 760px;
+    margin-top: 28px;
+
+    color: #b9d9ee;
+    font-size: clamp(17px, 2vw, 21px);
+}
+
+body:has(.hero) .hero-actions {
+    margin-top: 40px;
+    gap: 18px;
+}
+
+
+/* =========================================================
+   4. HERO VIDEO
+   CSS ONLY — STYLES AN EXISTING VIDEO
+   ========================================================= */
+
+body:has(.hero) .hero .video-container,
+body:has(.hero) .hero .video-wrapper {
+    position: relative;
+    z-index: 1;
+    width: min(1100px, 92vw);
+    margin: 40px auto 0;
+}
+
+body:has(.hero) .hero .video-container {
+    overflow: hidden;
+
+    border: 1px solid rgba(143, 220, 255, .25);
+    border-radius: 26px;
+
+    background: #020817;
+
+    box-shadow:
+        0 12px 0 #01040b,
+        0 30px 70px rgba(0, 0, 0, .60),
+        0 55px 100px rgba(0, 20, 70, .35);
+}
+
+body:has(.hero) .hero video,
+body:has(.hero) .hero iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+
+/* =========================================================
+   5. THREE-DIMENSIONAL BUTTON SYSTEM
+   FLOAT → HOVER DOWN → CLICK BOUNCE
+   ========================================================= */
+
+body:has(.hero) .button,
+body:has(.hero) button,
+body:has(.hero) .btn {
+    position: relative;
+
+    border: 1px solid rgba(160, 225, 255, .30);
+    border-radius: 16px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #3283ff 0%,
+            #0752db 48%,
+            #0035a8 100%
+        );
+
+    color: #fff;
+
+    box-shadow:
+        0 6px 0 #001d6b,
+        0 14px 24px rgba(0, 15, 50, .40),
+        0 28px 55px rgba(0, 40, 199, .22),
+        inset 0 2px 2px rgba(255,255,255,.25);
+
+    transition:
+        transform .16s ease,
+        box-shadow .16s ease,
+        filter .16s ease;
+
+    will-change: transform;
+}
+
+body:has(.hero) .button:hover,
+body:has(.hero) button:hover,
+body:has(.hero) .btn:hover {
+    transform: translateY(-5px);
+
+    filter: brightness(1.08);
+
+    box-shadow:
+        0 8px 0 #00166f,
+        0 20px 35px rgba(0, 15, 50, .48),
+        0 38px 70px rgba(0, 40, 199, .28),
+        inset 0 2px 3px rgba(255,255,255,.30);
+}
+
+body:has(.hero) .button:active,
+body:has(.hero) button:active,
+body:has(.hero) .btn:active {
+    transform: translateY(4px);
+
+    box-shadow:
+        0 2px 0 #00166f,
+        0 6px 12px rgba(0, 15, 50, .38),
+        inset 0 3px 5px rgba(0,0,0,.18);
+
+    animation: lpButtonBounce .28s ease-out;
+}
+
+@keyframes lpButtonBounce {
+    0%   { transform: translateY(4px); }
+    45%  { transform: translateY(-3px); }
+    75%  { transform: translateY(2px); }
+    100% { transform: translateY(0); }
+}
+
+
+/* =========================================================
+   6. LIGHT SECTIONS
+   ========================================================= */
+
+body:has(.hero) .section {
+    position: relative;
+    width: 100%;
+    margin: 0;
+    padding: clamp(80px, 9vw, 130px) 6%;
+
+    background: var(--lp-frost);
+    color: var(--lp-text);
+}
+
+body:has(.hero) .section:nth-of-type(even) {
+    background:
+        linear-gradient(
+            180deg,
+            #dff3ff,
+            #f4fbff
+        );
+}
+
+body:has(.hero) .section h2,
+body:has(.hero) .section h3 {
+    color: #061a38;
+}
+
+body:has(.hero) .section p {
+    color: var(--lp-muted);
+}
+
+
+/* =========================================================
+   7. CARDS — DEEP FLOATING SEPARATION
+   ========================================================= */
+
+body:has(.hero) .card,
+body:has(.hero) .level-card,
+body:has(.hero) .vocabulary-card {
+    background:
+        linear-gradient(
+            145deg,
+            #ffffff,
+            #eaf7ff
+        );
+
+    border: 1px solid rgba(0, 65, 150, .14);
+
+    box-shadow:
+        0 8px 0 #c4d9e8,
+        0 20px 40px rgba(0, 25, 70, .18),
+        0 42px 75px rgba(0, 40, 100, .13);
+
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease;
+}
+
+body:has(.hero) .card:hover,
+body:has(.hero) .level-card:hover,
+body:has(.hero) .vocabulary-card:hover {
+    transform: translateY(-8px);
+
+    box-shadow:
+        0 10px 0 #b7d1e3,
+        0 28px 50px rgba(0, 25, 70, .22),
+        0 55px 95px rgba(0, 40, 100, .17);
+}
+
+body:has(.hero) .card h2,
+body:has(.hero) .card h3,
+body:has(.hero) .level-card h2,
+body:has(.hero) .vocabulary-card h2,
+body:has(.hero) .vocabulary-card h3 {
+    color: #06204a;
+}
+
+body:has(.hero) .card p,
+body:has(.hero) .level-card p,
+body:has(.hero) .vocabulary-card p {
+    color: #45617f;
+}
+
+
+/* =========================================================
+   8. DARK / LIGHT SECTION CONTRAST
+   ========================================================= */
+
+body:has(.hero) .info-section {
+    background:
+        linear-gradient(
+            145deg,
+            #06152f,
+            #0a2b59
+        );
+
+    border: 1px solid rgba(143, 220, 255, .16);
+
+    color: var(--lp-ice);
+
+    box-shadow:
+        0 10px 0 #020817,
+        0 30px 65px rgba(0, 15, 45, .35);
+}
+
+body:has(.hero) .info-section h2 {
+    color: var(--lp-ice);
+}
+
+body:has(.hero) .info-section p {
+    color: #b9d9ee;
+}
+
+
+/* =========================================================
+   9. TESTIMONIAL SECTION
+   PREPARES THE FLOATING OPAQUE WINDOW
+   ========================================================= */
+
+body:has(.hero) .testimonials,
+body:has(.hero) .testimonial-section,
+body:has(.hero) [class*="testimonial"] {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+
+    min-height: 700px;
+    padding: clamp(90px, 10vw, 140px) 6%;
+
+    background:
+        radial-gradient(
+            circle at 50% 50%,
+            rgba(42, 121, 255, .24),
+            transparent 42%
+        ),
+        #020817;
+
+    color: var(--lp-ice);
+}
+
+body:has(.hero) .testimonials h2,
+body:has(.hero) .testimonial-section h2 {
+    position: relative;
+    z-index: 20;
+    color: var(--lp-ice);
+}
+
+
+/* ---------------------------------------------------------
+   OPAQUE TESTIMONIAL WINDOW
+   --------------------------------------------------------- */
+
+body:has(.hero) .testimonial,
+body:has(.hero) .testimonial-card,
+body:has(.hero) .testimonials-window {
+    position: relative;
+    z-index: 20;
+
+    width: min(900px, 94%);
+    margin: 50px auto 0;
+    padding: clamp(30px, 5vw, 60px);
+
+    background: #f5fbff;
+
+    border: 2px solid rgba(143, 220, 255, .70);
+    border-radius: 26px;
+
+    color: #071a36;
+
+    box-shadow:
+        0 8px 0 #9db8cc,
+        0 25px 50px rgba(0, 0, 0, .48),
+        0 50px 100px rgba(0, 25, 80, .35);
+}
+
+body:has(.hero) .testimonial p,
+body:has(.hero) .testimonial-card p,
+body:has(.hero) .testimonials-window p {
+    color: #284764;
+}
+
+body:has(.hero) .testimonial h3,
+body:has(.hero) .testimonial-card h3,
+body:has(.hero) .testimonials-window h3 {
+    color: #061a38;
+}
+
+
+/* =========================================================
+   10. EXISTING DEPTH PHOTO SYSTEM
+   MAKE IT MUCH DEEPER + MORE VISIBLE
+   ========================================================= */
+
+body:has(.hero) .depth-background {
+    background:
+        radial-gradient(
+            circle at 50% 50%,
+            rgba(35, 105, 210, .22),
+            transparent 45%
+        ),
+        #010611;
+}
+
+body:has(.hero) .depth-frame {
+    padding: 5px;
+
+    background: rgba(220, 242, 255, .92);
+    border: 2px solid rgba(255,255,255,.85);
+
+    box-shadow:
+        0 8px 0 rgba(0, 18, 55, .80),
+        0 22px 45px rgba(0, 0, 0, .65),
+        0 45px 85px rgba(0, 30, 90, .35);
+}
+
+body:has(.hero) .depth-frame img {
+    border-radius: 3px;
+}
+
+
+/* =========================================================
+   11. CTA
+   ========================================================= */
+
+body:has(.hero) .cta-section {
+    position: relative;
+    padding: clamp(90px, 10vw, 150px) 6%;
+
+    background:
+        linear-gradient(
+            145deg,
+            #06152f,
+            #002b72
+        );
+
+    color: var(--lp-ice);
+
+    text-align: center;
+}
+
+body:has(.hero) .cta-section h1 {
+    color: var(--lp-ice);
+    font-size: clamp(42px, 7vw, 82px);
+    letter-spacing: -1px;
+}
+
+body:has(.hero) .cta-section h1 span {
+    color: #8fdcff;
+}
+
+body:has(.hero) .cta-section p {
+    color: #b9d9ee;
+}
+
+
+/* =========================================================
+   12. FOOTER
+   ========================================================= */
+
+body:has(.hero) .footer {
+    background: #010611;
+    border-top: 1px solid rgba(143, 220, 255, .12);
+    color: #7897b5;
+}
+
+body:has(.hero) .footer a {
+    color: #8fdcff;
+}
+
+
+/* =========================================================
+   13. MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    body:has(.hero) .hero {
+        min-height: auto;
+        padding: 90px 6% 80px;
+    }
+
+    body:has(.hero) .hero h1 {
+        font-size: clamp(44px, 13vw, 68px);
+        letter-spacing: -1px;
+    }
+
+    body:has(.hero) .hero p {
+        font-size: 16px;
+    }
+
+    body:has(.hero) .hero-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    body:has(.hero) .hero-actions .button {
+        width: 100%;
+    }
+
+    body:has(.hero) .section {
+        padding: 75px 6%;
+    }
+
+    body:has(.hero) .testimonials,
+    body:has(.hero) .testimonial-section {
+        min-height: 600px;
+        padding: 80px 5%;
+    }
+
+    body:has(.hero) .testimonial,
+    body:has(.hero) .testimonial-card,
+    body:has(.hero) .testimonials-window {
+        width: 100%;
+        padding: 30px 22px;
+    }
+}
+
+
+/* =========================================================
+   14. REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    body:has(.hero) *,
+    body:has(.hero) *::before,
+    body:has(.hero) *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}
+
