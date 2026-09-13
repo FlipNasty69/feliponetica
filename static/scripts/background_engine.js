@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
 
-    const background = document.getElementById("depth-background");
+    const background = document.getElementById("testimonial-bg") || document.getElementById("depth-background");
 
     if (!background) {
         return;
@@ -20,8 +20,8 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
     }
 
-    const depthScales = [1, 0.72, 0.52, 0.38, 0.28, 0.20, 0.14, 0.10, 0.07, 0.05];
-    const depthOpacity = [1, 0.84, 0.66, 0.51, 0.39, 0.29, 0.21, 0.15, 0.10, 0.06];
+    const depthScales = [1, 0.9, 0.78, 0.68, 0.58, 0.48, 0.4, 0.34, 0.29, 0.24];
+    const depthOpacity = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
     const depthDuration = [75, 88, 102, 118, 136, 155, 176, 198, 222, 248];
 
     function random(min, max) {
@@ -56,25 +56,25 @@ document.addEventListener("DOMContentLoaded", function () {
         let endY;
 
         if (side === 0) {
-            startX = random(-25, 125);
-            startY = random(-35, -15);
-            endX = startX + random(-55, 55);
-            endY = random(115, 140);
+            startX = random(-10, 110);
+            startY = random(-15, -5);
+            endX = startX + random(-35, 35);
+            endY = random(105, 115);
         } else if (side === 1) {
             startX = random(0, 100);
-            startY = random(115, 140);
-            endX = startX + random(-55, 55);
-            endY = random(-35, -15);
+            startY = random(105, 115);
+            endX = startX + random(-35, 35);
+            endY = random(-15, -5);
         } else if (side === 2) {
-            startX = random(-35, -15);
-            startY = random(-20, 120);
-            endX = random(115, 140);
-            endY = startY + random(-45, 45);
+            startX = random(-15, -5);
+            startY = random(-10, 110);
+            endX = random(105, 115);
+            endY = startY + random(-35, 35);
         } else {
-            startX = random(115, 140);
-            startY = random(-20, 120);
-            endX = random(-35, -15);
-            endY = startY + random(-45, 45);
+            startX = random(105, 115);
+            startY = random(-10, 110);
+            endX = random(-15, -5);
+            endY = startY + random(-35, 35);
         }
 
         return {
@@ -98,7 +98,7 @@ document.addEventListener("DOMContentLoaded", function () {
         image.alt = "";
         image.decoding = "async";
 
-        setProperty(object, "--size", window.innerWidth * 0.25 + "px");
+        setProperty(object, "--size", Math.max(200, window.innerWidth * random(0.3, 0.6)) + "px");
         setProperty(object, "--depth-scale", scale);
         setProperty(object, "--depth-opacity", depthOpacity[level - 1]);
         setProperty(object, "--start-x", trajectory.startX + "vw");

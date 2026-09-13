@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Feliponetica Inglés</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 <style>
 /* =========================================================
@@ -15,7 +18,6 @@
     --navy-2:#0a2042;
     --ice:#eafaff;
     --ice-2:#c9f2ff;
-    --smoke:#17243a;
     --white:#ffffff;
     --blue:#0737c9;
     --cyan:#43e7f5;
@@ -40,14 +42,38 @@ a { text-decoration:none; }
 section { position:relative; }
 
 .landing-section {
-    min-height:100vh;
-    padding:110px 7vw;
+    width:100%;
+    height:100svh;
+    min-height:100svh;
     display:flex;
     align-items:center;
+.system-column,
+.course-box {
+    min-height: 0;
+    overflow-y: auto;
+}
+.course .section-inner {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 2vh, 22px);
+}
+.course .course-intro {
+    flex: 0 1 auto;
+    min-height: 0;
+    margin-bottom: 0;
+}
+.course .course-grid {
+    flex: 1 1 auto;
+    height: auto;
+}
+.faq-grid { min-height: 0; }
+    overflow:hidden;
+    scroll-snap-align:start;
 }
 
 .section-inner {
     width:min(1200px,100%);
+    max-height:calc(100svh - clamp(120px,16vh,220px));
     margin:auto;
 }
 
@@ -202,7 +228,7 @@ p {
 
 .nav-container {
     width:min(1250px,92%);
-    min-height:70px;
+    min-height: 60px;
     margin:auto;
     display:flex;
     align-items:center;
@@ -248,14 +274,19 @@ p {
 .system-grid {
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:70px;
+    gap:clamp(24px,4vw,70px);
     align-items:center;
+    max-height:100%;
 }
 
 .system-column {
-    padding:50px;
+    padding:clamp(24px,3.5vw,50px);
     border-radius:34px;
     background:rgba(255,255,255,.62);
+    max-height:100%;
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#1769ff transparent;
     border:1px solid rgba(255,255,255,.85);
     box-shadow:var(--shadow);
 }
@@ -266,6 +297,7 @@ p {
 }
 
 .system-column h2 { font-size:clamp(2.2rem,4vw,4rem); }
+.system-column h2 { color:#c9efff; }
 
 .system-column.dark p { color:#c9efff; }
 
@@ -288,7 +320,7 @@ p {
 }
 
 .visual-aid {
-    min-height:240px;
+    min-height:clamp(120px,18vh,240px);
     margin-top:35px;
     border-radius:25px;
     border:2px dashed rgba(5,40,80,.2);
@@ -324,7 +356,7 @@ p {
    ========================================================= */
 
 .testimonials {
-    min-height:100vh;
+    min-height:100svh;
     color:var(--ice);
     overflow:hidden;
     background:#06152f;
@@ -334,6 +366,7 @@ p {
     position:absolute;
     inset:0;
     overflow:hidden;
+    z-index:0;
 }
 
 .testimonial-photo {
@@ -342,17 +375,15 @@ p {
     height:230px;
     object-fit:cover;
     border-radius:20px;
-    opacity:.22;
-    box-shadow:0 25px 55px rgba(0,0,0,.5);
-    filter:saturate(.8);
+    opacity:1;
+    box-shadow:0 25px 55px rgba(0,0,0,.72),0 8px 0 rgba(0,0,0,.35);
+    filter:saturate(.95) contrast(1.04);
     animation:testimonialFloat linear forwards;
 }
 
 @keyframes testimonialFloat {
-    from { transform:translate3d(var(--sx),var(--sy),0) rotate(var(--sr)) scale(.65); opacity:0; }
-    12% { opacity:.25; }
-    80% { opacity:.22; }
-    to { transform:translate3d(var(--ex),var(--ey),0) rotate(var(--er)) scale(1); opacity:0; }
+    from { transform:translate3d(var(--sx),var(--sy),0) rotate(var(--sr)) scale(.65); }
+    to { transform:translate3d(var(--ex),var(--ey),0) rotate(var(--er)) scale(1); }
 }
 
 .testimonial-overlay {
@@ -366,25 +397,40 @@ p {
 .testimonial-inner {
     position:relative;
     z-index:2;
-    width:min(1100px,90%);
-    margin:auto;
+    width:100%;
+    height:100%;
+    margin:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
 }
 
 .testimonial-window {
-    min-height:560px;
-    padding:55px;
-    border-radius:38px;
-    background:#f4fcff;
+    width:min(30vw,620px);
+    min-width:280px;
+    min-height:30svh;
+    max-height:62svh;
+    padding:clamp(18px,2.4vw,34px);
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#1769ff rgba(7,26,56,.12);
+    border-radius:24px;
+    background:rgba(244,252,255,.97);
     color:var(--smoke);
-    border:2px solid rgba(220,250,255,.9);
-    box-shadow:0 28px 0 rgba(0,0,0,.22),0 45px 80px rgba(0,0,0,.48);
+    border:1px solid rgba(220,250,255,.42);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.95),
+        inset 0 -1px 0 rgba(43,79,107,.22),
+        0 7px 0 rgba(101,137,160,.34),
+        0 18px 42px rgba(0,0,0,.46);
     display:flex;
     flex-direction:column;
     justify-content:center;
 }
 
 .testimonial-window h2 {
-    font-size:clamp(2.5rem,5vw,5rem);
+    font-size:clamp(1.35rem,2.3vw,2.35rem);
     color:#071a38;
 }
 
@@ -396,6 +442,18 @@ p {
     background:white;
     box-shadow:var(--soft-shadow);
 }
+
+.testimonial-picture {
+    display:none;
+    width:clamp(74px,12vw,120px);
+    height:clamp(74px,12vw,120px);
+    margin:0 auto 22px;
+    border-radius:50%;
+    object-fit:cover;
+    box-shadow:0 10px 24px rgba(0,0,0,.2);
+}
+
+.testimonial-picture.is-visible { display:block; }
 
 .testimonial-card blockquote {
     margin:0 0 25px;
@@ -429,6 +487,7 @@ p {
     display:grid;
     grid-template-columns:1.1fr .9fr;
     gap:45px;
+    max-height:calc(100svh - clamp(250px,30vh,390px));
 }
 
 .course-box {
@@ -436,6 +495,10 @@ p {
     border-radius:32px;
     background:white;
     box-shadow:var(--shadow);
+    max-height:100%;
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#1769ff transparent;
 }
 
 .course-box.dark {
@@ -516,10 +579,10 @@ p {
    ========================================================= */
 
 @media (max-width:850px) {
-    .landing-section { padding:85px 5vw; }
+    .landing-section { padding:76px 5vw 28px; }
     .system-grid,.course-grid { grid-template-columns:1fr; }
     .system-column,.course-box { padding:30px; }
-    .testimonial-window { padding:30px; }
+    .testimonial-window { width:min(62vw,520px); padding:24px; }
     .nav-container { padding:10px 0; }
     .nav-links { gap:10px 15px; }
 }
@@ -531,7 +594,597 @@ p {
     .button { width:100%; }
     .nav-container { align-items:flex-start; flex-direction:column; }
     .nav-links { width:100%; justify-content:flex-start; }
-    .testimonial-window { min-height:520px; }
+    .testimonial-window { width:86vw; min-width:0; max-height:68svh; }
+}
+
+/* Full-screen landing navigation. A wheel must reach 35% of the viewport
+   before the page advances; smaller gestures settle back to the current panel. */
+body:has(.hero) {
+    height:100%;
+    overflow-y:auto;
+    scroll-snap-type:y mandatory;
+}
+
+body:has(.hero) main { scroll-snap-type:y mandatory; }
+
+body:has(.hero) .testimonial-bg .depth-object {
+    border-radius:18px;
+    box-shadow:0 26px 58px rgba(0,0,0,.78),0 10px 0 rgba(0,0,0,.4);
+}
+
+body:has(.hero) .testimonial-bg .depth-frame {
+    padding:5px;
+    background:rgba(235,249,255,.96);
+    border:2px solid rgba(255,255,255,.96);
+}
+
+body:has(.hero) .testimonial-bg .depth-frame img {
+    width:100%;
+    height:100%;
+    aspect-ratio:4 / 3;
+    object-fit:cover;
+}
+
+@media (max-width:700px) {
+    .landing-section { height:100svh; min-height:100svh; }
+    .section-inner { max-height:calc(100svh - 112px); }
+    .system-grid { gap:14px; }
+    .system-column { padding:18px; border-radius:22px; }
+    .system-column h2 { font-size:clamp(1.7rem,7vw,2.5rem); }
+    .system-list { gap:6px; margin:14px 0; }
+    .system-pill { padding:9px 12px; }
+    .visual-aid { min-height:80px; margin-top:14px; }
+    .course-intro { margin-bottom:20px; }
+    .course-box { padding:22px; }
+    .course-box ul { line-height:1.45; }
+}
+
+/* Landing content fit and the two-font type system. */
+body:has(.hero) .landing-section {
+    height:100svh;
+    min-height:100svh;
+    padding:clamp(64px,7vh,84px) clamp(16px,4vw,56px) clamp(16px,3vh,30px);
+    font-family:"Montserrat",sans-serif;
+}
+
+body:has(.hero) .landing-section h1,
+body:has(.hero) .landing-section h2,
+body:has(.hero) .landing-section h3,
+body:has(.hero) .landing-section .eyebrow,
+body:has(.hero) .landing-section .button,
+body:has(.hero) .landing-section .price {
+    font-family:"Oswald",sans-serif;
+    font-weight:700;
+    letter-spacing:0;
+}
+
+body:has(.hero) .landing-section p,
+body:has(.hero) .landing-section li,
+body:has(.hero) .landing-section .system-pill,
+body:has(.hero) .landing-section .visual-aid,
+body:has(.hero) .landing-section .testimonial-name {
+    font-family:"Montserrat",sans-serif;
+}
+
+body:has(.hero) .section-inner {
+    height:100%;
+    max-height:calc(100svh - clamp(80px,10vh,114px));
+    overflow:hidden;
+}
+
+body:has(.hero) .hero-content {
+    width:min(1100px,100%);
+    padding:0;
+}
+
+body:has(.hero) .hero h1 {
+    max-width:760px;
+    margin-bottom:clamp(14px,2vh,24px);
+    font-size:clamp(2.7rem,6.2vw,6.2rem);
+}
+
+body:has(.hero) .hero p {
+    max-width:650px;
+    font-size:clamp(.88rem,1.35vw,1.1rem);
+    line-height:1.45;
+}
+
+body:has(.hero) .hero-actions {
+    gap:12px;
+    margin-top:clamp(18px,3vh,30px);
+}
+
+body:has(.hero) .system-grid,
+body:has(.hero) .course-grid {
+    height:100%;
+    max-height:100%;
+    gap:clamp(12px,2vw,28px);
+}
+
+body:has(.hero) .system-column,
+body:has(.hero) .course-box {
+    padding:clamp(16px,2.2vw,30px);
+    border-radius:22px;
+}
+
+body:has(.hero) .system-column h2,
+body:has(.hero) .course-intro h2 {
+    font-size:clamp(1.8rem,3.5vw,3.5rem);
+}
+
+body:has(.hero) .system-column p,
+body:has(.hero) .course-box p,
+body:has(.hero) .course-box li,
+body:has(.hero) .faq-item p {
+    .system-grid {
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+    }
+    .course-grid {
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+    }
+    margin:clamp(12px,2vh,20px) 0;
+}
+
+body:has(.hero) .system-pill {
+    padding:9px 12px;
+}
+
+body:has(.hero) .visual-aid {
+    min-height:clamp(70px,12vh,130px);
+    margin-top:clamp(14px,2vh,24px);
+}
+
+body:has(.hero) .course-intro {
+    margin-bottom:clamp(14px,2vh,24px);
+}
+
+body:has(.hero) .course-box h3 {
+    font-size:clamp(1.35rem,2.2vw,2rem);
+}
+
+body:has(.hero) .course-box ul {
+    line-height:1.45;
+}
+
+body:has(.hero) .faq-grid {
+    height:100%;
+    max-height:100%;
+    overflow:auto;
+}
+
+body:has(.hero) .faq h2 {
+    margin-bottom:clamp(20px,3vh,34px);
+    font-size:clamp(2.4rem,5vw,5rem);
+}
+
+body:has(.hero) .faq-item {
+    padding:clamp(14px,2vh,22px) 0;
+}
+
+body:has(.hero) .testimonials {
+    min-height:100svh;
+    padding:0 clamp(16px,4vw,56px);
+    background:transparent;
+}
+
+body:has(.hero) .testimonial-bg,
+body:has(.hero) .testimonial-overlay {
+    position:absolute;
+    inset:0;
+}
+
+body:has(.hero) .testimonial-bg {
+    z-index:0;
+}
+
+body:has(.hero) .testimonial-overlay {
+    z-index:1;
+}
+
+body:has(.hero) .testimonial-inner {
+    z-index:2;
+    height:100%;
+}
+
+body:has(.hero) .testimonial-window {
+    position:relative;
+    z-index:3;
+}
+
+@media (max-width:700px) {
+    body:has(.hero) .landing-section {
+        padding:64px 14px 14px;
+    }
+
+    body:has(.hero) .section-inner {
+        max-height:calc(100svh - 78px);
+    }
+
+    body:has(.hero) .system-grid,
+    body:has(.hero) .course-grid {
+        height:100%;
+    }
+
+    body:has(.hero) .system-column,
+    body:has(.hero) .course-box {
+        padding:16px;
+    }
+}
+
+/* Final landing overrides keep the existing global stylesheet from expanding panels. */
+.landing-section {
+    height:100svh !important;
+    min-height:100svh !important;
+    scroll-margin-top:96px;
+    font-family:"Montserrat",sans-serif !important;
+}
+
+.landing-section h1,
+.landing-section h2,
+.landing-section h3,
+.landing-section .eyebrow,
+.landing-section .button,
+.landing-section .price {
+    font-family:"Oswald",sans-serif !important;
+    font-weight:700;
+    letter-spacing:0;
+}
+
+.landing-section p,
+.landing-section li,
+.landing-section .system-pill,
+.landing-section .visual-aid,
+.landing-section .testimonial-name {
+    font-family:"Montserrat",sans-serif !important;
+}
+
+.landing-section .section-inner {
+    height:100%;
+    max-height:calc(100svh - 80px);
+    overflow:hidden;
+}
+
+.testimonials {
+    padding:0 clamp(16px,4vw,56px) !important;
+    background:transparent !important;
+}
+
+.testimonial-bg,
+.testimonial-overlay {
+    position:absolute !important;
+    inset:0;
+}
+
+.testimonial-bg { z-index:0 !important; }
+.testimonial-overlay { z-index:1 !important; }
+.testimonial-inner { z-index:2 !important; }
+.testimonial-window { z-index:3 !important; }
+
+.course .section-inner {
+    display:flex;
+    flex-direction:column;
+    gap:clamp(10px,1.5vh,18px);
+    min-height:0;
+}
+
+.course {
+    padding:52px clamp(16px,4vw,56px) 10px !important;
+}
+
+.course .course-intro {
+    flex:0 0 auto;
+    margin-bottom:0;
+}
+
+.course .course-grid {
+    flex:1 1 0;
+    min-height:0;
+    height:auto;
+    grid-template-rows:minmax(0,1fr);
+}
+
+.course .course-box {
+    min-height:0;
+    overflow-y:auto;
+}
+
+.course .course-intro h2 {
+    font-size:clamp(1.7rem,3vw,2.8rem);
+    margin-bottom:8px;
+}
+
+.course .course-intro p,
+.course .course-box p,
+.course .course-box li {
+    font-size:.72rem;
+    line-height:1.25;
+}
+
+.course .course-box {
+    padding:10px 12px;
+    border-radius:20px;
+}
+
+.course .course-box h3 {
+    font-size:clamp(1.05rem,1.6vw,1.45rem);
+    margin-bottom:6px;
+}
+
+.course .course-box ul {
+    margin:7px 0;
+    padding-left:18px;
+    line-height:1.1;
+}
+
+.course .course-box .button {
+    min-height:38px;
+    padding:0 16px;
+    font-size:.72rem;
+}
+
+.course .price {
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    margin:8px 0;
+    line-height:1;
+}
+
+.course .price strong {
+    font-size:clamp(2.5rem,5vw,4.5rem);
+    color:var(--cyan);
+}
+
+.course .price span {
+    font-family:"Montserrat",sans-serif;
+    font-size:.68rem;
+    font-weight:600;
+    color:#c9eaf3;
+}
+
+.course .price-or {
+    margin:2px 0;
+    font-family:"Oswald",sans-serif !important;
+    font-size:.72rem !important;
+    color:#c9eaf3;
+}
+
+.course .price-note {
+    font-size:.62rem !important;
+    color:#a8d2df;
+}
+
+.course .course-box.dark {
+    padding:8px 12px;
+    overflow:hidden;
+}
+
+.course .course-box.dark h3 {
+    color:var(--ice) !important;
+}
+
+.course .course-box.dark .eyebrow {
+    margin-bottom:3px;
+    font-size:.58rem;
+}
+
+.course .course-box.dark h3 {
+    font-size:1.05rem;
+    margin-bottom:3px;
+}
+
+.course .course-box.dark p,
+.course .course-box.dark li {
+    font-size:.48rem;
+    line-height:1.05;
+}
+
+.course .course-box.dark ul {
+    margin:3px 0;
+    line-height:1.05;
+}
+
+.course .course-box.dark .price {
+    margin:2px 0;
+}
+
+.course .course-box.dark .price strong {
+    font-size:1.75rem;
+}
+
+.course .course-box.dark .price span {
+    font-size:.56rem;
+}
+
+.course .course-box.dark .price-note {
+    margin:2px 0 3px;
+}
+
+.course .course-box.dark .button {
+    min-height:23px;
+    font-size:.56rem;
+}
+
+.classes {
+    color:var(--ice);
+    background:linear-gradient(135deg,#102653,#06152f 60%,#0b5f78);
+}
+
+.classes-section {
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    min-height:0;
+}
+
+.classes-section h2 {
+    max-width:700px;
+    font-size:clamp(2.4rem,5.5vw,5.5rem);
+    margin-bottom:12px;
+}
+
+.classes-section .section-lead {
+    max-width:620px;
+    color:var(--ice-2);
+}
+
+.class-details {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+    margin:clamp(18px,3vh,30px) 0;
+}
+
+.class-detail {
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+    padding:16px;
+    border:1px solid rgba(234,250,255,.24);
+    border-radius:16px;
+    background:rgba(234,250,255,.08);
+}
+
+.class-detail strong {
+    color:var(--cyan);
+    font-family:"Oswald",sans-serif;
+    font-size:1.15rem;
+}
+
+.class-detail span {
+    color:#c9eaf3;
+    font-family:"Montserrat",sans-serif;
+    font-size:.72rem;
+    line-height:1.35;
+}
+
+@media (max-width:700px) {
+    .class-details { grid-template-columns:1fr; max-height:34vh; overflow:auto; }
+    .course .price strong { font-size:2.3rem; }
+}
+
+.feature-section,
+.social-section {
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    min-height:0;
+}
+
+.feature-section h2,
+.social-section h2,
+.split-section h2 {
+    max-width:850px;
+    font-size:clamp(2rem,4.8vw,5rem);
+    margin-bottom:clamp(12px,2vh,22px);
+}
+
+.section-lead {
+    max-width:650px;
+    font-size:clamp(.86rem,1.2vw,1rem);
+    line-height:1.5;
+}
+
+.feature-grid,
+.comparison-grid {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:clamp(12px,2vw,24px);
+    margin-top:clamp(16px,3vh,30px);
+    min-height:0;
+}
+
+.feature-card,
+.comparison-column {
+    padding:clamp(16px,2.2vw,28px);
+    border-radius:22px;
+    background:#fff;
+    color:#102653;
+    box-shadow:var(--shadow);
+}
+
+.feature-card-dark,
+.bright-column {
+    color:var(--ice);
+    background:linear-gradient(145deg,#071a39,#102c52);
+}
+
+.feature-card h3,
+.comparison-column h3 {
+    font-size:clamp(1.3rem,2.2vw,2rem);
+    margin:10px 0;
+}
+
+.feature-card p,
+.comparison-column p {
+    font-size:.86rem;
+    line-height:1.45;
+}
+
+.feature-number {
+    color:#1769ff;
+    font-family:"Oswald",sans-serif;
+    font-size:1.5rem;
+}
+
+.vocabulary {
+    color:var(--ice);
+    background:linear-gradient(135deg,#06152f,#0b3c72);
+}
+
+.vocabulary-board {
+    position:relative;
+    width:min(620px,90%);
+    height:clamp(130px,24vh,220px);
+    margin:clamp(12px,2vh,20px) 0;
+    border:1px solid rgba(201,242,255,.3);
+    border-radius:50%;
+    background:radial-gradient(circle,rgba(67,231,245,.22),rgba(7,55,120,.12) 50%,transparent 70%);
+}
+
+.vocab-orbit {
+    position:absolute;
+    display:grid;
+    place-items:center;
+    width:clamp(58px,8vw,90px);
+    aspect-ratio:1;
+    border-radius:50%;
+    background:#eafaff;
+    color:#06152f;
+    font-family:"Oswald",sans-serif;
+    box-shadow:0 12px 25px rgba(0,0,0,.3);
+}
+
+.vocab-orbit-main { left:calc(50% - 45px); top:calc(50% - 45px); background:var(--cyan); }
+.vocab-orbit-one { left:10%; top:12%; }
+.vocab-orbit-two { right:10%; top:18%; }
+.vocab-orbit-three { left:22%; bottom:8%; }
+
+.idea { background:linear-gradient(135deg,#f7ead5,#fff8ec); }
+.split-section { display:grid; grid-template-columns:1fr 1fr; gap:clamp(20px,5vw,80px); align-items:center; }
+.quote-panel { padding:clamp(22px,3vw,42px); border-left:5px solid #ff5b41; background:rgba(255,255,255,.65); box-shadow:var(--soft-shadow); }
+.quote-panel p { font-size:clamp(.92rem,1.3vw,1.15rem); line-height:1.6; }
+
+.why { background:#dff5fa; }
+.comparison-grid { grid-template-columns:1fr 1fr; }
+.muted-column { background:rgba(255,255,255,.55); color:#5d6d8c; box-shadow:none; }
+.bright-column { box-shadow:var(--shadow); }
+
+.social { color:var(--ice); background:linear-gradient(145deg,#06152f,#002b72); }
+.social-links { display:flex; flex-wrap:wrap; gap:12px; margin-top:clamp(18px,3vh,30px); }
+.social-link { display:flex; justify-content:space-between; gap:30px; min-width:170px; padding:14px 18px; border:1px solid rgba(234,250,255,.35); border-radius:12px; color:var(--ice); font-family:"Oswald",sans-serif; }
+.social-link span { color:var(--cyan); }
+
+.footer-logo-placeholder { width:min(180px,60vw); height:70px; margin:0 auto 24px; display:grid; place-items:center; border:1px dashed rgba(223,248,255,.4); color:#7897b5; font-family:"Montserrat",sans-serif; }
+
+@media (max-width:700px) {
+    .course .course-grid { grid-template-rows:repeat(2,minmax(0,1fr)); }
+    .feature-grid,
+    .comparison-grid,
+    .split-section { grid-template-columns:1fr; }
+    .feature-grid { overflow-y:auto; max-height:48vh; }
+    .split-section { gap:18px; }
+    .vocabulary-board { width:100%; }
 }
 </style>
 </head>
@@ -573,8 +1226,8 @@ p {
 
 <div class="hero-content">
 <div class="eyebrow">FELIPONETICA INGLÉS</div>
-<h1>El inglés que <span>por fin tiene sentido.</span></h1>
-<p>Un sistema completo para entender, practicar y usar el inglés de verdad. Gramática, vocabulario, pronunciación, lectura, escritura, comprensión y comunicación dentro de un mismo método.</p>
+<h1>Inglés que <span>sí entiendes.</span></h1>
+<p>Una forma más clara y humana de entender, practicar y usar el inglés.</p>
 
 <div class="hero-actions">
 <a href="/course" class="button hero-signup">Empieza ahora</a>
@@ -597,8 +1250,8 @@ p {
 <!-- TOTAL PICTURE -->
 
 <div class="system-column">
-<h2>Una sola estructura para aprenderlo todo.</h2>
-<p>Gramática, lectura y escritura dejan de ser materias separadas. El <strong>Total Picture Method</strong> conecta las piezas para que puedas ver cómo funciona el inglés completo.</p>
+<h2>Total Picture Method.</h2>
+<p>Todo conecta: gramática, lectura, escritura y comprensión en una sola imagen.</p>
 
 <div class="system-list">
 <div class="system-pill">Gramática</div>
@@ -607,7 +1260,7 @@ p {
 <div class="system-pill">Comprensión</div>
 </div>
 
-<p><strong>Un sistema para aprenderlo todo.</strong><br>Resultados reales, controlados y medibles.</p>
+<p><strong>Una imagen completa.</strong><br>Un avance que puedes sentir.</p>
 
 <div class="visual-aid">Espacio reservado para apoyo visual del método</div>
 </div>
@@ -616,8 +1269,8 @@ p {
 
 <div class="system-column dark">
 <div class="eyebrow">SPEAKING + LISTENING</div>
-<h2>Feliponetica.</h2>
-<p>Lecciones construidas para hispanohablantes, con una metodología desarrollada específicamente para quienes aprendemos inglés desde el español.</p>
+<h1>Feliponetica.</h1>
+<p>Pronunciación clara para quienes aprendemos inglés desde el español.</p>
 
 <div class="mini-buttons">
 <a href="{{ url_for('feliponetica_ingles') }}" class="button button-light">Feliponetica</a>
@@ -626,11 +1279,11 @@ p {
 <a href="/lessons" class="button button-light">Lecciones hechas por un Mexicano para Mexicanos</a>
 </div>
 
-<p style="margin-top:30px;"><strong>Desarrollo rápido de vocabulario</strong><br>Visual / Audio → Escrito / Feliponetica</p>
+<p style="margin-top:30px;"><strong>Palabra viva.</strong><br>Imagen → audio → uso real</p>
 
 <div class="visual-aid">Visual / audio → palabra escrita → Feliponetica → uso real</div>
 
-<p style="margin-top:30px;">Cada lección alimenta tu <strong>Vocabulary Bank</strong>. ¿Qué tan grande puede llegar a ser tu banco? ¿Qué tan grande es ya?</p>
+<p style="margin-top:30px;">Cada lección alimenta tu <strong>Vocabulary Bank</strong>.</p>
 
 <a href="/vocab_drill" class="button button-light">Ver mi Vocabulary Bank</a>
 </div>
@@ -645,7 +1298,11 @@ p {
 
 <section class="testimonials landing-section" id="testimonios">
 
-<div class="testimonial-bg" id="testimonial-bg"></div>
+<div class="testimonial-bg" id="testimonial-bg"
+data-image-count="42"
+data-image-folder="{{ url_for('static', filename='images/class_pics') }}"
+data-image-prefix="class_pics"
+data-image-extensions="jpg,jpeg"></div>
 <div class="testimonial-overlay"></div>
 
 <div class="testimonial-inner">
@@ -653,9 +1310,10 @@ p {
 
 <div class="testimonial-window">
 
-<h2>Lo que dicen quienes ya estuvieron aquí.</h2>
+<h2>Lo que dicen.</h2>
 
 <div class="testimonial-card" id="testimonial-card">
+<img class="testimonial-picture" id="testimonial-picture" alt="">
 <blockquote id="testimonial-text">“Aquí aparecerán los testimonios reales de los estudiantes.”</blockquote>
 <div class="testimonial-name" id="testimonial-name">Estudiante de Feliponetica</div>
 </div>
@@ -677,10 +1335,8 @@ p {
 
 <div class="course-intro">
 <div class="eyebrow">EL CURSO</div>
-<h2>El inglés sin que sea solo un negocio.</h2>
-<p><strong>Mientras más tienes que durar aprendiendo, más ganan.</strong></p>
-<p>Cursos de más de mil al mes y sigues sin entender algo que se puede entender en mucho menos tiempo.</p>
-<p>El curso está completo. Te enseña lo que necesitas saber del inglés de una manera que se entiende.</p>
+<h2>Elige tu camino.</h2>
+<p><strong>Aprende claro. Avanza a tu ritmo.</strong></p>
 </div>
 
 <div class="course-grid">
@@ -690,7 +1346,7 @@ p {
 <div class="course-box">
 <div class="eyebrow">GRATIS</div>
 <h3>Feliponetica Pollito</h3>
-<p>Una introducción a los símbolos que abren la puerta a la pronunciación del inglés.</p>
+<p>Tu primer paso hacia una pronunciación clara.</p>
 
 <ul>
 <li>Ejercicios visuales y de audio de vocabulario</li>
@@ -707,7 +1363,7 @@ p {
 <div class="course-box dark">
 <div class="eyebrow">ALUMNO INSCRITO</div>
 <h3>Acceso completo.</h3>
-<p>Todo el curso y las herramientas necesarias para avanzar de forma continua.</p>
+<p>Todo el sistema y las herramientas para avanzar.</p>
 
 <ul>
 <li>Enlaces a clases en vivo con el Fundador y Creador</li>
@@ -716,10 +1372,10 @@ p {
 <li>Vocabulary Bank y seguimiento de progreso</li>
 </ul>
 
-<div class="price">$600 al mes + una canción</div>
-<p>O</p>
-<div class="price">$400 al mes + 1 canción por semana</div>
-<p>La canción debe cumplir con las reglas establecidas para su validación.</p>
+<div class="price"><strong>$600</strong><span>al mes + una canción</span></div>
+<p class="price-or">O</p>
+<div class="price"><strong>$400</strong><span>al mes + 1 canción por semana</span></div>
+<p class="price-note">La canción debe cumplir con las reglas establecidas.</p>
 
 <a href="/course" class="button button-light">Ver el curso completo</a>
 </div>
@@ -736,7 +1392,7 @@ p {
 <div class="section-inner faq-grid">
 
 <div class="eyebrow">PREGUNTAS FRECUENTES</div>
-<h2>FAQ</h2>
+<h2>Preguntas reales.</h2>
 
 <div class="faq-item">
 <h3>¿Esta plataforma es gratis?</h3>
@@ -756,6 +1412,79 @@ p {
 </div>
 </section>
 
+<!-- =========================================================
+    06 — JUEGOS
+    ========================================================= -->
+
+<section class="games landing-section" id="juegos">
+<div class="section-inner feature-section">
+<div class="eyebrow">JUEGOS</div>
+<h2>Practica sin sentir que estas estudiando.</h2>
+<p class="section-lead">Retos cortos para reaccionar, escuchar, ordenar y hablar. Cada intento te da una pista nueva.</p>
+<div class="feature-grid">
+<article class="feature-card"><span class="feature-number">01</span><h3>Reto relampago</h3><p>Elige la respuesta correcta antes de que se acabe el tiempo.</p><a href="/verb_conjugation_game" class="button">Jugar</a></article>
+<article class="feature-card feature-card-dark"><span class="feature-number">02</span><h3>Construye la frase</h3><p>Ordena las piezas y descubre por que la frase funciona.</p><a href="/lessons" class="button button-light">Probar</a></article>
+<article class="feature-card"><span class="feature-number">03</span><h3>Escucha y atrapa</h3><p>Relaciona el sonido con la palabra antes de que desaparezca.</p><a href="/vocab_drill" class="button">Empezar</a></article>
+</div>
+</div>
+</section>
+
+<!-- =========================================================
+    07 — VOCABULARIO
+    ========================================================= -->
+
+<section class="vocabulary landing-section" id="vocabulario">
+<div class="section-inner feature-section">
+<div class="eyebrow">VOCABULARIO</div>
+<h2>Tu banco de palabras se convierte en un mapa.</h2>
+<p class="section-lead">No memorices listas sueltas. Descubre palabras por imagen, sonido, movimiento y uso real.</p>
+<div class="vocabulary-board"><div class="vocab-orbit vocab-orbit-main">audio</div><div class="vocab-orbit vocab-orbit-one">imagen</div><div class="vocab-orbit vocab-orbit-two">frase</div><div class="vocab-orbit vocab-orbit-three">voz</div></div>
+<a href="/vocab_drill" class="button">Abrir Vocabulary Bank</a>
+</div>
+</section>
+
+<!-- =========================================================
+    08 — LA IDEA
+    ========================================================= -->
+
+<section class="idea landing-section" id="idea">
+<div class="section-inner split-section"><div><div class="eyebrow">LA IDEA DETRAS</div><h2>Entender primero. Usar despues. Recordar porque tiene sentido.</h2></div><div class="quote-panel"><p>El ingles no tiene que sentirse como una pared de reglas. Cuando ves la imagen completa, cada pieza empieza a encontrar su lugar.</p><p><strong>Total Picture Method</strong> conecta gramatica, vocabulario, pronunciacion y comunicacion en una sola experiencia.</p></div></div>
+</section>
+
+<!-- =========================================================
+    09 — POR QUE
+    ========================================================= -->
+
+<section class="why landing-section" id="por-que">
+<div class="section-inner feature-section"><div class="eyebrow">POR QUE FELIPONETICA</div><h2>Una ruta completa, no otra coleccion de videos.</h2><div class="comparison-grid"><div class="comparison-column muted-column"><h3>Lo de siempre</h3><p>Lecciones aisladas</p><p>Listas que se olvidan</p><p>Pronunciacion como extra</p><p>Mucho tiempo sin una imagen completa</p></div><div class="comparison-column bright-column"><h3>Feliponetica</h3><p>Un sistema conectado</p><p>Practica que vuelve a aparecer</p><p>Sonido, imagen y uso juntos</p><p>Progreso que puedes sentir</p></div></div></div>
+</section>
+
+<!-- =========================================================
+    10 — REDES
+    ========================================================= -->
+
+<section class="social landing-section" id="redes">
+<div class="section-inner social-section"><div class="eyebrow">SOCIAL MEDIA</div><h2>Aprende algo pequeno todos los dias.</h2><p class="section-lead">Ideas, pronunciacion, retos y momentos de clase para mantener el ingles cerca.</p><div class="social-links"><a href="#" class="social-link">Instagram <span>↗</span></a><a href="#" class="social-link">YouTube <span>↗</span></a><a href="#" class="social-link">TikTok <span>↗</span></a></div></div>
+</section>
+
+<!-- =========================================================
+    11 — CLASES
+    ========================================================= -->
+
+<section class="classes landing-section" id="clases-con-fundador">
+<div class="section-inner classes-section">
+<div class="eyebrow">CLASES EN VIVO</div>
+<h2>Aprende conmigo.</h2>
+<p class="section-lead">Clases con el Founder and Creator para preguntar, practicar y entender lo que antes se sentía difícil.</p>
+<div class="class-details">
+<div class="class-detail"><strong>En vivo</strong><span>Pregunta y recibe respuesta real.</span></div>
+<div class="class-detail"><strong>Directo</strong><span>Practica inglés que puedes usar hoy.</span></div>
+<div class="class-detail"><strong>Personal</strong><span>Una guía cercana, sin perderte entre lecciones.</span></div>
+</div>
+<a href="/live_classes" class="button button-light">Ver las clases</a>
+</div>
+</section>
+
 </main>
 
 <!-- =========================================================
@@ -763,6 +1492,7 @@ p {
      ========================================================= -->
 
 <footer class="footer">
+<div class="footer-logo-placeholder">Tu logo aqui</div>
 <strong>Feliponetica Inglés</strong>
 <br><br>
 Aprende inglés. Entiende inglés. Habla inglés.
@@ -789,21 +1519,20 @@ updateNav();
    Replace these with real student testimonials.
    ========================================================= */
 
-const testimonials=[
-    {text:"“Aquí irá el testimonio real de un estudiante.”",name:"Estudiante 1"},
-    {text:"“Aquí irá otro testimonio real sobre el Fundador y Creador.”",name:"Estudiante 2"},
-    {text:"“Aquí irá otro testimonio real de un estudiante.”",name:"Estudiante 3"}
-];
+let testimonials=[{text:"Aquí aparecerán los testimonios reales de los estudiantes.",name:"Estudiante de Feliponetica"}];
 
 let testimonialIndex=0;
 const testimonialText=document.getElementById("testimonial-text");
 const testimonialName=document.getElementById("testimonial-name");
 const nextTestimonial=document.getElementById("next-testimonial");
+const testimonialPicture=document.getElementById("testimonial-picture");
 
 function showTestimonial(){
     const t=testimonials[testimonialIndex];
     testimonialText.textContent=t.text;
     testimonialName.textContent=t.name;
+    testimonialPicture.classList.toggle("is-visible",Boolean(t.picture));
+    testimonialPicture.src=t.picture||"";
 }
 
 nextTestimonial.addEventListener("click",()=>{
@@ -811,48 +1540,79 @@ nextTestimonial.addEventListener("click",()=>{
     showTestimonial();
 });
 
+fetch("{{ url_for('static', filename='data/testimonials.json') }}")
+    .then(response=>response.ok?response.json():[])
+    .then(data=>{
+        const entries=Array.isArray(data)?data:Object.values(data||{});
+        testimonials=entries.map(item=>({
+            name:item.name||item.Nombre||"Estudiante de Feliponetica",
+            text:item.testimonial||item.testimony||item.text||"",
+            picture:item.picture||item.image||""
+        })).filter(item=>item.text);
+        testimonialIndex=0;
+        showTestimonial();
+    })
+    .catch(()=>showTestimonial());
+
 /* =========================================================
-   TESTIMONIAL BACKGROUND
-   Uses the existing 42 class photos.
-   Random direction + angle + size + timing.
+   LANDING SECTION THRESHOLD NAVIGATION
    ========================================================= */
 
-const testimonialBg=document.getElementById("testimonial-bg");
-const photoFolder="{{ url_for('static', filename='images/class_pics') }}";
-const photoPrefix="class_pics";
-const photoCount=42;
+const landingSections=[...document.querySelectorAll(".landing-section")];
+let wheelDistance=0;
+let wheelDirection=0;
+let wheelReset;
+let sectionLocked=false;
 
-function randomPhoto(){
-    const img=document.createElement("img");
-    const ext=Math.random()>.5?"jpg":"jpeg";
-    img.className="testimonial-photo";
-    img.src=`${photoFolder}/${photoPrefix}${Math.floor(Math.random()*photoCount)+1}.${ext}`;
-    img.alt="";
-    img.style.width=(130+Math.random()*130)+"px";
-    img.style.height=(170+Math.random()*160)+"px";
-
-    const side=Math.floor(Math.random()*4);
-    let sx,sy,ex,ey;
-
-    if(side===0){sx="-25vw";sy=(Math.random()*120-10)+"vh";ex="115vw";ey=(Math.random()*120-10)+"vh";}
-    if(side===1){sx="125vw";sy=(Math.random()*120-10)+"vh";ex="-25vw";ey=(Math.random()*120-10)+"vh";}
-    if(side===2){sx=(Math.random()*120-10)+"vw";sy="-30vh";ex=(Math.random()*120-10)+"vw";ey="125vh";}
-    if(side===3){sx=(Math.random()*120-10)+"vw";sy="125vh";ex=(Math.random()*120-10)+"vw";ey="-30vh";}
-
-    img.style.setProperty("--sx",sx);
-    img.style.setProperty("--sy",sy);
-    img.style.setProperty("--ex",ex);
-    img.style.setProperty("--ey",ey);
-    img.style.setProperty("--sr",(Math.random()*70-35)+"deg");
-    img.style.setProperty("--er",(Math.random()*100-50)+"deg");
-    img.style.animationDuration=(10+Math.random()*13)+"s";
-
-    testimonialBg.appendChild(img);
-    setTimeout(()=>img.remove(),24000);
+function currentSectionIndex(){
+    const index=landingSections.findIndex(section=>
+        Math.abs(section.getBoundingClientRect().top)<window.innerHeight*.45);
+    return index<0?0:index;
 }
 
-setInterval(randomPhoto,1200);
-for(let i=0;i<8;i++)setTimeout(randomPhoto,i*500);
+function settleSection(){
+    const section=landingSections[currentSectionIndex()];
+    if(section) section.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+window.addEventListener("wheel",event=>{
+    if(event.ctrlKey) return;
+    if(sectionLocked){
+        event.preventDefault();
+        return;
+    }
+    event.preventDefault();
+    const direction=Math.sign(event.deltaY);
+    if(!direction) return;
+    if(direction!==wheelDirection) wheelDistance=0;
+    wheelDirection=direction;
+    wheelDistance+=Math.abs(event.deltaY);
+    clearTimeout(wheelReset);
+    wheelReset=setTimeout(()=>{
+        wheelDistance=0;
+        wheelDirection=0;
+        settleSection();
+    },180);
+    if(wheelDistance<window.innerHeight*.35) return;
+    const target=currentSectionIndex()+direction;
+    wheelDistance=0;
+    wheelDirection=0;
+    if(target<0||target>=landingSections.length) return settleSection();
+    sectionLocked=true;
+    landingSections[target].scrollIntoView({behavior:"smooth",block:"start"});
+    setTimeout(()=>{sectionLocked=false;},650);
+},{passive:false});
+
+let touchStartY=0;
+window.addEventListener("touchstart",event=>{ touchStartY=event.touches[0].clientY; },{passive:true});
+window.addEventListener("touchend",event=>{
+    const distance=touchStartY-event.changedTouches[0].clientY;
+    if(Math.abs(distance)<window.innerHeight*.35){ settleSection(); return; }
+    const target=currentSectionIndex()+(distance>0?1:-1);
+    if(target>=0&&target<landingSections.length){
+        landingSections[target].scrollIntoView({behavior:"smooth",block:"start"});
+    } else settleSection();
+},{passive:true});
 </script>
 
 </body>

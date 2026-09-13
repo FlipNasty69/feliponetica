@@ -3506,14 +3506,13 @@ body:has(.hero) .info-section p {
    ========================================================= */
 
 body:has(.hero) .testimonials,
-body:has(.hero) .testimonial-section,
-body:has(.hero) [class*="testimonial"] {
+body:has(.hero) .testimonial-section {
     position: relative;
     isolation: isolate;
     overflow: hidden;
 
-    min-height: 700px;
-    padding: clamp(90px, 10vw, 140px) 6%;
+    min-height: 100svh;
+    padding: 0 6%;
 
     background:
         radial-gradient(
@@ -3524,6 +3523,33 @@ body:has(.hero) [class*="testimonial"] {
         #020817;
 
     color: var(--lp-ice);
+}
+
+body:has(.hero) .testimonials > .testimonial-bg,
+body:has(.hero) .testimonial-section > .testimonial-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    padding: 0;
+    min-height: 0;
+    background: transparent;
+}
+
+body:has(.hero) .testimonials > .testimonial-overlay,
+body:has(.hero) .testimonial-section > .testimonial-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    padding: 0;
+    min-height: 0;
+}
+
+body:has(.hero) .testimonials > .testimonial-inner,
+body:has(.hero) .testimonial-section > .testimonial-inner {
+    position: relative;
+    z-index: 2;
+    min-height: 0;
+    padding: 0;
 }
 
 body:has(.hero) .testimonials h2,
@@ -3560,6 +3586,29 @@ body:has(.hero) .testimonials-window {
         0 25px 50px rgba(0, 0, 0, .48),
         0 50px 100px rgba(0, 25, 80, .35);
 }
+
+body:has(.hero) .testimonials > .testimonial-inner .testimonial-window,
+body:has(.hero) .testimonial-section > .testimonial-inner .testimonial-window {
+    position: relative;
+    z-index: 3;
+}
+
+    body:has(.hero) .testimonial-window {
+        width: min(30vw, 620px);
+        min-width: 280px;
+        min-height: 30svh;
+        max-height: 62svh;
+        margin: 0;
+        padding: clamp(18px, 2.4vw, 34px);
+        border: 1px solid rgba(220, 250, 255, .42);
+        border-radius: 24px;
+        background: rgba(244, 252, 255, .97);
+        box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .95),
+        inset 0 -1px 0 rgba(43, 79, 107, .22),
+        0 7px 0 rgba(101, 137, 160, .34),
+        0 18px 42px rgba(0, 0, 0, .46);
+    }
 
 body:has(.hero) .testimonial p,
 body:has(.hero) .testimonial-card p,
