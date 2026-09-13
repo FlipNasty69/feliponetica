@@ -68,7 +68,6 @@ section { position:relative; }
 }
 .faq-grid { min-height: 0; }
     overflow:hidden;
-    scroll-snap-align:start;
 }
 
 .section-inner {
@@ -602,10 +601,7 @@ p {
 body:has(.hero) {
     height:100%;
     overflow-y:auto;
-    scroll-snap-type:y mandatory;
 }
-
-body:has(.hero) main { scroll-snap-type:y mandatory; }
 
 body:has(.hero) .testimonial-bg .depth-object {
     border-radius:18px;
@@ -1554,65 +1550,6 @@ fetch("{{ url_for('static', filename='data/testimonials.json') }}")
     })
     .catch(()=>showTestimonial());
 
-/* =========================================================
-   LANDING SECTION THRESHOLD NAVIGATION
-   ========================================================= */
-
-const landingSections=[...document.querySelectorAll(".landing-section")];
-let wheelDistance=0;
-let wheelDirection=0;
-let wheelReset;
-let sectionLocked=false;
-
-function currentSectionIndex(){
-    const index=landingSections.findIndex(section=>
-        Math.abs(section.getBoundingClientRect().top)<window.innerHeight*.45);
-    return index<0?0:index;
-}
-
-function settleSection(){
-    const section=landingSections[currentSectionIndex()];
-    if(section) section.scrollIntoView({behavior:"smooth",block:"start"});
-}
-
-window.addEventListener("wheel",event=>{
-    if(event.ctrlKey) return;
-    if(sectionLocked){
-        event.preventDefault();
-        return;
-    }
-    event.preventDefault();
-    const direction=Math.sign(event.deltaY);
-    if(!direction) return;
-    if(direction!==wheelDirection) wheelDistance=0;
-    wheelDirection=direction;
-    wheelDistance+=Math.abs(event.deltaY);
-    clearTimeout(wheelReset);
-    wheelReset=setTimeout(()=>{
-        wheelDistance=0;
-        wheelDirection=0;
-        settleSection();
-    },180);
-    if(wheelDistance<window.innerHeight*.35) return;
-    const target=currentSectionIndex()+direction;
-    wheelDistance=0;
-    wheelDirection=0;
-    if(target<0||target>=landingSections.length) return settleSection();
-    sectionLocked=true;
-    landingSections[target].scrollIntoView({behavior:"smooth",block:"start"});
-    setTimeout(()=>{sectionLocked=false;},650);
-},{passive:false});
-
-let touchStartY=0;
-window.addEventListener("touchstart",event=>{ touchStartY=event.touches[0].clientY; },{passive:true});
-window.addEventListener("touchend",event=>{
-    const distance=touchStartY-event.changedTouches[0].clientY;
-    if(Math.abs(distance)<window.innerHeight*.35){ settleSection(); return; }
-    const target=currentSectionIndex()+(distance>0?1:-1);
-    if(target>=0&&target<landingSections.length){
-        landingSections[target].scrollIntoView({behavior:"smooth",block:"start"});
-    } else settleSection();
-},{passive:true});
 </script>
 
 </body>

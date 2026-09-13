@@ -311,7 +311,7 @@ p {
 
     z-index: 1000;
 
-    padding: 15px 5%;
+    padding: 8px 5%;
 
     background: rgba(255, 255, 255, 0.90);
 
@@ -335,7 +335,7 @@ p {
     align-items: center;
     justify-content: space-between;
 
-    gap: 30px;
+    gap: 16px;
 }
 
 .logo {
@@ -360,7 +360,7 @@ p {
     align-items: center;
     justify-content: flex-end;
 
-    gap: 8px;
+    gap: 6px;
 
     flex-wrap: wrap;
 }
@@ -370,7 +370,7 @@ p {
     align-items: center;
     justify-content: center;
 
-    padding: 8px 16px;
+    padding: 5px 11px;
 
     border-radius: var(--radius-pill);
 
@@ -380,7 +380,7 @@ p {
 
     text-decoration: none;
 
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
 
     box-shadow:
@@ -1982,7 +1982,7 @@ textarea {
     .nav-container {
         flex-direction: column;
 
-        gap: 15px;
+        gap: 8px;
     }
 
     .nav-links {
@@ -2029,7 +2029,7 @@ textarea {
 @media (max-width: 600px) {
 
     .navbar {
-        padding: 12px 4%;
+        padding: 7px 4%;
     }
 
     .logo {
@@ -2043,7 +2043,7 @@ textarea {
     }
 
     .nav-links a {
-        padding: 7px 11px;
+        padding: 5px 9px;
 
         font-size: 12px;
     }
@@ -3128,6 +3128,7 @@ body:has(.hero) p {
    ========================================================= */
 
 body:has(.hero) .navbar {
+    padding: 7px 4%;
     background: rgba(2, 8, 23, .88);
     border-bottom: 1px solid rgba(223, 247, 255, .12);
     box-shadow: 0 12px 35px rgba(0, 0, 0, .35);
@@ -3149,10 +3150,12 @@ body:has(.hero) .nav-links a {
     color: var(--lp-ice);
     border: 1px solid rgba(143, 220, 255, .20);
 
+    padding: 4px 10px;
+    font-size: 12px;
     box-shadow:
-        0 5px 0 #020b1b,
-        0 12px 25px rgba(0, 0, 0, .42),
-        0 20px 40px rgba(0, 40, 199, .16);
+        0 3px 0 #020b1b,
+        0 8px 16px rgba(0, 0, 0, .35),
+        0 14px 28px rgba(0, 40, 199, .12);
 
     transition:
         transform .16s ease,
