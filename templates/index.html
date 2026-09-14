@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Feliponetica Inglés</title>
@@ -1173,6 +1174,51 @@ body:has(.hero) .testimonial-window {
 
 .footer-logo-placeholder { width:min(180px,60vw); height:70px; margin:0 auto 24px; display:grid; place-items:center; border:1px dashed rgba(223,248,255,.4); color:#7897b5; font-family:"Montserrat",sans-serif; }
 
+.hero {
+    background-image:url("{{ url_for('static', filename='images/hero_background.jpeg') }}") !important;
+    background-position:center !important;
+    background-size:100% 100% !important;
+    background-repeat:no-repeat !important;
+    width:100% !important;
+    overflow:hidden;
+}
+
+.hero::before {
+    display:none !important;
+}
+
+/* Keep only the hero and testimonials viewport-sized. */
+.landing-section:not(.hero):not(.testimonials) {
+    height:auto !important;
+    min-height:0 !important;
+    align-items:stretch;
+}
+
+.landing-section:not(.hero):not(.testimonials) .section-inner {
+    height:auto !important;
+    max-height:none !important;
+    overflow:visible !important;
+}
+
+.landing-section:not(.hero):not(.testimonials) .system-grid,
+.landing-section:not(.hero):not(.testimonials) .course-grid,
+.landing-section:not(.hero):not(.testimonials) .faq-grid {
+    height:auto !important;
+    max-height:none !important;
+    overflow:visible !important;
+    grid-template-rows:none !important;
+}
+
+.landing-section:not(.hero):not(.testimonials) .system-column,
+.landing-section:not(.hero):not(.testimonials) .course-box {
+    max-height:none !important;
+    overflow:visible !important;
+}
+
+.course:not(.hero):not(.testimonials) .course-grid {
+    flex:0 0 auto;
+}
+
 @media (max-width:700px) {
     .course .course-grid { grid-template-rows:repeat(2,minmax(0,1fr)); }
     .feature-grid,
@@ -1181,6 +1227,96 @@ body:has(.hero) .testimonial-window {
     .feature-grid { overflow-y:auto; max-height:48vh; }
     .split-section { gap:18px; }
     .vocabulary-board { width:100%; }
+}
+
+/* Final landing layout: only hero and testimonials fill the viewport. */
+.landing-section.hero,
+.landing-section.testimonials {
+    height:100svh !important;
+    min-height:100svh !important;
+}
+
+.landing-section:not(.hero):not(.testimonials) {
+    display:flex;
+    height:auto !important;
+    min-height:0 !important;
+    align-items:stretch;
+    max-height:none !important;
+    overflow:visible !important;
+    padding:clamp(56px,7vw,96px) clamp(16px,6vw,80px) !important;
+}
+
+.landing-section:not(.hero):not(.testimonials) .section-inner {
+    width:min(1200px,100%);
+    height:auto !important;
+    max-height:none !important;
+    margin:auto;
+    overflow:visible !important;
+}
+
+.landing-section:not(.hero):not(.testimonials) .system-grid,
+.landing-section:not(.hero):not(.testimonials) .course-grid,
+.landing-section:not(.hero):not(.testimonials) .feature-grid,
+.landing-section:not(.hero):not(.testimonials) .comparison-grid,
+.landing-section:not(.hero):not(.testimonials) .split-section {
+    height:auto !important;
+    max-height:none !important;
+    grid-template-rows:none !important;
+    align-items:stretch;
+    overflow:visible !important;
+    min-width:0;
+}
+
+.landing-section:not(.hero):not(.testimonials) .system-column,
+.landing-section:not(.hero):not(.testimonials) .course-box,
+.landing-section:not(.hero):not(.testimonials) .feature-card,
+.landing-section:not(.hero):not(.testimonials) .comparison-column,
+.landing-section:not(.hero):not(.testimonials) .quote-panel {
+    height:auto !important;
+    max-height:none !important;
+    overflow:visible !important;
+    min-width:0;
+}
+
+.landing-section:not(.hero):not(.testimonials) .course-grid {
+    flex:0 0 auto;
+}
+
+.landing-section:not(.hero):not(.testimonials) .feature-section,
+.landing-section:not(.hero):not(.testimonials) .social-section,
+.landing-section:not(.hero):not(.testimonials) .classes-section {
+    justify-content:flex-start;
+    min-height:0;
+}
+
+.landing-section:not(.hero):not(.testimonials) .class-details,
+.landing-section:not(.hero):not(.testimonials) .feature-grid,
+.landing-section:not(.hero):not(.testimonials) .faq-grid {
+    max-height:none !important;
+    overflow:visible !important;
+}
+
+.landing-section:not(.hero):not(.testimonials) p,
+.landing-section:not(.hero):not(.testimonials) li,
+.landing-section:not(.hero):not(.testimonials) h1,
+.landing-section:not(.hero):not(.testimonials) h2,
+.landing-section:not(.hero):not(.testimonials) h3 {
+    max-width:100%;
+    overflow-wrap:anywhere;
+}
+
+@media (max-width:700px) {
+    .landing-section:not(.hero):not(.testimonials) {
+        padding:48px 16px !important;
+    }
+
+    .landing-section:not(.hero):not(.testimonials) .system-grid,
+    .landing-section:not(.hero):not(.testimonials) .course-grid,
+    .landing-section:not(.hero):not(.testimonials) .feature-grid,
+    .landing-section:not(.hero):not(.testimonials) .comparison-grid,
+    .landing-section:not(.hero):not(.testimonials) .split-section {
+        grid-template-columns:1fr;
+    }
 }
 </style>
 </head>
@@ -1215,21 +1351,6 @@ body:has(.hero) .testimonial-window {
      ========================================================= -->
 
 <section class="hero landing-section" id="inicio">
-<video class="hero-video" autoplay muted loop playsinline>
-<source src="{{ url_for('static', filename='video/class_pics_video.mp4') }}" type="video/mp4">
-</video>
-<div class="hero-smoke"></div>
-
-<div class="hero-content">
-<div class="eyebrow">FELIPONETICA INGLÉS</div>
-<h1>Inglés que <span>sí entiendes.</span></h1>
-<p>Una forma más clara y humana de entender, practicar y usar el inglés.</p>
-
-<div class="hero-actions">
-<a href="/course" class="button hero-signup">Empieza ahora</a>
-<a href="/lessons" class="button button-light hero-signup">Conoce el sistema</a>
-</div>
-</div>
 </section>
 
 <!-- =========================================================
@@ -1334,17 +1455,20 @@ data-image-extensions="jpg,jpeg"></div>
     <!-- FREE -->
         <div class="course-box">
             
-                <p>Tu primer paso hacia una pronunciación y entendimiento natural.<p>
+            <p>Tu primer paso hacia una pronunciación y entendimiento natural.</p>
                 <ul>
                 <li>Feliponetica Pollito y Gallo</li>
-                <li>Vocabulario Visual y Auditorio<li>
+            <li>Vocabulario Visual y Auditorio</li>
                 <li>Juegos De Informacion Fundamental</li>
                 <li>PDFs hechos por el Fundador y Creador</li>
                 <li>Fundamentos del Total Picture Method</li>
                 </ul>
                 <h3>Y MUCHO MAS!</h3>
                 <a href="/course" class="button">Empezar gratis</a>
-                </div>
+        </div>
+        </div>
+        </div>
+    </section>
 
 
 <!-- =========================================================
