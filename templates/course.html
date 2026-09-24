@@ -48,7 +48,7 @@
             <div class="nav-links">
 
                 <a href="/">Home</a>
-                <a href="{{ url_for('feliponetica_ingles') }}">Feliponetica Inglés</a>
+                <a href="{{ url_for('feliponetica.feliponetica_ingles') }}">Feliponetica Inglés</a>
                 <a href="/vocab_drill">Vocabulary</a>
                 <a href="/about">About</a>
                 <a href="/contact">Contact</a>
@@ -165,9 +165,17 @@
                 </ul>
 
                 <div class="card-footer">
-                    <a href="{{ url_for('verb_conjugation_game') }}" class="button button-primary">
+
+                    <a href="{{ url_for('games_dashboard') }}"
+                       class="button button-primary">
+                        Play Other Games
+                    </a>
+
+                    <a href="{{ url_for('verb_conjugation_game') }}"
+                       class="button button-primary">
                         Play Verb Conjugation
                     </a>
+
                 </div>
 
             </article>

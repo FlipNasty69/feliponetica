@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vocabulary Practice Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
+  <style>
+    :root {
+      --bg-color: #f7f9fa;
+      --card-bg: #ffffff;
+      --text-main: #4b4b4b;
+      --green-main: #58cc02;
+      --green-shadow: #46a302;
+      --blue-main: #1cb0f6;
+      --blue-shadow: #1899d6;
+      --red-main: #ff4b4b;
+      --red-shadow: #ea2b2b;
+      --gray-light: #e5e5e5;
+      --gray-border: #cecece;
+      --gray-shadow: #afafaf;
+      --gold-main: #ffc800;
+      --gold-shadow: #e5b200;
+    }
+
+    * { box-sizing: border-box; font-family: 'Nunito', sans-serif; user-select: none; }
+    body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+    /* Flash Overlay */
+    #flashOverlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: rgba(255, 75, 75, 0.85); pointer-events: none; opacity: 0;
+      transition: opacity 0.15s ease-in-out; z-index: 9999;
+    }
+    .flashing { animation: flashAnim 0.3s infinite alternate; }
+    @keyframes flashAnim { 0% { opacity: 0.2; } 100% { opacity: 0.95; } }
+
+    /* Layout Container */
+    .game-container { width: 100%; max-width: 600px; background: var(--card-bg); border: 2px solid var(--gray-light); border-bottom-width: 5px; border-radius: 20px; padding: 24px; position: relative; overflow: hidden; }
+
+    /* Duolingo Buttons */
+    .duo-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px 24px; border-radius: 16px; font-weight: 800; font-size: 16px;
+      text-transform: uppercase; letter-spacing: 0.8px; border: none; cursor: pointer;
+      position: relative; transition: filter 0.1s, transform 0.1s; width: 100%; margin-top: 10px;
+    }
+    .duo-btn:active { transform: translateY(4px); box-shadow: none !important; }
+    .btn-green { background: var(--green-main); color: #fff; box-shadow: 0 4px 0 var(--green-shadow); }
+    .btn-blue { background: var(--blue-main); color: #fff; box-shadow: 0 4px 0 var(--blue-shadow); }
+    .btn-red { background: var(--red-main); color: #fff; box-shadow: 0 4px 0 var(--red-shadow); }
+    .btn-gray { background: var(--gray-light); color: var(--text-main); box-shadow: 0 4px 0 var(--gray-shadow); }
+    .btn-gold { background: var(--gold-main); color: #fff; box-shadow: 0 4px 0 var(--gold-shadow); }
+
+    /* Progress Header */
+    .header-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .progress-outer { flex: 1; height: 16px; background: var(--gray-light); border-radius: 10px; overflow: hidden; }
+    .progress-inner { height: 100%; width: 0%; background: var(--green-main); transition: width 0.3s ease; border-radius: 10px; }
+    .stage-badge { font-weight: 900; font-size: 14px; color: var(--blue-main); text-transform: uppercase; }
+
+    /* Display Card Grid & Items */
+    .prompt-area { font-size: 24px; font-weight: 900; text-align: center; margin-bottom: 20px; color: var(--text-main); }
+    .phonetics { font-size: 18px; color: var(--blue-main); margin-top: 4px; font-weight: 800; }
+    .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 20px; }
+    
+    .card-option {
+      border: 2px solid var(--gray-light); border-bottom-width: 5px; border-radius: 16px;
+      padding: 12px; text-align: center; cursor: pointer; transition: all 0.15s ease;
+      background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .card-option img { width: 100%; height: 120px; object-fit: contain; border-radius: 10px; }
+    .card-option.selected { border-color: var(--blue-main); background: #ddf4ff; border-bottom-width: 5px; }
+
+    /* Video Container */
+    .video-container { width: 100%; text-align: center; }
+    .video-container video { width: 100%; max-height: 350px; border-radius: 16px; border: 3px solid var(--green-main); }
+    
+    .hidden { display: none !important; }
+    .flex-row { display: flex; gap: 10px; }
+
+    /* Correct-answer celebration */
+    #correctCelebration {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      pointer-events: none;
+      background: rgba(88, 204, 2, .86);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .15s ease;
+    }
+    #correctCelebration.is-active { opacity: 1; visibility: visible; animation: correctFlash .42s 3 alternate; }
+    #fireworks { position: absolute; inset: 0; }
+    #fireworks svg { width: 100%; height: 100%; }
+    @keyframes correctFlash { from { opacity: .42; } to { opacity: .92; } }
+
+    @media (max-width: 480px) {
+    body {
+      padding: 12px;
+      justify-content: flex-start;
+    }
+
+    .game-container {
+      padding: 16px;
+      border-radius: 16px;
+    }
+
+    .grid-container {
+      gap: 10px;
+    }
+
+    .card-option {
+      padding: 8px;
+    }
+
+    .card-option img {
+      height: 95px;
+    }
+
+    .duo-btn {
+      padding: 13px 12px;
+      font-size: 14px;
+    }
+
+    .video-container video {
+      max-height: 260px;
+    }
+  }
+  </style>
+</head>
+<body>
+
+  <div id="flashOverlay"></div>
+  <div id="correctCelebration" aria-live="polite" aria-atomic="true">
+    <div id="fireworks" aria-hidden="true"></div>
+  </div>
+
+  <div class="game-container">
+    <div class="header-bar" id="headerBar">
+      <div class="stage-badge" id="stageBadge">Menu</div>
+      <div class="progress-outer"><div class="progress-inner" id="progressBar"></div></div>
+    </div>
+
+    <!-- STAGE 0: MENU SCREEN -->
+    <div id="screenMenu">
+      <h2 style="text-align:center; font-weight:900;">Choose a Vocab Set</h2>
+      <div id="setButtonsList"></div>
+    </div>
+
+    <!-- STAGE 1: EXPOSURE & REPETITION -->
+    <div id="screenStage1" class="hidden">
+      <div class="prompt-area">
+        <img id="s1Image" src="" style="width:200px; height:160px; object-fit:contain; border-radius:12px;" />
+        <div id="s1Phonetic" class="phonetics"></div>
+      </div>
+      <button id="s1AudioBtn" class="duo-btn btn-blue">🔊 Listen & Repeat (<span id="s1Count">0</span>/3)</button>
+      <button id="s1MicBtn" class="duo-btn btn-gold hidden">🎙️ Speak Now</button>
+    </div>
+
+    <!-- STAGE 2: SPANISH TO IMAGE MATCHING -->
+    <div id="screenStage2" class="hidden">
+      <div class="prompt-area">
+        <span id="s2SpanishPrompt">...</span>
+      </div>
+      <div class="grid-container" id="s2ImageGrid"></div>
+      <button id="s2SubmitBtn" class="duo-btn btn-green">Check Answer</button>
+      <button id="s2MicBtn" class="duo-btn btn-gold hidden">🎙️ Say the Word</button>
+    </div>
+
+    <!-- STAGE 3: AUDIO/PHONETIC TO IMAGE MATCHING -->
+    <div id="screenStage3" class="hidden">
+      <div class="prompt-area">
+        <button id="s3AudioBtn" class="duo-btn btn-blue" style="width:auto; padding:10px 20px;">🔊 Play Audio</button>
+        <div id="s3Phonetic" class="phonetics"></div>
+      </div>
+      <div class="grid-container" id="s3ImageGrid"></div>
+      <button id="s3SubmitBtn" class="duo-btn btn-green">Check Answer</button>
+      <button id="s3MicBtn" class="duo-btn btn-gold hidden">🎙️ Say the Word</button>
+    </div>
+
+    <!-- STAGE 4: IMAGE TO AUDIO BUTTON MATCHING -->
+    <div id="screenStage4" class="hidden">
+      <div class="prompt-area">
+        <img id="s4ImagePrompt" src="" style="width:180px; height:140px; object-fit:contain;" />
+      </div>
+      <div class="grid-container" id="s4AudioGrid"></div>
+      <button id="s4SubmitBtn" class="duo-btn btn-green">Check Answer</button>
+      <button id="s4MicBtn" class="duo-btn btn-gold hidden">🎙️ Say the Word</button>
+    </div>
+
+    <!-- STAGE 5: SELF EVALUATION -->
+    <div id="screenStage5" class="hidden">
+      <div class="prompt-area">
+        <img id="s5ImagePrompt" src="" style="width:180px; height:140px; object-fit:contain;" />
+      </div>
+      
+      <div id="s5RecordArea">
+        <button id="s5MicBtn" class="duo-btn btn-gold">🎙️ Record Answer</button>
+      </div>
+
+      <div id="s5EvalArea" class="hidden">
+        <p style="text-align:center; font-weight:800; font-size:18px;">¿Lo dijiste bien?</p>
+        <div class="flex-row">
+          <button id="s5YesBtn" class="duo-btn btn-green">I Did!</button>
+          <button id="s5NoBtn" class="duo-btn btn-red">I Didn't</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAGE 6: VICTORY SCREEN -->
+    <div id="screenVictory" class="hidden">
+      <h2 style="text-align:center; font-weight:900; color:var(--green-main);">Great Job!</h2>
+      <div class="video-container">
+       <video id="victoryVideo" loop>
+        <source src="{{ url_for('static', filename='video/brain_swell/brain_swell.mp4') }}"
+                type="video/mp4">
+       </video>
+      </div>
+      <button id="victoryReturnBtn" class="duo-btn btn-green">Continue</button>
+    </div>
+
+  </div>
+
+  <script>
+    // --- STATE ENGINE ---
+    let currentSet = [];
+    let currentStage = 0; // 0: Menu, 1-5: Rounds, 6: Victory
+    let wordIndex = 0;
+    let selectedOption = null;
+    let s1RepCount = 0;
+    let s5RetryCount = 0;
+    let mediaRecorder, audioChunks = [];
+
+    // --- INIT & MENU ---
+    async function loadSets() {
+      try {
+        const res = await fetch('/vocab/api/get-vocab-sets');
+        const sets = await res.json();
+        const container = document.getElementById('setButtonsList');
+        container.innerHTML = '';
+        sets.forEach(set => {
+          const btn = document.createElement('button');
+          btn.className = 'duo-btn btn-blue';
+          btn.innerText = set.title;
+          btn.onclick = () => startSet(set.id);
+          container.appendChild(btn);
+        });
+      } catch(e) { console.error("Could not fetch sets", e); }
+    }
+
+    async function startSet(setId) {
+      const res = await fetch(`/vocab/api/get-set-details?id=${setId}`);
+      currentSet = await res.json();
+      wordIndex = 0;
+      currentStage = 1;
+      updateHeader();
+      initStage1();
+    }
+
+    function updateHeader() {
+      const badge = document.getElementById('stageBadge');
+      const bar = document.getElementById('progressBar');
+      if (currentStage === 0 || currentStage === 6) {
+        document.getElementById('headerBar').classList.add('hidden');
+        return;
+      }
+      document.getElementById('headerBar').classList.remove('hidden');
+      badge.innerText = `Round ${currentStage}`;
+      const totalSteps = 5 * currentSet.length;
+      const currentStep = ((currentStage - 1) * currentSet.length) + wordIndex;
+      bar.style.width = `${Math.max(5, (currentStep / totalSteps) * 100)}%`;
+    }
+
+    function hideAllScreens() {
+      const screens = ['screenMenu', 'screenStage1', 'screenStage2', 'screenStage3', 'screenStage4', 'screenStage5', 'screenVictory'];
+      screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+    }
+
+    function flashRedScreen() {
+      const flash = document.getElementById('flashOverlay');
+      flash.classList.add('flashing');
+      setTimeout(() => flash.classList.remove('flashing'), 1200);
+    }
+
+    function playCorrectChime() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      const audioContext = new AudioContextClass();
+      audioContext.resume().then(() => {
+        [523.25, 659.25, 783.99].forEach((frequency, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          const start = audioContext.currentTime + index * .11;
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(frequency, start);
+          gain.gain.setValueAtTime(.0001, start);
+          gain.gain.exponentialRampToValueAtTime(.13, start + .02);
+          gain.gain.exponentialRampToValueAtTime(.0001, start + .22);
+          oscillator.connect(gain).connect(audioContext.destination);
+          oscillator.start(start);
+          oscillator.stop(start + .24);
+        });
+      }).catch(error => console.warn('Correct-answer chime could not play:', error));
+    }
+
+    let celebrationTimer;
+    let fireworksAnimation;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!window.lottie) {
+        console.warn('Fireworks animation could not load. Check the Lottie library connection.');
+        return;
+      }
+
+      fireworksAnimation = window.lottie.loadAnimation({
+        container: document.getElementById('fireworks'),
+        renderer: 'svg',
+        loop: false,
+        autoplay: false,
+        path: "{{ url_for('static', filename='animations/Fireworks.json') }}"
+      });
+    });
+
+    function celebrateCorrect() {
+      const celebration = document.getElementById('correctCelebration');
+
+      celebration.classList.remove('is-active');
+      void celebration.offsetWidth;
+      celebration.classList.add('is-active');
+      fireworksAnimation?.setSpeed(.7);
+      fireworksAnimation?.goToAndPlay(0, true);
+      playCorrectChime();
+      clearTimeout(celebrationTimer);
+      celebrationTimer = setTimeout(() => celebration.classList.remove('is-active'), 5200);
+    }
+
+    const pronunciationAudio = new Audio();
+
+    function playAudio(url) {
+      if (!url) return;
+
+      pronunciationAudio.pause();
+      pronunciationAudio.currentTime = 0;
+      pronunciationAudio.src = url;
+
+      pronunciationAudio.play().catch(error => {
+        console.error("Could not play pronunciation audio:", url, error);
+      });
+    }
+
+    // --- STAGE 1 ---
+    function initStage1() {
+      hideAllScreens();
+      document.getElementById('screenStage1').classList.remove('hidden');
+      s1RepCount = 0;
+      selectedOption = null;
+      const word = currentSet[wordIndex];
+      document.getElementById('s1Image').src = word.image;
+      document.getElementById('s1Phonetic').innerText = word.phonetic;
+      document.getElementById('s1Count').innerText = s1RepCount;
+      document.getElementById('s1AudioBtn').classList.remove('hidden');
+      document.getElementById('s1MicBtn').classList.add('hidden');
+    }
+
+    document.getElementById('s1AudioBtn').onclick = () => {
+      const word = currentSet[wordIndex];
+      playAudio(word.audio);
+      document.getElementById('s1AudioBtn').classList.add('hidden');
+      document.getElementById('s1MicBtn').classList.remove('hidden');
+    };
+
+    document.getElementById('s1MicBtn').onclick = async () => {
+      await recordVoiceMock();
+      s1RepCount++;
+      document.getElementById('s1Count').innerText = s1RepCount;
+      document.getElementById('s1MicBtn').classList.add('hidden');
+      document.getElementById('s1AudioBtn').classList.remove('hidden');
+
+      if (s1RepCount >= 3) {
+        wordIndex++;
+        if (wordIndex >= currentSet.length) {
+          wordIndex = 0;
+          currentStage = 2;
+          initStage2();
+        } else {
+          initStage1();
+        }
+        updateHeader();
+      }
+    };
+
+    // --- STAGE 2 ---
+    function initStage2() {
+      hideAllScreens();
+      document.getElementById('screenStage2').classList.remove('hidden');
+      selectedOption = null;
+      document.getElementById('s2SubmitBtn').classList.remove('hidden');
+      document.getElementById('s2MicBtn').classList.add('hidden');
+
+      const word = currentSet[wordIndex];
+      document.getElementById('s2SpanishPrompt').innerText = word.spanish;
+
+      const grid = document.getElementById('s2ImageGrid');
+      grid.innerHTML = '';
+      currentSet.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card-option';
+        card.innerHTML = `<img src="${item.image}"/><div class="phonetics hidden">${item.phonetic}</div>`;
+        card.onclick = () => {
+          document.querySelectorAll('#s2ImageGrid .card-option').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          selectedOption = item;
+          playAudio(item.audio);
+          card.querySelector('.phonetics').classList.remove('hidden');
+        };
+        grid.appendChild(card);
+      });
+    }
+
+    document.getElementById('s2SubmitBtn').onclick = () => {
+      if (!selectedOption) return;
+      if (selectedOption.id === currentSet[wordIndex].id) {
+        celebrateCorrect();
+        document.getElementById('s2SubmitBtn').classList.add('hidden');
+        document.getElementById('s2MicBtn').classList.remove('hidden');
+      } else {
+        flashRedScreen();
+      }
+    };
+
+    document.getElementById('s2MicBtn').onclick = async () => {
+      await recordVoiceMock();
+      advanceWord(3, initStage3);
+    };
+
+    // --- STAGE 3 ---
+    function initStage3() {
+      hideAllScreens();
+      document.getElementById('screenStage3').classList.remove('hidden');
+      selectedOption = null;
+      document.getElementById('s3SubmitBtn').classList.remove('hidden');
+      document.getElementById('s3MicBtn').classList.add('hidden');
+
+      const word = currentSet[wordIndex];
+      document.getElementById('s3Phonetic').innerText = word.phonetic;
+      document.getElementById('s3AudioBtn').onclick = () => playAudio(word.audio);
+
+      const grid = document.getElementById('s3ImageGrid');
+      grid.innerHTML = '';
+      currentSet.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card-option';
+        card.innerHTML = `<img src="${item.image}"/>`;
+        card.onclick = () => {
+          document.querySelectorAll('#s3ImageGrid .card-option').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          selectedOption = item;
+        };
+        grid.appendChild(card);
+      });
+    }
+
+    document.getElementById('s3SubmitBtn').onclick = () => {
+      if (!selectedOption) return;
+      if (selectedOption.id === currentSet[wordIndex].id) {
+        celebrateCorrect();
+        document.getElementById('s3SubmitBtn').classList.add('hidden');
+        document.getElementById('s3MicBtn').classList.remove('hidden');
+      } else {
+        flashRedScreen();
+      }
+    };
+
+    document.getElementById('s3MicBtn').onclick = async () => {
+      await recordVoiceMock();
+      advanceWord(4, initStage4);
+    };
+
+    // --- STAGE 4 ---
+    function initStage4() {
+      hideAllScreens();
+      document.getElementById('screenStage4').classList.remove('hidden');
+      selectedOption = null;
+      document.getElementById('s4SubmitBtn').classList.remove('hidden');
+      document.getElementById('s4MicBtn').classList.add('hidden');
+
+      const word = currentSet[wordIndex];
+      document.getElementById('s4ImagePrompt').src = word.image;
+
+      const grid = document.getElementById('s4AudioGrid');
+      grid.innerHTML = '';
+      currentSet.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card-option';
+        card.innerHTML = `<div style="font-size:24px;">🔊 Audio</div><div class="phonetics hidden">${item.phonetic}</div>`;
+        card.onclick = () => {
+          document.querySelectorAll('#s4AudioGrid .card-option').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          selectedOption = item;
+          playAudio(item.audio);
+          card.querySelector('.phonetics').classList.remove('hidden');
+        };
+        grid.appendChild(card);
+      });
+    }
+
+    document.getElementById('s4SubmitBtn').onclick = () => {
+      if (!selectedOption) return;
+      if (selectedOption.id === currentSet[wordIndex].id) {
+        celebrateCorrect();
+        document.getElementById('s4SubmitBtn').classList.add('hidden');
+        document.getElementById('s4MicBtn').classList.remove('hidden');
+      } else {
+        flashRedScreen();
+      }
+    };
+
+    document.getElementById('s4MicBtn').onclick = async () => {
+      await recordVoiceMock();
+      advanceWord(5, initStage5);
+    };
+
+    // --- STAGE 5 ---
+    function initStage5() {
+      hideAllScreens();
+      document.getElementById('screenStage5').classList.remove('hidden');
+      s5RetryCount = 0;
+      const word = currentSet[wordIndex];
+      document.getElementById('s5ImagePrompt').src = word.image;
+      document.getElementById('s5RecordArea').classList.remove('hidden');
+      document.getElementById('s5EvalArea').classList.add('hidden');
+    }
+
+    document.getElementById('s5MicBtn').onclick = async () => {
+      const audioBlob = await recordVoiceMock();
+      document.getElementById('s5RecordArea').classList.add('hidden');
+      
+      const word = currentSet[wordIndex];
+      // Play system audio then user audio twice
+      playAudio(word.audio);
+      setTimeout(() => playUserBlob(audioBlob), 1200);
+      setTimeout(() => playAudio(word.audio), 2400);
+      setTimeout(() => playUserBlob(audioBlob), 3600);
+
+      setTimeout(() => {
+        document.getElementById('s5EvalArea').classList.remove('hidden');
+      }, 4800);
+    };
+
+    document.getElementById('s5YesBtn').onclick = () => {
+      advanceWord(6, initVictory);
+    };
+
+    document.getElementById('s5NoBtn').onclick = () => {
+      s5RetryCount++;
+      if (s5RetryCount >= 3) {
+        advanceWord(6, initVictory);
+      } else {
+        document.getElementById('s5EvalArea').classList.add('hidden');
+        document.getElementById('s5RecordArea').classList.remove('hidden');
+        playAudio(currentSet[wordIndex].audio);
+      }
+    };
+
+  // --- VICTORY ---
+  function initVictory() {
+    hideAllScreens();
+    currentStage = 6;
+    updateHeader();
+
+    document.getElementById('screenVictory').classList.remove('hidden');
+
+      const victoryVideo = document.getElementById('victoryVideo');
+      victoryVideo.pause();
+      victoryVideo.currentTime = 0;
+      victoryVideo.muted = false;
+      victoryVideo.volume = 1;
+
+      victoryVideo.play().catch(error => {
+        console.warn('Browser blocked victory video sound:', error);
+      });
+    }
+    
+   document.getElementById('victoryReturnBtn').onclick = () => {
+      const victoryVideo = document.getElementById('victoryVideo');
+      victoryVideo.pause();
+      victoryVideo.currentTime = 0;
+
+      currentStage = 0;
+      hideAllScreens();
+      document.getElementById('screenMenu').classList.remove('hidden');
+      loadSets();
+    };
+
+    // --- UTILITIES ---
+    function advanceWord(nextStageNum, nextStageInitFn) {
+      wordIndex++;
+      if (wordIndex >= currentSet.length) {
+        wordIndex = 0;
+        currentStage = nextStageNum;
+        nextStageInitFn();
+      } else {
+        switch(currentStage) {
+          case 2: initStage2(); break;
+          case 3: initStage3(); break;
+          case 4: initStage4(); break;
+          case 5: initStage5(); break;
+        }
+      }
+      updateHeader();
+    }
+
+    // 1. Send the recorded audio blob to your backend API
+async function sendAudioToServer(blob) {
+  if (!blob) return;
+
+  const formData = new FormData();
+  formData.append('audio', blob, 'user_recording.wav');
+
+  try {
+    const res = await fetch('/vocab/api/verify-voice', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    console.log('Voice API Response:', data);
+  } catch (err) {
+    console.error('Failed to send audio to backend:', err);
+  }
+}
+
+// 2. Capture mic stream and trigger the backend upload on stop
+function recordVoiceMock() {
+  return new Promise((resolve) => {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+      
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(audioChunks, { type: 'audio/wav' });
+        
+        // --- THIS IS THE API CONNECTION LINE ---
+        await sendAudioToServer(blob);
+        
+        resolve(blob);
+      };
+      
+      mediaRecorder.start();
+      setTimeout(() => mediaRecorder.stop(), 1500); // 1.5s recording window
+    }).catch((err) => {
+      console.warn("Microphone issue or fallback:", err);
+      resolve(null);
+    });
+  });
+}
+
+    function playUserBlob(blob) {
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        new Audio(url).play();
+      }
+    }
+
+    // Start on menu screen
+    loadSets();
+  </script>
+</body>
+</html>

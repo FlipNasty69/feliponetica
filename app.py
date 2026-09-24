@@ -2,17 +2,16 @@ import sqlite3
 import os
 import smtplib
 import json
-import nltk
-import re
 import secrets
 
 from email.message import EmailMessage
 from flask import request, render_template
 from flask import Flask, render_template, request, send_from_directory, abort
-from g2p_en import G2p
 from flask import session, redirect, url_for
+from features.feliponetica import feliponetica_bp
 
 app = Flask(__name__)
+
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -26,6 +25,24 @@ USERS = {
         "role": "admin",
     }
 }
+
+# ============================================================
+# GAME BLUEPRINTS
+# ============================================================
+# Add future game blueprints here and then register them below.
+# Example:
+# from games.vocab_game import vocab_bp
+# GAME_BLUEPRINTS = [vocab_bp]
+from games.vocab_game import vocab_bp
+GAME_BLUEPRINTS = [vocab_bp]
+
+def register_game_blueprints():
+    for blueprint in GAME_BLUEPRINTS:
+        app.register_blueprint(blueprint)
+
+
+register_game_blueprints()
+app.register_blueprint(feliponetica_bp)
 
 
 def init_student_database():
@@ -251,25 +268,6 @@ def conjugation_progress():
     }
 
 
-# ============================================================
-# NLTK DATA
-# ============================================================
-
-NLTK_DATA_PATH = "/opt/render/nltk_data"
-
-nltk.data.path.insert(0, NLTK_DATA_PATH)
-
-nltk.download(
-    "averaged_perceptron_tagger_eng",
-    download_dir=NLTK_DATA_PATH
-)
-
-nltk.download(
-    "cmudict",
-    download_dir=NLTK_DATA_PATH
-)
-
-g2p = G2p()
 
 # ============================================================
 # SUPPORT DATABASE
@@ -298,367 +296,6 @@ init_support_database()
 
 
 # ============================================================
-# FELIPONETICA
-# ============================================================
-
-CMU_TO_FELIPONETICA = {
-
-    # Vowels
-    "AA": "a˂",
-    "AE": "aʰ",
-    "AH": "uʰ",
-    "AO": "a˂",
-    "AW": "au",
-    "AY": "ai",
-    "EH": "e",
-    "ER": "er",
-    "EY": "ei",
-    "IH": "iʰ",
-    "IY": "i",
-    "OW": "ou",
-    "OY": "oi",
-    "UH": "uᶠ",
-    "UW": "u",
-
-    # Stops
-    "P": "p",
-    "B": "b",
-    "T": "t",
-    "D": "d",
-    "K": "k",
-    "G": "g",
-
-    # Fricatives
-    "F": "f",
-    "V": "v",
-    "TH": "thˢ",
-    "DH": "thᶻ",
-    "S": "s",
-    "Z": "z",
-    "SH": "sh",
-    "ZH": "shᶻ",
-    "HH": "j",
-
-    # Affricates
-    "CH": "ch",
-    "JH": "shᶻ",
-
-    # Nasals
-    "M": "m",
-    "N": "n",
-    "NG": "ng",
-
-    # Liquids
-    "L": "l",
-    "R": "r",
-
-    # Glides
-    "W": "w",
-    "Y": "ll",
-}
-
-CMU_TO_FELIPONETICA_POLLITO = {
-    # Vowels
-    "AA": "a",
-    "AE": "a",
-    "AH": "a",
-    "AO": "a",
-    "AW": "au",
-    "AY": "ai",
-    "EH": "e",
-    "ER": "r",
-    "EY": "ei",
-    "IH": "i",
-    "IY": "ii",
-    "OW": "ou",
-    "OY": "oi",
-    "UH": "u",
-    "UW": "uu",
-
-    # Stops
-    "P": "p",
-    "B": "b",
-    "T": "t",
-    "D": "d",
-    "K": "k",
-    "G": "g",
-
-    # Fricatives
-    "F": "f",
-    "V": "v",
-    "TH": "t",
-    "DH": "d",
-    "S": "s",
-    "Z": "z",
-    "SH": "sh",
-    "ZH": "(shᶻ)",
-    "HH": "j",
-
-    # Affricates
-    "CH": "ch",
-    "JH": "ch",
-
-    # Nasals
-    "M": "m",
-    "N": "n",
-    "NG": "ng",
-
-    # Liquids
-    "L": "l",
-    "R": "r",
-
-    # Glides
-    "W": "w",
-    "Y": "ll",
-}
-
-
-def convert_to_feliponetica(text, phoneme_map=CMU_TO_FELIPONETICA):
-
-    phonemes = g2p(text)
-
-    # =====================================================
-    # WORD-SPECIFIC PRONUNCIATION CORRECTIONS
-    # =====================================================
-
-    # "with" uses the voiceless TH sound in Feliponetica
-    # with → W IH TH
-    for i, phone in enumerate(phonemes):
-
-        clean_phone = re.sub(r"\d", "", phone)
-
-        if clean_phone == "DH":
-
-            previous_1 = ""
-            previous_2 = ""
-
-            if i > 0:
-                previous_1 = re.sub(r"\d", "", phonemes[i - 1])
-
-            if i > 1:
-                previous_2 = re.sub(r"\d", "", phonemes[i - 2])
-
-            if previous_2 == "W" and previous_1 == "IH":
-                phonemes[i] = "TH"
-
-    converted = []
-
-    i = 0
-
-    while i < len(phonemes):
-
-        phone = phonemes[i]
-
-        # =================================================
-        # KEEP SPACES
-        # =================================================
-
-        if phone == " ":
-            converted.append(" ")
-            i += 1
-            continue
-
-        # =================================================
-        # KEEP PUNCTUATION
-        # =================================================
-
-        if not re.match(r"^[A-Z]+[0-2]?$", phone):
-            converted.append(phone)
-            i += 1
-            continue
-
-        # Remove stress number
-        phone = re.sub(r"\d", "", phone)
-
-        # Get next phoneme
-        next_phone = ""
-
-        if i + 1 < len(phonemes):
-            next_phone = re.sub(
-                r"\d", "",
-                phonemes[i + 1]
-            )
-
-        # Get phoneme after next
-        after_next_phone = ""
-
-        if i + 2 < len(phonemes):
-            after_next_phone = re.sub(
-                r"\d", "",
-                phonemes[i + 2]
-            )
-
-                # =================================================
-        # Y + UW + AH + L
-        # =================================================
-
-        # fuel → fiuol
-
-        if (
-            phone == "Y"
-            and next_phone == "UW"
-            and after_next_phone == "AH"
-        ):
-
-            if i + 3 < len(phonemes):
-                after_ah_phone = re.sub(
-                    r"\d", "",
-                    phonemes[i + 3]
-                )
-
-                if after_ah_phone == "L":
-                    converted.append("iuol")
-                    i += 4
-                    continue
-
-
-        # =================================================
-        # Y + UW + L
-        # =================================================
-        #
-        # mule → miuol
-        # fuel → fiuol
-        #
-        # Y UW L → iuol
-
-        if (
-            phone == "Y"
-            and next_phone == "UW"
-            and after_next_phone == "L"
-        ):
-
-            converted.append("iuol")
-
-            i += 3
-            continue
-
-
-        # =================================================
-        # Y + UW
-        # =================================================
-        #
-        # few → fiu
-        # future → fiuchr
-        # fusion → fiu...
-
-        if phone == "Y" and next_phone == "UW":
-
-            converted.append("iu")
-
-            i += 2
-            
-            continue
-
-        # =================================================
-        # AO + R
-        # =================================================
-        #
-        # north
-        # core
-        # bore
-        # store
-        # chore
-        # lore
-        # more
-        #
-        # AO R → o r
-
-        if phone == "AO" and next_phone == "R":
-
-            converted.append("or")
-
-            i += 2
-            continue
-
-        # =================================================
-        # NG + K
-        # =================================================
-        #
-        # think
-        # thank
-        # drink
-        # bank
-        #
-        # NG K → n k
-
-        if phone == "NG" and next_phone == "K":
-
-            converted.append("nk")
-
-            i += 2
-            continue
-
-        # =================================================
-        # FINAL L RULE
-        # =================================================
-        #
-        # UW + L → uol
-        # IY + L → iol
-        # EY + L → eiol
-        # AY + L → aiol
-        # OY + L → oiol
-        #
-        # Examples:
-        #
-        # full   → fuol
-        # feel   → fiol
-        # school → skuol
-        # male   → meiol
-        # tail   → teiol
-        # oil    → oiol
-        #
-        # IH + L is NOT changed.
-        #
-        # fill → fiʰl
-        # hill → hiʰl
-
-        if (
-            phone in ["UW", "IY", "EY", "AY", "OY"]
-            and next_phone == "L"
-        ):
-
-            vowel = phoneme_map.get(
-                phone,
-                phone
-            )
-
-            converted.append(vowel + "ol")
-
-            i += 2
-            continue
-
-        # =================================================
-        # NORMAL CMU → FELIPONETICA
-        # =================================================
-
-        converted.append(
-            phoneme_map.get(
-                phone,
-                phone
-            )
-        )
-
-        i += 1
-
-    return "".join(converted)
-
-
-def convert_to_feliponetica_pollito(text):
-    return convert_to_feliponetica(
-        text,
-        phoneme_map=CMU_TO_FELIPONETICA_POLLITO
-    )
-
-
-def require_admin():
-    access_error = require_login()
-    if access_error:
-        return access_error
-    if session.get("role") != "admin":
-        return {"error": "Admin access required"}, 403
-    return None
-
-# ============================================================
 # HOME
 # ============================================================
 
@@ -666,114 +303,6 @@ def require_admin():
 def home():
     return render_template("index.html")
 
-
-
-# ============================================================
-# FELIPONETICA
-# ============================================================
-
-@app.route('/feliponetica', methods=['GET', 'POST'])
-def feliponetica():
-
-    access_error = require_login()
-    if access_error:
-        return access_error
-
-    result = None
-    user_input = ""
-
-    if request.method == 'POST':
-
-        user_input = request.form.get(
-            'transcript_text',
-            ''
-        ).strip()
-
-        if user_input:
-            result = convert_to_feliponetica(user_input)
-
-    return render_template(
-        'feliponetica.html',
-        result=result,
-        user_input=user_input
-    )
-
-
-@app.route('/feliponetica-ingles', methods=['GET', 'POST'])
-@app.route('/feliponetica_ingles', methods=['GET', 'POST'])
-def feliponetica_ingles():
-    access_error = require_login()
-    if access_error:
-        return access_error
-
-    pollito_result = None
-    gallo_result = None
-    pollito_input = ""
-    gallo_input = ""
-
-    if request.method == 'POST':
-        dialect = request.form.get('dialect', 'pollito')
-        text = request.form.get('transcript_text', '').strip()
-        if dialect == 'gallo':
-            gallo_input = text
-            if text:
-                gallo_result = convert_to_feliponetica(text)
-        else:
-            pollito_input = text
-            if text:
-                pollito_result = convert_to_feliponetica_pollito(text)
-
-    return render_template(
-        'feliponetica_ingles.html',
-        pollito_result=pollito_result,
-        gallo_result=gallo_result,
-        pollito_input=pollito_input,
-        gallo_input=gallo_input
-    )
-
-
-@app.route('/api/feliponetica/transcribe', methods=['POST'])
-def feliponetica_transcribe_api():
-    access_error = require_admin()
-    if access_error:
-        return access_error
-
-    payload = request.get_json(silent=True) or {}
-    text = str(payload.get('text', '')).strip()
-    dialect = str(payload.get('dialect', 'gallo')).lower()
-    if not text:
-        return {"error": "text is required"}, 400
-    if dialect not in {'pollito', 'gallo'}:
-        return {"error": "dialect must be pollito or gallo"}, 400
-
-    converter = (
-        convert_to_feliponetica_pollito
-        if dialect == 'pollito'
-        else convert_to_feliponetica
-    )
-    return {"dialect": dialect, "text": text, "result": converter(text)}
-
-
-@app.route('/api/feliponetica/transcribe-page', methods=['POST'])
-def feliponetica_transcribe_page():
-    access_error = require_login()
-    if access_error:
-        return access_error
-
-    payload = request.get_json(silent=True) or {}
-    text = str(payload.get('text', '')).strip()
-    dialect = str(payload.get('dialect', 'pollito')).lower()
-    if not text:
-        return {"error": "text is required"}, 400
-    if dialect not in {'pollito', 'gallo'}:
-        return {"error": "dialect must be pollito or gallo"}, 400
-
-    converter = (
-        convert_to_feliponetica_pollito
-        if dialect == 'pollito'
-        else convert_to_feliponetica
-    )
-    return {"dialect": dialect, "text": text, "result": converter(text)}
 
 
 # ============================================================
@@ -1178,6 +707,17 @@ def interactive_module(module_id):
         'module.html',
         module=module
     )
+# ============================================================
+# GAMES
+# ============================================================
+
+@app.route('/games')
+def games_dashboard():
+
+    return render_template('games.html')
+
+    if __name__ == "__main__":
+        app.run(host='0.0.0.0.', por=5000, debug=Ture)
 
 # ============================================================
 # ABOUT

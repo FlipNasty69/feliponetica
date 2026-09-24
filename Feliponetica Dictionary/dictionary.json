@@ -1,5 +1,5 @@
 {
-    "i": {
+   "i": {
         "pollito": "ai",
         "gallo": "ai"
     },
@@ -26,5 +26,22 @@
     "it": {
         "pollito": "it",
         "gallo": "i[h]t"
-    }
+        },
+  "prepositions": [
+    { "en": "in", "sp 1": "en", "sp 2": "adentro/dentro", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "ín", "audio": "" },
+    { "en": "on", "sp 1": "en/sobre", "sp 2": "a", "sp 3": "el/los", "sp 4": "", "Feliponetica Pollito": "ón", "audio": "" },
+    { "en": "at", "sp 1": "en", "sp 2": "a", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "át", "audio": "" },
+    { "en": "by", "sp 1": "por/junto a", "sp 2": "para (las)", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "bái", "audio": "" },
+    { "en": "for", "sp 1": "para", "sp 2": "por", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "fór", "audio": "" },
+    { "en": "from", "sp 1": "de", "sp 2": "desde", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "fróm", "audio": "" },
+    { "en": "to", "sp 1": "a", "sp 2": "para", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "tú", "audio": "" },
+    { "en": "with", "sp 1": "con", "sp 2": "", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "uíz", "audio": "" },
+    { "en": "about", "sp 1": "sobre", "sp 2": "acerca de", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "abáut", "audio": "" },
+    { "en": "over", "sp 1": "sobre", "sp 2": "encima de", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "óuver", "audio": "" },
+    { "en": "under", "sp 1": "debajo de", "sp 2": "", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "ónder", "audio": "" },
+    { "en": "between", "sp 1": "entre", "sp 2": "", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "bituín", "audio": "" },
+    { "en": "through", "sp 1": "a través de", "sp 2": "", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "zrú", "audio": "" },
+    { "en": "during", "sp 1": "durante", "sp 2": "", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "diúring", "audio": "" },
+    { "en": "without", "sp 1": "sin", "sp 2": "", "sp 3": "", "sp 4": "", "Feliponetica Pollito": "uizáut", "audio": "" }
+  ]
 }

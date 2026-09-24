@@ -1175,7 +1175,7 @@ body:has(.hero) .testimonial-window {
 .footer-logo-placeholder { width:min(180px,60vw); height:70px; margin:0 auto 24px; display:grid; place-items:center; border:1px dashed rgba(223,248,255,.4); color:#7897b5; font-family:"Montserrat",sans-serif; }
 
 .hero {
-    background-image:url("{{ url_for('static', filename='images/hero_background.jpeg') }}") !important;
+    background-image:url("{{ url_for('static', filename='images/hero_background.webp') }}") !important;
     background-position:center !important;
     background-size:100% 100% !important;
     background-repeat:no-repeat !important;
@@ -1332,7 +1332,7 @@ body:has(.hero) .testimonial-window {
 <div class="nav-container">
 <a href="/" class="logo">Feliponetica <span>Inglés</span></a>
 <div class="nav-links">
-<a href="{{ url_for('feliponetica_ingles') }}">Feliponetica</a>
+<a href="{{ url_for('feliponetica.feliponetica_ingles') }}">Feliponetica</a>
 <a href="/vocab_drill">Vocabulary</a>
 <a href="/about">Nosotros</a>
 <a href="/contact">Contacto</a>
@@ -1390,8 +1390,8 @@ body:has(.hero) .testimonial-window {
 <p>Pronunciación clara para quienes aprendemos inglés desde el español.</p>
 
 <div class="mini-buttons">
-<a href="{{ url_for('feliponetica_ingles') }}" class="button button-light">Feliponetica</a>
-<a href="{{ url_for('feliponetica_ingles') }}" class="button button-light">La pronunciación sin miedo</a>
+<a href="{{ url_for('feliponetica.feliponetica_ingles') }}" class="button button-light">Feliponetica</a>
+<a href="{{ url_for('feliponetica.feliponetica_ingles') }}" class="button button-light">La pronunciación sin miedo</a>
 <a href="/lessons" class="button button-light">Palabras mojadas</a>
 <a href="/lessons" class="button button-light">Lecciones hechas por un Mexicano para Mexicanos</a>
 </div>

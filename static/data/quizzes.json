@@ -15,7 +15,7 @@
                         "options": ["through", "across"],
                         "answer": "across",
                         "audio_help": "audio/help_through_across.mp3",
-                        "image": "images/popups/across_street.jpg",
+                        "image": "images/popups/across_street.webp",
                         "image_alt": ""
                     },
 
@@ -35,7 +35,7 @@
                         "options": ["through", "across"],
                         "answer": "through",
                         "audio_help": "audio/help_through_across.mp3",
-                        "image": "images/popups/through_water.jpg",
+                        "image": "images/popups/through_water.webp",
                         "image_alt": ""
                     },
 
@@ -45,7 +45,7 @@
                         "options": ["through", "across"],
                         "answer": "across",
                         "audio_help": "audio/help_through_across.mp3",
-                        "image": "images/popups/across_wall.jpg",
+                        "image": "images/popups/across_wall.webp",
                         "image_alt": ""
                     },
 
@@ -55,7 +55,7 @@
                         "options": ["through", "across"],
                         "answer": "through",
                         "audio_help": "audio/help_through_across.mp3",
-                        "image": "images/popups/through_window.jpg",
+                        "image": "images/popups/through_window.webp",
                         "image_alt": ""
                     },
 
@@ -65,7 +65,7 @@
                         "options": ["through", "across"],
                         "answer": "across",
                         "audio_help": "audio/help_through_across.mp3",
-                        "image": "images/popups/across_ground.jpg",
+                        "image": "images/popups/across_ground.webp",
                         "image_alt": ""
                     },
 
@@ -75,7 +75,7 @@
                         "options": ["through", "across"],
                         "answer": "through",
                         "audio_help": "audio/help_through_across.mp3",
-                        "image": "images/popups/through_tunnel.jpg",
+                        "image": "images/popups/through_tunnel.webp",
                         "image_alt": ""
                     },
 
@@ -85,7 +85,7 @@
                         "options": ["through", "across"],
                         "answer": "through",
                         "audio_help": "audio/help_through_across.mp3",
-                        "image": "images/popups/through_rain.jpg",
+                        "image": "images/popups/through_rain.webp",
                         "image_alt": ""
                     }
 

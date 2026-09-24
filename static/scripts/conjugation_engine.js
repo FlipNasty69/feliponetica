@@ -19,6 +19,31 @@ let completedForms = new Set();
 const progressStorageKey = "feliponetica-conjugation-progress";
 const savedUser = document.body.dataset.savedUser === "true";
 let progressState = {};
+const CORRECT_ANSWER_AUDIO_URLS = Array.from(
+    { length: 11 },
+    (_, index) => `/static/audio/game_feedback/correct_answer-${String(index + 1).padStart(2, "0")}.mp3`
+);
+let correctAnswersSinceFeedback = 0;
+let nextCorrectFeedbackAt = 3 + Math.floor(Math.random() * 2);
+let correctAnswerAudioQueue = [];
+
+function nextCorrectAnswerAudio() {
+    if (!correctAnswerAudioQueue.length) {
+        correctAnswerAudioQueue = shuffle([...CORRECT_ANSWER_AUDIO_URLS]);
+    }
+    return correctAnswerAudioQueue.pop();
+}
+
+function playOccasionalCorrectAnswerAudio() {
+    correctAnswersSinceFeedback += 1;
+    if (correctAnswersSinceFeedback < nextCorrectFeedbackAt) return;
+
+    const audio = new Audio(nextCorrectAnswerAudio());
+    audio.volume = 0.7;
+    audio.play().catch(error => console.warn("Correct-answer audio could not play:", error));
+    correctAnswersSinceFeedback = 0;
+    nextCorrectFeedbackAt = 3 + Math.floor(Math.random() * 2);
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     if (savedUser) beginGame();
@@ -160,6 +185,7 @@ function checkAnswer(area, areaIndex, selectedOption) {
     score += tries === 1 ? 2 : 1;
     document.getElementById("score").textContent = score;
     fireConfetti();
+    playOccasionalCorrectAnswerAudio();
     setStatus(tries === 1 ? "Correct! Full points." : "Correct! Half points.", "success");
     if (completedForms.size === FORM_DEFINITIONS.length) finishVerb();
 }
