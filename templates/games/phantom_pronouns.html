@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Phantom Pronouns</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-color: #f7f9fa;
+    --card-bg: #ffffff;
+    --text-main: #4b4b4b;
+    --green-main: #58cc02;
+    --green-shadow: #46a302;
+    --blue-main: #1cb0f6;
+    --blue-shadow: #1899d6;
+    --red-main: #ff4b4b;
+    --red-shadow: #ea2b2b;
+    --gray-light: #e5e5e5;
+    --gray-border: #cecece;
+    --gray-shadow: #afafaf;
+    --gold-main: #ffc800;
+    --gold-shadow: #e5b200;
+    --purple-main: #ce82ff;
+    --purple-shadow: #a568cc;
+  }
+
+  * { box-sizing: border-box; font-family: 'Nunito', sans-serif; user-select: none; }
+  body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+
+  #flashOverlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(255, 75, 75, 0.85); pointer-events: none; opacity: 0;
+    z-index: 9999;
+  }
+  .flash-red { animation: flashRed 0.5s 2; }
+  @keyframes flashRed { 0% { opacity: 0; } 50% { opacity: 0.55; } 100% { opacity: 0; } }
+
+  #flashGreenOverlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(88, 204, 2, 0.55); pointer-events: none; opacity: 0;
+    z-index: 9999;
+  }
+  .flash-green { animation: flashGreen 0.5s 2; }
+  @keyframes flashGreen { 0% { opacity: 0; } 50% { opacity: 0.6; } 100% { opacity: 0; } }
+
+  .game-container { width: 100%; max-width: 640px; background: var(--card-bg); border: 2px solid var(--gray-light); border-bottom-width: 5px; border-radius: 20px; padding: 24px; position: relative; }
+
+  .duo-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 24px; border-radius: 16px; font-weight: 800; font-size: 16px;
+    text-transform: uppercase; letter-spacing: 0.8px; border: none; cursor: pointer;
+    transition: filter 0.1s, transform 0.1s, opacity .15s; width: 100%; margin-top: 10px;
+  }
+  .duo-btn:active { transform: translateY(3px); }
+  .duo-btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-green { background: var(--green-main); color: #fff; box-shadow: 0 4px 0 var(--green-shadow); }
+  .btn-blue { background: var(--blue-main); color: #fff; box-shadow: 0 4px 0 var(--blue-shadow); }
+  .btn-red { background: var(--red-main); color: #fff; box-shadow: 0 4px 0 var(--red-shadow); }
+  .btn-gray { background: var(--gray-light); color: var(--text-main); box-shadow: 0 4px 0 var(--gray-shadow); }
+  .btn-gold { background: var(--gold-main); color: #fff; box-shadow: 0 4px 0 var(--gold-shadow); }
+  .btn-purple { background: var(--purple-main); color: #fff; box-shadow: 0 4px 0 var(--purple-shadow); }
+
+  .header-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .progress-outer { flex: 1; height: 16px; background: var(--gray-light); border-radius: 10px; overflow: hidden; }
+  .progress-inner { height: 100%; width: 0%; background: var(--green-main); transition: width 0.3s ease; border-radius: 10px; }
+  .stage-badge { font-weight: 900; font-size: 13px; color: var(--blue-main); text-transform: uppercase; white-space: nowrap; }
+  .score-badge { font-weight: 900; font-size: 13px; color: var(--gold-shadow); white-space: nowrap; }
+
+  .hidden { display: none !important; }
+
+  /* --- MENU --- */
+  .level-card {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    border: 2px solid var(--gray-light); border-bottom-width: 4px; border-radius: 14px;
+    padding: 14px 16px; margin-bottom: 10px; cursor: pointer; background: #fff;
+  }
+  .level-card.locked { opacity: .5; cursor: not-allowed; }
+  .level-card.review { border-color: var(--purple-main); }
+  .level-card h3 { margin: 0 0 2px 0; font-size: 16px; font-weight: 900; }
+  .level-card p { margin: 0; font-size: 12.5px; color: #888; }
+  .level-card .badge { font-weight: 900; color: var(--gold-shadow); font-size: 13px; white-space: nowrap; }
+
+  /* --- EXERCISE GRID --- */
+  .pp-prompt { text-align: center; font-size: 20px; font-weight: 900; margin-bottom: 6px; }
+  .pp-tense-tag { text-align: center; font-size: 12px; font-weight: 800; color: var(--purple-shadow); text-transform: uppercase; margin-bottom: 14px; min-height: 14px; }
+
+  .pp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .pp-image-cell { grid-column: 2 / 3; grid-row: 1; display:flex; align-items:center; justify-content:center; min-height: 90px; }
+  .pp-image-cell img { max-width: 100%; max-height: 90px; border-radius: 10px; }
+  .pp-image-placeholder { width: 90px; height: 90px; border-radius: 10px; background: var(--gray-light); display:flex; align-items:center; justify-content:center; font-size: 30px; }
+
+  .pp-slot {
+    grid-row: 2;
+    border: 2px solid var(--gray-light); border-bottom-width: 4px; border-radius: 14px;
+    padding: 14px 8px; text-align: center; font-weight: 900; font-size: 17px;
+    background: #fff; cursor: pointer; min-height: 52px; display:flex; align-items:center; justify-content:center;
+  }
+  .pp-slot.filled { border-color: var(--green-main); background: #eaffda; cursor: default; }
+  .pp-slot.disabled-slot { opacity: .4; cursor: not-allowed; }
+  .pp-slot-subject { grid-column: 1; }
+  .pp-slot-verb { grid-column: 2; border-style: dashed; cursor: default; background: #f4f4f4; }
+  .pp-slot-object { grid-column: 3; }
+
+  .pp-phonetic { grid-row: 3; text-align:center; font-size: 12.5px; font-weight: 800; color: var(--blue-main); min-height: 16px; }
+  .pp-phonetic-subject { grid-column: 1; }
+  .pp-phonetic-verb { grid-column: 2; }
+  .pp-phonetic-object { grid-column: 3; }
+
+  .picker-label { text-align:center; font-weight: 800; font-size: 14px; margin-bottom: 8px; color: #888; }
+  .picker-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
+  .chip {
+    border: 2px solid var(--gray-light); border-bottom-width: 4px; border-radius: 12px;
+    padding: 10px 16px; font-weight: 800; font-size: 14px; background: #fff; cursor: pointer;
+  }
+  .chip:active { transform: translateY(2px); }
+  .chip.chip-removed { opacity: .25; text-decoration: line-through; pointer-events: none; }
+
+  .pp-sentence { text-align:center; font-size: 19px; font-weight: 900; color: var(--green-shadow); margin: 10px 0 4px; min-height: 26px; }
+
+  @media (max-width: 480px) {
+    .game-container { padding: 16px; border-radius: 16px; }
+    .pp-slot { font-size: 15px; padding: 10px 4px; }
+    .pp-prompt { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="flashOverlay"></div>
+<div id="flashGreenOverlay"></div>
+
+<div class="game-container">
+  <div class="header-bar" id="headerBar">
+    <div class="stage-badge" id="stageBadge">Menu</div>
+    <div class="progress-outer"><div class="progress-inner" id="progressBar"></div></div>
+    <div class="score-badge hidden" id="liveScoreBadge">0 pts</div>
+  </div>
+
+  <!-- MENU -->
+  <div id="screenMenu">
+    <h2 style="text-align:center; font-weight:900; margin-top:0;">Phantom Pronouns</h2>
+    <p style="text-align:center; color:#888; margin-top:-8px;">Spanish hides its pronouns in the verb ending. English needs them out loud — find them.</p>
+    <div id="levelList"></div>
+  </div>
+
+  <!-- EXERCISE SCREEN -->
+  <div id="screenExercise" class="hidden">
+    <div class="pp-prompt" id="ppPrompt"></div>
+    <div class="pp-tense-tag" id="ppTenseTag"></div>
+
+    <div class="pp-grid">
+      <div class="pp-image-cell" id="ppImageCell"></div>
+
+      <div class="pp-slot pp-slot-subject" id="ppSubjectSlot">?</div>
+      <div class="pp-slot pp-slot-verb" id="ppVerbSlot">verb</div>
+      <div class="pp-slot pp-slot-object" id="ppObjectSlot">?</div>
+
+      <div class="pp-phonetic pp-phonetic-subject" id="ppSubjectPhonetic"></div>
+      <div class="pp-phonetic pp-phonetic-verb" id="ppVerbPhonetic"></div>
+      <div class="pp-phonetic pp-phonetic-object" id="ppObjectPhonetic"></div>
+    </div>
+
+    <div id="ppPickerArea">
+      <div class="picker-label" id="ppPickerLabel"></div>
+      <div class="picker-chips" id="ppPickerChips"></div>
+    </div>
+
+    <div class="pp-sentence hidden" id="ppSentence"></div>
+
+    <button id="ppPlayBtn" class="duo-btn btn-blue hidden">🔊 Play It in English</button>
+    <button id="ppMicBtn" class="duo-btn btn-gold hidden">🎙️ ¡Ahora dilo tú!</button>
+  </div>
+
+  <!-- SUMMARY SCREEN -->
+  <div id="screenSummary" class="hidden">
+    <h2 style="text-align:center; font-weight:900; color:var(--green-main);">Round Complete!</h2>
+    <p style="text-align:center; font-size:40px; font-weight:900; margin: 4px 0;" id="summaryScore">0 / 100</p>
+    <p style="text-align:center; color:#888;" id="summaryBest"></p>
+    <button id="summaryRedoBtn" class="duo-btn btn-gold">Redo This Level</button>
+    <button id="summaryMenuBtn" class="duo-btn btn-green">Back to Menu</button>
+  </div>
+</div>
+
+<script>
+  const API_BASE = '/phantom-pronouns/api';
+  const STORAGE_KEY = 'phantomPronounsProgress';
+
+  let LEVELS = [];
+  let progress = {};       // { level_key: { best_score, completed } }
+  let usingServerProgress = false;
+
+  let currentLevel = null; // level meta object, or {key:'review', id:'review', title:'Review'}
+  let exercises = [];
+  let exerciseIndex = 0;
+  let scoreTotal = 0;
+  let mistakesThisExercise = 0;
+
+  let slots = [];          // queue of {type,label,options,correctId} for current exercise
+  let slotIndex = 0;
+
+  // ---------- persistence ----------
+  function loadLocalProgress() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+  function saveLocalProgress() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  }
+  function recordLevelResult(levelKey, score, completed) {
+    const prevBest = (progress[levelKey] && progress[levelKey].best_score) || 0;
+    progress[levelKey] = {
+      best_score: Math.max(prevBest, score),
+      completed: completed || (progress[levelKey] && progress[levelKey].completed) || false
+    };
+    saveLocalProgress();
+    fetch(`${API_BASE}/submit-score`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level_key: levelKey, score, total: 100, completed })
+    }).catch(() => {});
+  }
+  function isLevelCompleted(levelKey) {
+    return !!(progress[levelKey] && progress[levelKey].completed);
+  }
+
+  // ---------- menu ----------
+  async function init() {
+    const [levelsRes, progressRes] = await Promise.all([
+      fetch(`${API_BASE}/levels`).then(r => r.json()),
+      fetch(`${API_BASE}/progress`).then(r => r.json()).catch(() => ({ saved: false, progress: {} }))
+    ]);
+    LEVELS = levelsRes;
+    if (progressRes.saved) {
+      usingServerProgress = true;
+      progress = progressRes.progress || {};
+      saveLocalProgress();
+    } else {
+      progress = loadLocalProgress();
+    }
+    renderMenu();
+  }
+
+  function renderMenu() {
+    hideAllScreens();
+    document.getElementById('screenMenu').classList.remove('hidden');
+    document.getElementById('headerBar').classList.add('hidden');
+
+    const list = document.getElementById('levelList');
+    list.innerHTML = '';
+
+    let previousCompleted = true; // level 1 is always unlocked
+    const completedIds = [];
+
+    LEVELS.forEach((lv) => {
+      const unlocked = previousCompleted;
+      const entry = progress[lv.key];
+      if (entry && entry.completed) completedIds.push(lv.id);
+
+      const card = document.createElement('div');
+      card.className = 'level-card' + (unlocked ? '' : ' locked');
+      card.innerHTML = `
+        <div>
+          <h3>${unlocked ? '' : '🔒 '}${lv.title}</h3>
+          <p>${lv.blurb}</p>
+        </div>
+        <div class="badge">${entry ? entry.best_score + ' pts' : ''}</div>
+      `;
+      if (unlocked) card.onclick = () => startLevel(lv);
+      list.appendChild(card);
+
+      previousCompleted = !!(entry && entry.completed);
+    });
+
+    const reviewCard = document.createElement('div');
+    const reviewUnlocked = completedIds.length > 0;
+    reviewCard.className = 'level-card review' + (reviewUnlocked ? '' : ' locked');
+    reviewCard.innerHTML = `
+      <div>
+        <h3>${reviewUnlocked ? '🔀 ' : '🔒 '}Review Module</h3>
+        <p>A random mix pulled from every level you've completed so far.</p>
+      </div>
+      <div class="badge"></div>
+    `;
+    if (reviewUnlocked) {
+      reviewCard.onclick = () => startLevel({ id: 'review', key: 'review', title: 'Review Module' }, completedIds);
+    }
+    list.appendChild(reviewCard);
+  }
+
+  // ---------- starting a level ----------
+  async function startLevel(level, completedIds) {
+    currentLevel = level;
+    scoreTotal = 0;
+    exerciseIndex = 0;
+
+    let url = `${API_BASE}/exercise-set?count=10&level=${level.id}`;
+    if (level.id === 'review') {
+      url += `&completed=${completedIds.join(',')}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) { renderMenu(); return; }
+    exercises = await res.json();
+
+    document.getElementById('headerBar').classList.remove('hidden');
+    document.getElementById('liveScoreBadge').classList.remove('hidden');
+    document.getElementById('stageBadge').innerText = level.title;
+    updateLiveScore();
+    loadExercise();
+  }
+
+  function updateProgressBar() {
+    const pct = Math.max(5, (exerciseIndex / exercises.length) * 100);
+    document.getElementById('progressBar').style.width = pct + '%';
+  }
+  function updateLiveScore() {
+    document.getElementById('liveScoreBadge').innerText = scoreTotal + ' pts';
+  }
+
+  function hideAllScreens() {
+    ['screenMenu', 'screenExercise', 'screenSummary'].forEach(id =>
+      document.getElementById(id).classList.add('hidden'));
+  }
+
+  // ---------- exercise flow ----------
+  function loadExercise() {
+    hideAllScreens();
+    document.getElementById('screenExercise').classList.remove('hidden');
+    updateProgressBar();
+
+    const ex = exercises[exerciseIndex];
+    mistakesThisExercise = 0;
+
+    document.getElementById('ppPrompt').innerText = ex.spanish_prompt;
+    document.getElementById('ppTenseTag').innerText = '';
+
+    document.getElementById('ppVerbSlot').innerText = ex.verb_infinitive;
+    document.getElementById('ppVerbPhonetic').innerText = ex.verb_phonetic;
+
+    const subjectSlot = document.getElementById('ppSubjectSlot');
+    const objectSlot = document.getElementById('ppObjectSlot');
+    subjectSlot.innerText = '?';
+    objectSlot.innerText = '?';
+    subjectSlot.classList.remove('filled');
+    objectSlot.classList.remove('filled');
+    subjectSlot.classList.add('disabled-slot');
+    objectSlot.classList.add('disabled-slot');
+    document.getElementById('ppSubjectPhonetic').innerText = '';
+    document.getElementById('ppObjectPhonetic').innerText = '';
+
+    document.getElementById('ppImageCell').innerHTML = '';
+    document.getElementById('ppSentence').classList.add('hidden');
+    document.getElementById('ppSentence').innerText = '';
+    document.getElementById('ppPlayBtn').classList.add('hidden');
+    document.getElementById('ppMicBtn').classList.add('hidden');
+
+    // Build the slot queue: optional tense choice, then subject, then object.
+    slots = [];
+    if (ex.requires_tense_choice) {
+      slots.push({ type: 'tense', label: 'When does this happen?', options: ex.tense_options, correctId: ex.correct_tense_id, labelKey: 'label' });
+    }
+    slots.push({ type: 'subject', label: 'Tap to choose the (phantom) subject pronoun', options: ex.subject_options, correctId: ex.correct_subject_id, labelKey: 'en' });
+    slots.push({ type: 'object', label: 'Tap to choose the pronoun that finishes it', options: ex.object_options, correctId: ex.correct_object_id, labelKey: 'en' });
+    slotIndex = 0;
+    renderCurrentSlot();
+  }
+
+  function renderCurrentSlot() {
+    const slot = slots[slotIndex];
+    document.getElementById('ppPickerLabel').innerText = slot.label;
+    const chipsWrap = document.getElementById('ppPickerChips');
+    chipsWrap.innerHTML = '';
+
+    if (slot.type === 'subject') document.getElementById('ppSubjectSlot').classList.remove('disabled-slot');
+    if (slot.type === 'object') document.getElementById('ppObjectSlot').classList.remove('disabled-slot');
+
+    slot.options.forEach(opt => {
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.type = 'button';
+      chip.innerText = opt[slot.labelKey];
+      chip.onclick = () => handleChipClick(slot, opt, chip);
+      chipsWrap.appendChild(chip);
+    });
+  }
+
+  function handleChipClick(slot, opt, chipEl) {
+    const ex = exercises[exerciseIndex];
+    if (opt.id === slot.correctId) {
+      flashGreen();
+      fillSlotVisual(slot, opt, ex);
+      slotIndex++;
+      if (slotIndex < slots.length) {
+        renderCurrentSlot();
+      } else {
+        finishSlots(ex);
+      }
+    } else {
+      mistakesThisExercise++;
+      flashRed();
+      showHintImage(ex);
+      chipEl.classList.add('chip-removed');
+    }
+  }
+
+  function fillSlotVisual(slot, opt, ex) {
+    if (slot.type === 'tense') {
+      document.getElementById('ppTenseTag').innerText = opt.label + ' tense';
+      return;
+    }
+    if (slot.type === 'subject') {
+      const el = document.getElementById('ppSubjectSlot');
+      el.innerText = opt.en;
+      el.classList.add('filled');
+      document.getElementById('ppSubjectPhonetic').innerText = opt.phonetic;
+    }
+    if (slot.type === 'object') {
+      const el = document.getElementById('ppObjectSlot');
+      el.innerText = opt.en;
+      el.classList.add('filled');
+      document.getElementById('ppObjectPhonetic').innerText = opt.phonetic;
+    }
+  }
+
+  function showHintImage(ex) {
+    const cell = document.getElementById('ppImageCell');
+    if (cell.dataset.shown === '1') return;
+    cell.dataset.shown = '1';
+    const img = document.createElement('img');
+    img.src = ex.hint_image;
+    img.onerror = function () {
+      cell.innerHTML = '<div class="pp-image-placeholder">🖼️</div>';
+    };
+    cell.appendChild(img);
+  }
+
+  function finishSlots(ex) {
+    document.getElementById('ppPickerLabel').innerText = '';
+    document.getElementById('ppPickerChips').innerHTML = '';
+    const sentenceEl = document.getElementById('ppSentence');
+    sentenceEl.innerText = ex.english_sentence;
+    sentenceEl.classList.remove('hidden');
+    document.getElementById('ppPlayBtn').classList.remove('hidden');
+    document.getElementById('ppMicBtn').classList.add('hidden');
+  }
+
+  // ---------- audio (browser TTS — swap for real recordings once you have them) ----------
+  // This is pronunciation practice, so we speak the ENGLISH sentence the
+  // student just built, not the Spanish prompt.
+  function speakEnglish(text) {
+    return new Promise((resolve) => {
+      if (!('speechSynthesis' in window)) { resolve(); return; }
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      utterance.onend = resolve;
+      utterance.onerror = resolve;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    });
+  }
+
+  document.getElementById('ppPlayBtn').onclick = async () => {
+    const ex = exercises[exerciseIndex];
+    document.getElementById('ppPlayBtn').disabled = true;
+    await speakEnglish(ex.english_sentence);
+    document.getElementById('ppPlayBtn').disabled = false;
+    document.getElementById('ppPlayBtn').classList.add('hidden');
+    document.getElementById('ppMicBtn').classList.remove('hidden');
+  };
+
+  document.getElementById('ppMicBtn').onclick = async () => {
+    document.getElementById('ppMicBtn').disabled = true;
+    await recordAndSend();
+    document.getElementById('ppMicBtn').disabled = false;
+
+    const points = Math.max(2, 10 - 2 * mistakesThisExercise);
+    scoreTotal += points;
+    updateLiveScore();
+
+    exerciseIndex++;
+    if (exerciseIndex >= exercises.length) {
+      finishRound();
+    } else {
+      loadExercise();
+    }
+  };
+
+  function recordAndSend() {
+    return new Promise((resolve) => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { resolve(); return; }
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        const recorder = new MediaRecorder(stream);
+        const chunks = [];
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = async () => {
+          stream.getTracks().forEach(t => t.stop());
+          const blob = new Blob(chunks, { type: 'audio/wav' });
+          const formData = new FormData();
+          formData.append('audio', blob, 'attempt.wav');
+          try { await fetch(`${API_BASE}/verify-voice`, { method: 'POST', body: formData }); }
+          catch (e) { /* non-fatal */ }
+          resolve();
+        };
+        recorder.start();
+        setTimeout(() => recorder.stop(), 1500);
+      }).catch(() => resolve());
+    });
+  }
+
+  // ---------- flashes ----------
+  function flashRed() {
+    const el = document.getElementById('flashOverlay');
+    el.classList.remove('flash-red'); void el.offsetWidth; el.classList.add('flash-red');
+  }
+  function flashGreen() {
+    const el = document.getElementById('flashGreenOverlay');
+    el.classList.remove('flash-green'); void el.offsetWidth; el.classList.add('flash-green');
+  }
+
+  // ---------- round summary ----------
+  function finishRound() {
+    hideAllScreens();
+    document.getElementById('screenSummary').classList.remove('hidden');
+    document.getElementById('summaryScore').innerText = `${scoreTotal} / 100`;
+
+    const levelKey = currentLevel.key;
+    const prevBest = (progress[levelKey] && progress[levelKey].best_score) || 0;
+    document.getElementById('summaryBest').innerText =
+      scoreTotal > prevBest ? 'New best score!' : `Best score: ${Math.max(prevBest, scoreTotal)}`;
+
+    if (currentLevel.id !== 'review') {
+      recordLevelResult(levelKey, scoreTotal, true);
+    }
+  }
+
+  document.getElementById('summaryRedoBtn').onclick = () => startLevel(currentLevel);
+  document.getElementById('summaryMenuBtn').onclick = () => renderMenu();
+
+  init();
+</script>
+</body>
+</html>

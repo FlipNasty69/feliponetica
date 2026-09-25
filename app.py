@@ -34,7 +34,8 @@ USERS = {
 # from games.vocab_game import vocab_bp
 # GAME_BLUEPRINTS = [vocab_bp]
 from games.vocab_game import vocab_bp
-GAME_BLUEPRINTS = [vocab_bp]
+from games.phantom_pronouns import phantom_pronouns_bp
+GAME_BLUEPRINTS = [vocab_bp, phantom_pronouns_bp]
 
 def register_game_blueprints():
     for blueprint in GAME_BLUEPRINTS:
