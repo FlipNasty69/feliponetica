@@ -1,6 +1,7 @@
 import unittest
 
 from app import app
+from games import phantom_pronouns
 
 
 class PhantomPronounsRoutesTestCase(unittest.TestCase):
@@ -20,6 +21,19 @@ class PhantomPronounsRoutesTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Phantom Pronouns", response.data)
+
+    def test_level_one_loads_verbs_from_workbook(self):
+        previous_cache = phantom_pronouns._level1_cache
+        try:
+            phantom_pronouns._level1_cache = None
+            data = phantom_pronouns._get_level1_data()
+        finally:
+            phantom_pronouns._level1_cache = previous_cache
+
+        self.assertGreater(
+            len(data["verbs"]), len(phantom_pronouns._FALLBACK_LEVEL1_VERBS)
+        )
+        self.assertIn("saw", {verb["gloss"] for verb in data["verbs"]})
 
     def test_phantom_pronouns_api_routes_load(self):
         levels_response = self.client.get("/phantom-pronouns/api/levels")

@@ -8,40 +8,63 @@ object word every time. The game shows a Spanish sentence with its
 "phantom" (missing/implicit) pronouns and has the student supply the
 two English words that make it explicit.
 
-Example (this is exactly the shape the front end renders):
+Example:
     Spanish given:      "Mugre puerta. Me pegó."
     English to build:   ___ hit ___
     subject options:    I, we, you, they, he, she, it   -> correct: it
     object options:     me, us, you, them, him, her, it -> correct: me
 
+LEVEL 1 IS DATA-DRIVEN
+-----------------------
+Level 1 no longer ships a hand-typed verb list. Instead it reads
+static/data/phantom_pronouns_lev_1.xlsx at runtime and builds:
+  - every verb's full preterite conjugation (from just the "yo" form,
+    using a regular-preterite engine + a short irregular-verb override
+    table — see conjugate_preterite())
+  - which Spanish object clitic(s) are even grammatical for a given
+    subject+object pair, and which alternate spellings exist (te/le/lo/la
+    for "you", le/lo for "him", etc.) — read straight from the sheet's
+    subject/object compatibility table
+  - which verbs are "dative" verbs (llamar, preguntar, decir, dar,
+    mostrar, pagar, prestar, devolver, confiar, agradecer, recordar,
+    prometer...) that take le/les instead of lo/la/los/las for a 3rd
+    person object — read from the sheet's "X" / "as indirect object"
+    markings
+
+With ~99 verbs x up to 7 subjects x up to 7 objects x multiple valid
+clitic spellings x multiple disambiguating context sentences, level 1
+alone generates many thousands of distinct exercises, and every one of
+those choices (verb, subject, object, clitic spelling, context line,
+tense where relevant) is picked at random per exercise.
+
+TO ADD MORE VERBS: just add rows to the spreadsheet's verb table
+following the existing columns. No code changes needed.
+
 DROP-IN INSTRUCTIONS
 ---------------------
-1. Save this file as: games/phantom_pronouns.py   (next to games/vocab_game.py)
-2. In app.py, where vocab_bp is imported/registered, add:
+1. pip install openpyxl   (only new dependency)
+2. Save this file as: games/phantom_pronouns.py
+3. Save the spreadsheet as: static/data/phantom_pronouns_lev_1.xlsx
+4. In app.py, where vocab_bp is imported/registered, add:
 
         from games.phantom_pronouns import phantom_pronouns_bp
         GAME_BLUEPRINTS = [vocab_bp, phantom_pronouns_bp]
 
-3. Save the matching template as: templates/games/phantom_pronouns.html
-4. Create this folder (it can start empty — a built-in fallback icon
-   is shown until you add real art):
+5. Save the matching template as: templates/games/phantom_pronouns.html
+6. Create this folder (art is optional — a fallback icon is shown
+   until you add real images):
         static/images/phantom_pronouns/
-   No audio files are needed: "Play the Sentence" and the mic step use
-   the browser's built-in English text-to-speech, so pronunciation
-   practice works immediately. Swap in real recordings later by
-   editing speakEnglish() in the template.
-5. Visit /phantom-pronouns/game
+   No audio files are needed either: "Play It in English" and the mic
+   step use the browser's built-in English text-to-speech.
+7. Visit /phantom-pronouns/game
 
-CONTENT
--------
-Level 1 (direct object pronouns) ships with six fully-worked verbs.
-Levels 2-7 each ship with one worked verb so the whole progression —
-reciprocal, reflexive, distributive, indefinite x3, plus the Review
-module — is playable end to end today. Add more verbs to each
-VERB_BANKS[n] entry the same way as you produce art/audio.
+If the spreadsheet is missing or fails to parse, level 1 quietly falls
+back to a small built-in seed list (see _FALLBACK_LEVEL1_VERBS) instead
+of crashing the page.
 """
 
 import os
+import re
 import random
 import sqlite3
 
@@ -50,6 +73,10 @@ from flask import Blueprint, render_template, jsonify, request, session, current
 phantom_pronouns_bp = Blueprint(
     "phantom_pronouns", __name__, url_prefix="/phantom-pronouns"
 )
+
+EXCEL_PATH = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), "..", "static", "data", "phantom_pronouns_lev_1.xlsx"
+))
 
 # ============================================================
 # ENGLISH ANSWER SETS
@@ -80,22 +107,16 @@ CONTEXT_NOUNS = {
     "it":  ["La puerta.", "El carro.", "La pelota.", "El teléfono.", "La silla."],
 }
 
-# The base object-pronoun pool (direct objects). Other categories mix
-# these in as distractors alongside their own special words.
 DIRECT_OBJECT_WORDS = [
-    {"id": "me",   "en": "me",   "es": "me",  "phonetic": "[ mi ]"},
-    {"id": "us",   "en": "us",   "es": "nos", "phonetic": "[ os ]"},
-    {"id": "you",  "en": "you",  "es": "te",  "phonetic": "[ llu ]"},
-    {"id": "them", "en": "them", "es": "los", "phonetic": "[ dem ]"},
-    {"id": "him",  "en": "him",  "es": "lo",  "phonetic": "[ jim ]"},
-    {"id": "her",  "en": "her",  "es": "la",  "phonetic": "[ jer ]"},
-    {"id": "it",   "en": "it",   "es": "lo",  "phonetic": "[ it ]"},
+    {"id": "me",   "en": "me",   "phonetic": "[ mi ]"},
+    {"id": "us",   "en": "us",   "phonetic": "[ os ]"},
+    {"id": "you",  "en": "you",  "phonetic": "[ llu ]"},
+    {"id": "them", "en": "them", "phonetic": "[ dem ]"},
+    {"id": "him",  "en": "him",  "phonetic": "[ jim ]"},
+    {"id": "her",  "en": "her",  "phonetic": "[ jer ]"},
+    {"id": "it",   "en": "it",   "phonetic": "[ it ]"},
 ]
-# Avoid trivially reflexive-sounding pairs in level 1 (subject "I" + object "me").
-SELF_OBJECT_ID_BY_SUBJECT = {
-    "i": "me", "we": "us", "you": "you", "they": "them",
-    "he": "him", "she": "her", "it": "it",
-}
+DIRECT_OBJECT_WORDS_BY_ID = {o["id"]: o for o in DIRECT_OBJECT_WORDS}
 
 REFLEXIVE_WORDS = [
     {"id": "myself",     "en": "myself",     "phonetic": "[ mai-self ]"},
@@ -152,10 +173,6 @@ TENSE_GLOSS = {
 
 # ============================================================
 # LEVEL CONFIG
-# clitic=True  -> in the Spanish clue, the pronoun word sits BEFORE the verb
-#                 (me/te/lo/la/nos/los/se — direct object, reflexive, reciprocal)
-# clitic=False -> the pronoun phrase sits AFTER the verb, with "a"
-#                 (cada uno, alguien... — distributive/indefinite)
 # ============================================================
 
 LEVELS = [
@@ -163,7 +180,7 @@ LEVELS = [
      "category": "direct_object", "clitic": True,
      "eligible_subjects": ["i", "we", "you", "they", "he", "she", "it"],
      "requires_tense_choice": False, "tenses": ["preterite"],
-     "blurb": "Spanish drops the subject and glues the object onto the verb. Unglue both into English."},
+     "blurb": "Spanish drops the subject and glues the object onto the verb. Unglue both into English. 99+ verbs, all random."},
     {"id": 2, "key": "level_2", "title": "Reciprocal Pronouns",
      "category": "reciprocal", "clitic": True,
      "eligible_subjects": ["we", "they"],
@@ -198,38 +215,10 @@ LEVELS = [
 LEVELS_BY_ID = {lv["id"]: lv for lv in LEVELS}
 
 # ============================================================
-# VERB BANKS (add more verbs per level as you produce assets)
-# Every verb's "conj" is keyed [tense][conj_group]; "gloss"/"phonetic"
-# are keyed by tense so the English side reads naturally.
+# LEVELS 2-7 VERB BANKS (unchanged — no spreadsheet for these yet)
 # ============================================================
 
 VERB_BANKS = {
-    1: [
-        {"id": "pegar", "gloss": {"preterite": "hit"}, "phonetic": {"preterite": "[ jit ]"},
-         "conj": {"preterite": {"yo": "pegué", "tu": "pegaste", "nosotros": "pegamos",
-                                 "ellos": "pegaron", "3rd_singular": "pegó"}},
-         "hint_image": "/static/images/phantom_pronouns/pegar.webp"},
-        {"id": "ayudar", "gloss": {"preterite": "helped"}, "phonetic": {"preterite": "[ jelpt ]"},
-         "conj": {"preterite": {"yo": "ayudé", "tu": "ayudaste", "nosotros": "ayudamos",
-                                 "ellos": "ayudaron", "3rd_singular": "ayudó"}},
-         "hint_image": "/static/images/phantom_pronouns/ayudar.webp"},
-        {"id": "ver", "gloss": {"preterite": "saw"}, "phonetic": {"preterite": "[ so ]"},
-         "conj": {"preterite": {"yo": "vi", "tu": "viste", "nosotros": "vimos",
-                                 "ellos": "vieron", "3rd_singular": "vio"}},
-         "hint_image": "/static/images/phantom_pronouns/ver.webp"},
-        {"id": "llamar", "gloss": {"preterite": "called"}, "phonetic": {"preterite": "[ cold ]"},
-         "conj": {"preterite": {"yo": "llamé", "tu": "llamaste", "nosotros": "llamamos",
-                                 "ellos": "llamaron", "3rd_singular": "llamó"}},
-         "hint_image": "/static/images/phantom_pronouns/llamar.webp"},
-        {"id": "buscar", "gloss": {"preterite": "looked for"}, "phonetic": {"preterite": "[ lukt for ]"},
-         "conj": {"preterite": {"yo": "busqué", "tu": "buscaste", "nosotros": "buscamos",
-                                 "ellos": "buscaron", "3rd_singular": "buscó"}},
-         "hint_image": "/static/images/phantom_pronouns/buscar.webp"},
-        {"id": "amar", "gloss": {"preterite": "loved"}, "phonetic": {"preterite": "[ lavd ]"},
-         "conj": {"preterite": {"yo": "amé", "tu": "amaste", "nosotros": "amamos",
-                                 "ellos": "amaron", "3rd_singular": "amó"}},
-         "hint_image": "/static/images/phantom_pronouns/amar.webp"},
-    ],
     2: [
         {"id": "ver_rec", "gloss": {"preterite": "saw", "present": "see"},
          "phonetic": {"preterite": "[ so ]", "present": "[ si ]"},
@@ -283,6 +272,222 @@ EXERCISES_PER_ROUND = 10
 
 
 # ============================================================
+# LEVEL 1 — EXCEL-DRIVEN VERB & PRONOUN-COMPATIBILITY ENGINE
+# ============================================================
+
+# A handful of genuinely irregular Spanish preterites can't be derived
+# from a suffix rule. Keyed by the accent-stripped, lowercased "yo" form.
+_IRREGULAR_PRETERITE = {
+    "vi":       {"yo": "vi",       "tu": "viste",     "nosotros": "vimos",     "ellos": "vieron",     "3rd_singular": "vio"},
+    "oi":       {"yo": "oí",       "tu": "oíste",     "nosotros": "oímos",     "ellos": "oyeron",     "3rd_singular": "oyó"},
+    "dije":     {"yo": "dije",     "tu": "dijiste",   "nosotros": "dijimos",   "ellos": "dijeron",    "3rd_singular": "dijo"},
+    "di":       {"yo": "di",       "tu": "diste",     "nosotros": "dimos",     "ellos": "dieron",     "3rd_singular": "dio"},
+    "traje":    {"yo": "traje",    "tu": "trajiste",  "nosotros": "trajimos",  "ellos": "trajeron",   "3rd_singular": "trajo"},
+    "distraje": {"yo": "distraje", "tu": "distrajiste","nosotros": "distrajimos","ellos": "distrajeron","3rd_singular": "distrajo"},
+    "detuve":   {"yo": "detuve",   "tu": "detuviste", "nosotros": "detuvimos", "ellos": "detuvieron", "3rd_singular": "detuvo"},
+    "segui":    {"yo": "seguí",    "tu": "seguiste",  "nosotros": "seguimos",  "ellos": "siguieron",  "3rd_singular": "siguió"},
+    "senti":    {"yo": "sentí",    "tu": "sentiste",  "nosotros": "sentimos",  "ellos": "sintieron",  "3rd_singular": "sintió"},
+    "heri":     {"yo": "herí",     "tu": "heriste",   "nosotros": "herimos",   "ellos": "hirieron",   "3rd_singular": "hirió"},
+    "preferi":  {"yo": "preferí",  "tu": "preferiste","nosotros": "preferimos","ellos": "prefirieron","3rd_singular": "prefirió"},
+    "quise":    {"yo": "quise",    "tu": "quisiste",  "nosotros": "quisimos",  "ellos": "quisieron",  "3rd_singular": "quiso"},
+}
+
+# Best-effort feliponetica pronunciation guides for the English glosses
+# that ship in the spreadsheet. A verb the teacher adds later that isn't
+# in here just falls back to showing the plain English word in brackets
+# — add an entry here any time to sharpen it.
+_PHONETIC_OVERRIDES = {
+    "saw": "so", "heard": "jerd", "looked at": "lukt at", "noticed": "no-tist",
+    "recognized": "re-cog-naizd", "found": "faund", "caught": "cot",
+    "followed": "fo-loud", "felt": "felt", "observed": "ob-servd",
+    "smelled": "smeld", "tracked": "trakt", "identified": "ai-den-ti-faid",
+    "discovered": "dis-co-verd", "ignored": "ig-nord", "asked": "askt",
+    "said": "sed", "called": "cold", "sent": "sent", "answered": "an-serd",
+    "invited": "in-vai-tid", "greeted": "gri-tid", "informed": "in-formd",
+    "advised": "ad-vaizd", "taught": "tot", "promised": "pra-mist",
+    "remembered": "ri-mem-berd", "interrupted": "in-te-rap-tid",
+    "encouraged": "en-ker-ejd", "congratulated": "con-grach-u-lei-tid",
+    "blamed": "bleimd", "forgave": "for-gueiv", "received": "ri-sivd",
+    "challenged": "cha-lenjd", "thanked": "zankt", "bit": "bit", "cut": "cat",
+    "pushed": "pusht", "pulled": "puld", "hit": "jit", "kicked": "kikt",
+    "hugged": "jagd", "kissed": "kist", "grabbed": "grabd", "carried": "ca-rid",
+    "touched": "tacht", "scratched": "skracht", "threw": "zru",
+    "tossed": "tost", "shook": "shuk", "pinched": "pincht", "slapped": "slapt",
+    "woke up": "uouk ap", "burned": "bernd", "tied": "taid", "helped": "jelpt",
+    "saved": "seivd", "protected": "pro-tec-tid", "scared": "skerd",
+    "surprised": "ser-praizd", "bothered": "ba-derd", "distracted": "dis-trac-tid",
+    "deceived": "di-sivd", "convinced": "con-vinst", "forced": "forst",
+    "stopped": "stopt", "allowed": "a-laud", "injured": "in-yurd",
+    "healed": "jild", "confused": "con-fiuzd", "gave": "gueiv",
+    "brought": "brot", "bought": "bot", "sold": "sould", "delivered": "di-li-verd",
+    "stole": "stoul", "took": "tuk", "offered": "o-ferd", "showed": "shoud",
+    "paid": "peid", "lent": "lent", "returned": "ri-ternd",
+    "threw away": "zru e-uei", "loved": "lavd", "hated": "jei-tid",
+    "missed": "mist", "needed": "ni-did", "wanted": "uan-tid",
+    "preferred": "pri-ferd", "trusted": "tras-tid", "respected": "res-pec-tid",
+    "waited": "uei-tid", "forgot": "for-gat", "rejected": "ri-yec-tid",
+    "accepted": "ac-sep-tid", "hired": "ja-ierd", "fired": "fa-ierd",
+}
+
+# If the spreadsheet is missing, the game still runs on this tiny seed list.
+_FALLBACK_LEVEL1_VERBS = [
+    {"id": "golpear", "gloss": "hit",
+     "conj": {"yo": "golpeé", "tu": "golpeaste", "nosotros": "golpeamos",
+              "ellos": "golpearon", "3rd_singular": "golpeó"},
+     "dative": False, "hint_image": "/static/images/phantom_pronouns/golpear.webp"},
+    {"id": "ayudar", "gloss": "helped",
+     "conj": {"yo": "ayudé", "tu": "ayudaste", "nosotros": "ayudamos",
+              "ellos": "ayudaron", "3rd_singular": "ayudó"},
+     "dative": False, "hint_image": "/static/images/phantom_pronouns/ayudar.webp"},
+]
+
+_FALLBACK_SUBJECT_OBJECT_CLITICS = {
+    sid: {
+        "me": [] if sid in ("i", "we") else ["me"],
+        "us": [] if sid in ("i", "we") else ["nos"],
+        "you": ["te", "lo", "la"] if sid != "you" else [],
+        "them": ["los", "las"],
+        "him": ["lo"],
+        "her": ["la"],
+        "it": ["lo", "la"],
+    }
+    for sid in ("i", "we", "you", "they", "he", "she", "it")
+}
+
+
+def _strip_accents(text):
+    return (text.replace("á", "a").replace("é", "e").replace("í", "i")
+                .replace("ó", "o").replace("ú", "u"))
+
+
+def _slugify(text):
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def feliponetica_for(gloss):
+    key = gloss.strip().lower()
+    if key in _PHONETIC_OVERRIDES:
+        return f"[ {_PHONETIC_OVERRIDES[key]} ]"
+    return f"[ {key} ]"
+
+
+def conjugate_preterite(yo_form):
+    """Given just the 1st-person-singular preterite form, derive tú,
+    nosotros, ellos, and the ambiguous 3rd-person-singular form."""
+    yo_form = str(yo_form).strip().lower()  # normalize — the sheet mixes cases
+    key = _strip_accents(yo_form)
+    if key in _IRREGULAR_PRETERITE:
+        return dict(_IRREGULAR_PRETERITE[key])
+
+    low = yo_form
+    if low.endswith("qué"):
+        stem, cls = yo_form[:-3] + "c", "ar"
+    elif low.endswith("gué"):
+        stem, cls = yo_form[:-3] + "g", "ar"
+    elif low.endswith("cé"):
+        stem, cls = yo_form[:-2] + "z", "ar"
+    elif low.endswith(("é", "e")):  # tolerate a missing accent in source data
+        stem, cls = yo_form[:-1], "ar"
+    elif low.endswith(("í", "i")):
+        stem, cls = yo_form[:-1], "ir"
+    else:
+        stem, cls = yo_form, "ar"
+
+    if cls == "ar":
+        return {
+            "yo": yo_form if low.endswith("é") else stem + "é",
+            "tu": stem + "aste",
+            "nosotros": stem + "amos",
+            "ellos": stem + "aron",
+            "3rd_singular": stem + "ó",
+        }
+    vowel_stem = bool(stem) and stem[-1] in "aeiouáéíóú"
+    return {
+        "yo": yo_form if low.endswith("í") else stem + "í",
+        "tu": stem + "iste",
+        "nosotros": stem + "imos",
+        "ellos": stem + ("yeron" if vowel_stem else "ieron"),
+        "3rd_singular": stem + ("yó" if vowel_stem else "ió"),
+    }
+
+
+_level1_cache = None  # {"verbs": [...], "clitics": {...}} populated on first use
+
+
+def _parse_level1_workbook():
+    import openpyxl  # imported lazily so the module still loads without it installed
+
+    wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
+    ws = wb.worksheets[0]
+    rows = list(ws.iter_rows(values_only=True))
+
+    # --- subject/object clitic compatibility table ---
+    subject_row_map = {"i": "i", "we": "we", "you (*singular)": "you",
+                        "they": "they", "he": "he", "she": "she", "it": "it"}
+    object_columns = {
+        "me": [1], "us": [2], "you": [3, 4, 5, 6, 7, 8, 9],
+        "them": [10, 11, 12], "him": [13, 14], "her": [15, 16], "it": [17, 18, 19],
+    }
+    clitics = {}
+    header_row_idx = next(
+        i for i, r in enumerate(rows) if r and r[0] == "Subject Pronoun"
+    )
+    for r in rows[header_row_idx + 1: header_row_idx + 20]:
+        if not r or not r[0]:
+            continue
+        label = str(r[0]).strip().lower()
+        if label not in subject_row_map:
+            continue
+        sid = subject_row_map[label]
+        clitics[sid] = {}
+        for obj_id, cols in object_columns.items():
+            values = []
+            for c in cols:
+                v = r[c] if c < len(r) else None
+                if v and v not in values:
+                    values.append(v)
+            clitics[sid][obj_id] = values
+
+    # --- verb table ---
+    verb_header_idx = next(
+        i for i, r in enumerate(rows) if r and r[0] == "verb in past tense"
+    )
+    verbs = []
+    for r in rows[verb_header_idx + 1:]:
+        if not r or not r[0]:
+            break
+        gloss, yo_form = str(r[0]).strip(), r[1]
+        if not yo_form:
+            continue
+        dative = any(cell in ("X", "as indirect object") for cell in r)
+        conj = conjugate_preterite(str(yo_form))
+        verbs.append({
+            "id": _slugify(gloss) or f"verb_{len(verbs)}",
+            "gloss": gloss.lower(),
+            "conj": conj,
+            "dative": dative,
+            "hint_image": f"/static/images/phantom_pronouns/verbs/{_slugify(gloss)}.webp",
+        })
+
+    return {"verbs": verbs, "clitics": clitics}
+
+
+def _get_level1_data():
+    global _level1_cache
+    if _level1_cache is None:
+        try:
+            _level1_cache = _parse_level1_workbook()
+            if not _level1_cache["verbs"] or not _level1_cache["clitics"]:
+                raise ValueError("Workbook parsed but produced no data")
+        except Exception:
+            _level1_cache = {
+                "verbs": _FALLBACK_LEVEL1_VERBS,
+                "clitics": _FALLBACK_SUBJECT_OBJECT_CLITICS,
+            }
+    return _level1_cache
+
+
+# ============================================================
 # EXERCISE GENERATION
 # ============================================================
 
@@ -290,16 +495,62 @@ def _capitalize(word):
     return word[:1].upper() + word[1:] if word else word
 
 
-def _object_chip_pool_and_correct(level, subject_id):
-    """Returns (chip_pool, correct_object_id, spanish_word_for_clue)."""
-    category = level["category"]
+def _build_level1_exercise():
+    data = _get_level1_data()
+    verb = random.choice(data["verbs"])
+    clitics = data["clitics"]
 
-    if category == "direct_object":
-        pool = DIRECT_OBJECT_WORDS
-        avoid_id = SELF_OBJECT_ID_BY_SUBJECT.get(subject_id)
-        choices = [w for w in pool if w["id"] != avoid_id] or pool
-        chosen = random.choice(choices)
-        return pool, chosen["id"], chosen["es"]
+    # Only offer subjects for which at least one object is grammatical.
+    candidate_subjects = [
+        sid for sid in SUBJECTS_BY_ID
+        if any(clitics.get(sid, {}).get(obj_id) for obj_id in DIRECT_OBJECT_WORDS_BY_ID)
+    ] or list(SUBJECTS_BY_ID)
+    subject_id = random.choice(candidate_subjects)
+    subject = SUBJECTS_BY_ID[subject_id]
+
+    valid_objects = [
+        obj_id for obj_id in DIRECT_OBJECT_WORDS_BY_ID
+        if clitics.get(subject_id, {}).get(obj_id)
+    ] or list(DIRECT_OBJECT_WORDS_BY_ID)
+    object_id = random.choice(valid_objects)
+    object_word = DIRECT_OBJECT_WORDS_BY_ID[object_id]
+
+    candidate_clitics = clitics.get(subject_id, {}).get(object_id) or ["lo"]
+    if verb["dative"] and object_id in ("him", "her", "them", "it"):
+        dative_only = [c for c in candidate_clitics if c.startswith("le")]
+        candidate_clitics = dative_only or candidate_clitics
+    object_es = random.choice(candidate_clitics)
+
+    conj_group = subject["conj_group"]
+    conjugated = verb["conj"][conj_group]
+
+    context_line = None
+    if conj_group == "3rd_singular":
+        context_line = random.choice(CONTEXT_NOUNS[subject["gender"]])
+
+    target_clause = f"{_capitalize(object_es)} {conjugated}."
+    spanish_prompt = f"{context_line} {target_clause}" if context_line else target_clause
+    english_sentence = f"{_capitalize(subject['en'])} {verb['gloss']} {object_word['en']}."
+
+    return {
+        "spanish_prompt": spanish_prompt,
+        "verb_infinitive": verb["gloss"],
+        "verb_phonetic": feliponetica_for(verb["gloss"]),
+        "hint_image": verb["hint_image"],
+        "subject_options": SUBJECT_OPTIONS,
+        "correct_subject_id": subject_id,
+        "object_options": DIRECT_OBJECT_WORDS,
+        "correct_object_id": object_id,
+        "requires_tense_choice": False,
+        "tense_options": None,
+        "correct_tense_id": None,
+        "english_sentence": english_sentence,
+    }
+
+
+def _object_chip_pool_and_correct(level, subject_id):
+    """Returns (chip_pool, correct_object_id, spanish_word_for_clue) for levels 2-7."""
+    category = level["category"]
 
     if category == "reciprocal":
         pool = DIRECT_OBJECT_WORDS + [EACH_OTHER_WORD]
@@ -316,7 +567,7 @@ def _object_chip_pool_and_correct(level, subject_id):
     return pool, chosen["id"], chosen["es"]
 
 
-def build_exercise(level_id):
+def _build_other_level_exercise(level_id):
     level = LEVELS_BY_ID[level_id]
     verb = random.choice(VERB_BANKS[level_id])
     subject_id = random.choice(level["eligible_subjects"])
@@ -361,6 +612,12 @@ def build_exercise(level_id):
         "correct_tense_id": tense if level["requires_tense_choice"] else None,
         "english_sentence": english_sentence,
     }
+
+
+def build_exercise(level_id):
+    if level_id == 1:
+        return _build_level1_exercise()
+    return _build_other_level_exercise(level_id)
 
 
 def build_exercise_set(level_id, count=EXERCISES_PER_ROUND):
