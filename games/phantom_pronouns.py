@@ -109,22 +109,22 @@ CONTEXT_NOUNS = {
 
 DIRECT_OBJECT_WORDS = [
     {"id": "me",   "en": "me",   "phonetic": "[ mi ]"},
-    {"id": "us",   "en": "us",   "phonetic": "[ os ]"},
+    {"id": "us",   "en": "us",   "phonetic": "[ as ]"},
     {"id": "you",  "en": "you",  "phonetic": "[ llu ]"},
     {"id": "them", "en": "them", "phonetic": "[ dem ]"},
     {"id": "him",  "en": "him",  "phonetic": "[ jim ]"},
-    {"id": "her",  "en": "her",  "phonetic": "[ jer ]"},
+    {"id": "her",  "en": "her",  "phonetic": "[ jr ]"},
     {"id": "it",   "en": "it",   "phonetic": "[ it ]"},
 ]
 DIRECT_OBJECT_WORDS_BY_ID = {o["id"]: o for o in DIRECT_OBJECT_WORDS}
 
 REFLEXIVE_WORDS = [
     {"id": "myself",     "en": "myself",     "phonetic": "[ mai-self ]"},
-    {"id": "yourself",   "en": "yourself",   "phonetic": "[ ior-self ]"},
+    {"id": "yourself",   "en": "yourself",   "phonetic": "[ llor-self ]"},
     {"id": "himself",    "en": "himself",    "phonetic": "[ jim-self ]"},
-    {"id": "herself",    "en": "herself",    "phonetic": "[ jer-self ]"},
+    {"id": "herself",    "en": "herself",    "phonetic": "[ jr-self ]"},
     {"id": "itself",     "en": "itself",     "phonetic": "[ it-self ]"},
-    {"id": "ourselves",  "en": "ourselves",  "phonetic": "[ aur-selvs ]"},
+    {"id": "ourselves",  "en": "ourselves",  "phonetic": "[ auor-selvs ]"},
     {"id": "themselves", "en": "themselves", "phonetic": "[ dem-selvs ]"},
 ]
 REFLEXIVE_EN_BY_SUBJECT = {
