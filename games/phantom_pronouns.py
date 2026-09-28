@@ -9,36 +9,21 @@ object word every time. The game shows a Spanish sentence with its
 two English words that make it explicit.
 
 Example:
-    Spanish given:      "Mugre puerta. Me pegó."
+    Spanish given:      "La puerta. Me pegó."
     English to build:   ___ hit ___
     subject options:    I, we, you, they, he, she, it   -> correct: it
     object options:     me, us, you, them, him, her, it -> correct: me
 
 LEVEL 1 IS DATA-DRIVEN
------------------------
-Level 1 no longer ships a hand-typed verb list. Instead it reads
-static/data/phantom_pronouns_lev_1.xlsx at runtime and builds:
-  - every verb's full preterite conjugation (from just the "yo" form,
-    using a regular-preterite engine + a short irregular-verb override
-    table — see conjugate_preterite())
-  - which Spanish object clitic(s) are even grammatical for a given
-    subject+object pair, and which alternate spellings exist (te/le/lo/la
-    for "you", le/lo for "him", etc.) — read straight from the sheet's
-    subject/object compatibility table
-  - which verbs are "dative" verbs (llamar, preguntar, decir, dar,
-    mostrar, pagar, prestar, devolver, confiar, agradecer, recordar,
-    prometer...) that take le/les instead of lo/la/los/las for a 3rd
-    person object — read from the sheet's "X" / "as indirect object"
-    markings
+----------------------
+Level 1 reads the named tables in
+static/data/phantom_pronouns_lev_1.xlsx at runtime. The verb/schema table
+selects a schema, its A/X marks select an accepted subject/object pair,
+and the Spanish verb and object-pronoun tables provide the conjugation,
+phonetic spelling, and Spanish sentence opening.
 
-With ~99 verbs x up to 7 subjects x up to 7 objects x multiple valid
-clitic spellings x multiple disambiguating context sentences, level 1
-alone generates many thousands of distinct exercises, and every one of
-those choices (verb, subject, object, clitic spelling, context line,
-tense where relevant) is picked at random per exercise.
-
-TO ADD MORE VERBS: just add rows to the spreadsheet's verb table
-following the existing columns. No code changes needed.
+TO ADD MORE VERBS: add matching rows to the verb/schema and Spanish verb
+tables, and use an existing schema number. No code changes are needed.
 
 DROP-IN INSTRUCTIONS
 ---------------------
@@ -58,9 +43,9 @@ DROP-IN INSTRUCTIONS
    step use the browser's built-in English text-to-speech.
 7. Visit /phantom-pronouns/game
 
-If the spreadsheet is missing or fails to parse, level 1 quietly falls
-back to a small built-in seed list (see _FALLBACK_LEVEL1_VERBS) instead
-of crashing the page.
+Level 1 requires the workbook tables. If the workbook is missing or a
+required table cannot be read, the game reports a workbook load error
+instead of silently serving different exercise data.
 """
 
 import os
@@ -104,12 +89,12 @@ SUBJECTS_BY_ID = {p["id"]: p for p in SUBJECT_OPTIONS}
 CONTEXT_NOUNS = {
     "he":  ["Mi hermano.", "El niño.", "Mi papá.", "El maestro."],
     "she": ["Mi hermana.", "La niña.", "Mi mamá.", "La maestra."],
-    "it":  ["La puerta.", "El carro.", "La pelota.", "El teléfono.", "La silla."],
+    "it":  ["un objecto.", "un animal.", "una cosa."],
 }
 
 DIRECT_OBJECT_WORDS = [
     {"id": "me",   "en": "me",   "phonetic": "[ mi ]"},
-    {"id": "us",   "en": "us",   "phonetic": "[ as ]"},
+    {"id": "us",   "en": "us",   "phonetic": "[ as ]"}, 
     {"id": "you",  "en": "you",  "phonetic": "[ llu ]"},
     {"id": "them", "en": "them", "phonetic": "[ dem ]"},
     {"id": "him",  "en": "him",  "phonetic": "[ jim ]"},
@@ -176,11 +161,11 @@ TENSE_GLOSS = {
 # ============================================================
 
 LEVELS = [
-    {"id": 1, "key": "level_1", "title": "Direct Object Pronouns",
+    {"id": 1, "key": "level_1", "title": "Object Pronouns",
      "category": "direct_object", "clitic": True,
      "eligible_subjects": ["i", "we", "you", "they", "he", "she", "it"],
      "requires_tense_choice": False, "tenses": ["preterite"],
-     "blurb": "Spanish drops the subject and glues the object onto the verb. Unglue both into English. 99+ verbs, all random."},
+    "blurb": "Use subject-object choices allowed by each verb's schema."},
     {"id": 2, "key": "level_2", "title": "Reciprocal Pronouns",
      "category": "reciprocal", "clitic": True,
      "eligible_subjects": ["we", "they"],
@@ -213,6 +198,7 @@ LEVELS = [
      "blurb": "Cualquiera / cualesquiera — pronouns that don't care about number."},
 ]
 LEVELS_BY_ID = {lv["id"]: lv for lv in LEVELS}
+AVAILABLE_LEVEL_IDS = {1}
 
 # ============================================================
 # LEVELS 2-7 VERB BANKS (unchanged — no spreadsheet for these yet)
@@ -275,201 +261,144 @@ EXERCISES_PER_ROUND = 10
 # LEVEL 1 — EXCEL-DRIVEN VERB & PRONOUN-COMPATIBILITY ENGINE
 # ============================================================
 
-# A handful of genuinely irregular Spanish preterites can't be derived
-# from a suffix rule. Keyed by the accent-stripped, lowercased "yo" form.
-_IRREGULAR_PRETERITE = {
-    "vi":       {"yo": "vi",       "tu": "viste",     "nosotros": "vimos",     "ellos": "vieron",     "3rd_singular": "vio"},
-    "oi":       {"yo": "oí",       "tu": "oíste",     "nosotros": "oímos",     "ellos": "oyeron",     "3rd_singular": "oyó"},
-    "dije":     {"yo": "dije",     "tu": "dijiste",   "nosotros": "dijimos",   "ellos": "dijeron",    "3rd_singular": "dijo"},
-    "di":       {"yo": "di",       "tu": "diste",     "nosotros": "dimos",     "ellos": "dieron",     "3rd_singular": "dio"},
-    "traje":    {"yo": "traje",    "tu": "trajiste",  "nosotros": "trajimos",  "ellos": "trajeron",   "3rd_singular": "trajo"},
-    "distraje": {"yo": "distraje", "tu": "distrajiste","nosotros": "distrajimos","ellos": "distrajeron","3rd_singular": "distrajo"},
-    "detuve":   {"yo": "detuve",   "tu": "detuviste", "nosotros": "detuvimos", "ellos": "detuvieron", "3rd_singular": "detuvo"},
-    "segui":    {"yo": "seguí",    "tu": "seguiste",  "nosotros": "seguimos",  "ellos": "siguieron",  "3rd_singular": "siguió"},
-    "senti":    {"yo": "sentí",    "tu": "sentiste",  "nosotros": "sentimos",  "ellos": "sintieron",  "3rd_singular": "sintió"},
-    "heri":     {"yo": "herí",     "tu": "heriste",   "nosotros": "herimos",   "ellos": "hirieron",   "3rd_singular": "hirió"},
-    "preferi":  {"yo": "preferí",  "tu": "preferiste","nosotros": "preferimos","ellos": "prefirieron","3rd_singular": "prefirió"},
-    "quise":    {"yo": "quise",    "tu": "quisiste",  "nosotros": "quisimos",  "ellos": "quisieron",  "3rd_singular": "quiso"},
-}
-
-# Best-effort feliponetica pronunciation guides for the English glosses
-# that ship in the spreadsheet. A verb the teacher adds later that isn't
-# in here just falls back to showing the plain English word in brackets
-# — add an entry here any time to sharpen it.
-_PHONETIC_OVERRIDES = {
-    "saw": "so", "heard": "jerd", "looked at": "lukt at", "noticed": "no-tist",
-    "recognized": "re-cog-naizd", "found": "faund", "caught": "cot",
-    "followed": "fo-loud", "felt": "felt", "observed": "ob-servd",
-    "smelled": "smeld", "tracked": "trakt", "identified": "ai-den-ti-faid",
-    "discovered": "dis-co-verd", "ignored": "ig-nord", "asked": "askt",
-    "said": "sed", "called": "cold", "sent": "sent", "answered": "an-serd",
-    "invited": "in-vai-tid", "greeted": "gri-tid", "informed": "in-formd",
-    "advised": "ad-vaizd", "taught": "tot", "promised": "pra-mist",
-    "remembered": "ri-mem-berd", "interrupted": "in-te-rap-tid",
-    "encouraged": "en-ker-ejd", "congratulated": "con-grach-u-lei-tid",
-    "blamed": "bleimd", "forgave": "for-gueiv", "received": "ri-sivd",
-    "challenged": "cha-lenjd", "thanked": "zankt", "bit": "bit", "cut": "cat",
-    "pushed": "pusht", "pulled": "puld", "hit": "jit", "kicked": "kikt",
-    "hugged": "jagd", "kissed": "kist", "grabbed": "grabd", "carried": "ca-rid",
-    "touched": "tacht", "scratched": "skracht", "threw": "zru",
-    "tossed": "tost", "shook": "shuk", "pinched": "pincht", "slapped": "slapt",
-    "woke up": "uouk ap", "burned": "bernd", "tied": "taid", "helped": "jelpt",
-    "saved": "seivd", "protected": "pro-tec-tid", "scared": "skerd",
-    "surprised": "ser-praizd", "bothered": "ba-derd", "distracted": "dis-trac-tid",
-    "deceived": "di-sivd", "convinced": "con-vinst", "forced": "forst",
-    "stopped": "stopt", "allowed": "a-laud", "injured": "in-yurd",
-    "healed": "jild", "confused": "con-fiuzd", "gave": "gueiv",
-    "brought": "brot", "bought": "bot", "sold": "sould", "delivered": "di-li-verd",
-    "stole": "stoul", "took": "tuk", "offered": "o-ferd", "showed": "shoud",
-    "paid": "peid", "lent": "lent", "returned": "ri-ternd",
-    "threw away": "zru e-uei", "loved": "lavd", "hated": "jei-tid",
-    "missed": "mist", "needed": "ni-did", "wanted": "uan-tid",
-    "preferred": "pri-ferd", "trusted": "tras-tid", "respected": "res-pec-tid",
-    "waited": "uei-tid", "forgot": "for-gat", "rejected": "ri-yec-tid",
-    "accepted": "ac-sep-tid", "hired": "ja-ierd", "fired": "fa-ierd",
-}
-
-# If the spreadsheet is missing, the game still runs on this tiny seed list.
-_FALLBACK_LEVEL1_VERBS = [
-    {"id": "golpear", "gloss": "hit",
-     "conj": {"yo": "golpeé", "tu": "golpeaste", "nosotros": "golpeamos",
-              "ellos": "golpearon", "3rd_singular": "golpeó"},
-     "dative": False, "hint_image": "/static/images/phantom_pronouns/golpear.webp"},
-    {"id": "ayudar", "gloss": "helped",
-     "conj": {"yo": "ayudé", "tu": "ayudaste", "nosotros": "ayudamos",
-              "ellos": "ayudaron", "3rd_singular": "ayudó"},
-     "dative": False, "hint_image": "/static/images/phantom_pronouns/ayudar.webp"},
-]
-
-_FALLBACK_SUBJECT_OBJECT_CLITICS = {
-    sid: {
-        "me": [] if sid in ("i", "we") else ["me"],
-        "us": [] if sid in ("i", "we") else ["nos"],
-        "you": ["te", "lo", "la"] if sid != "you" else [],
-        "them": ["los", "las"],
-        "him": ["lo"],
-        "her": ["la"],
-        "it": ["lo", "la"],
-    }
-    for sid in ("i", "we", "you", "they", "he", "she", "it")
-}
-
-
-def _strip_accents(text):
-    return (text.replace("á", "a").replace("é", "e").replace("í", "i")
-                .replace("ó", "o").replace("ú", "u"))
-
-
 def _slugify(text):
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
-def feliponetica_for(gloss):
-    key = gloss.strip().lower()
-    if key in _PHONETIC_OVERRIDES:
-        return f"[ {_PHONETIC_OVERRIDES[key]} ]"
-    return f"[ {key} ]"
+_level1_cache = None  # Parsed schema, verb, and object-clitic tables.
 
 
-def conjugate_preterite(yo_form):
-    """Given just the 1st-person-singular preterite form, derive tú,
-    nosotros, ellos, and the ambiguous 3rd-person-singular form."""
-    yo_form = str(yo_form).strip().lower()  # normalize — the sheet mixes cases
-    key = _strip_accents(yo_form)
-    if key in _IRREGULAR_PRETERITE:
-        return dict(_IRREGULAR_PRETERITE[key])
-
-    low = yo_form
-    if low.endswith("qué"):
-        stem, cls = yo_form[:-3] + "c", "ar"
-    elif low.endswith("gué"):
-        stem, cls = yo_form[:-3] + "g", "ar"
-    elif low.endswith("cé"):
-        stem, cls = yo_form[:-2] + "z", "ar"
-    elif low.endswith(("é", "e")):  # tolerate a missing accent in source data
-        stem, cls = yo_form[:-1], "ar"
-    elif low.endswith(("í", "i")):
-        stem, cls = yo_form[:-1], "ir"
-    else:
-        stem, cls = yo_form, "ar"
-
-    if cls == "ar":
-        return {
-            "yo": yo_form if low.endswith("é") else stem + "é",
-            "tu": stem + "aste",
-            "nosotros": stem + "amos",
-            "ellos": stem + "aron",
-            "3rd_singular": stem + "ó",
-        }
-    vowel_stem = bool(stem) and stem[-1] in "aeiouáéíóú"
-    return {
-        "yo": yo_form if low.endswith("í") else stem + "í",
-        "tu": stem + "iste",
-        "nosotros": stem + "imos",
-        "ellos": stem + ("yeron" if vowel_stem else "ieron"),
-        "3rd_singular": stem + ("yó" if vowel_stem else "ió"),
-    }
+def _read_workbook_table(worksheets, table_name):
+    for worksheet in worksheets:
+        if table_name not in worksheet.tables:
+            continue
+        table = worksheet.tables[table_name]
+        rows = worksheet[table.ref]
+        headers = [str(cell.value).strip().casefold() for cell in rows[0]]
+        records = [
+            dict(zip(headers, (cell.value for cell in row)))
+            for row in rows[1:]
+        ]
+        return headers, records
+    raise ValueError(f"Workbook table {table_name!r} was not found")
 
 
-_level1_cache = None  # {"verbs": [...], "clitics": {...}} populated on first use
+def _table_key(value):
+    return str(value).strip().casefold() if value is not None else ""
 
 
 def _parse_level1_workbook():
-    import openpyxl  # imported lazily so the module still loads without it installed
+    import openpyxl
 
-    wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
-    ws = wb.worksheets[0]
-    rows = list(ws.iter_rows(values_only=True))
+    workbook = openpyxl.load_workbook(EXCEL_PATH, data_only=True, read_only=False)
+    try:
+        worksheets = workbook.worksheets
+        _, verb_schema_rows = _read_workbook_table(
+            worksheets, "verb_schema_refrence"
+        )
+        _, spanish_verb_rows = _read_workbook_table(
+            worksheets, "spanish_verb_refrence"
+        )
+        _, object_pronoun_rows = _read_workbook_table(
+            worksheets, "en_sp_object_pronoun_refrence"
+        )
 
-    # --- subject/object clitic compatibility table ---
-    subject_row_map = {"i": "i", "we": "we", "you (*singular)": "you",
-                        "they": "they", "he": "he", "she": "she", "it": "it"}
-    object_columns = {
-        "me": [1], "us": [2], "you": [3, 4, 5, 6, 7, 8, 9],
-        "them": [10, 11, 12], "him": [13, 14], "her": [15, 16], "it": [17, 18, 19],
-    }
-    clitics = {}
-    header_row_idx = next(
-        i for i, r in enumerate(rows) if r and r[0] == "Subject Pronoun"
-    )
-    for r in rows[header_row_idx + 1: header_row_idx + 20]:
-        if not r or not r[0]:
-            continue
-        label = str(r[0]).strip().lower()
-        if label not in subject_row_map:
-            continue
-        sid = subject_row_map[label]
-        clitics[sid] = {}
-        for obj_id, cols in object_columns.items():
-            values = []
-            for c in cols:
-                v = r[c] if c < len(r) else None
-                if v and v not in values:
-                    values.append(v)
-            clitics[sid][obj_id] = values
+        subjects_by_label = {
+            _table_key(subject["en"]): subject["id"]
+            for subject in SUBJECT_OPTIONS
+        }
+        objects_by_label = {
+            _table_key(obj["en"]): obj["id"]
+            for obj in DIRECT_OBJECT_WORDS
+        }
 
-    # --- verb table ---
-    verb_header_idx = next(
-        i for i, r in enumerate(rows) if r and r[0] == "verb in past tense"
-    )
-    verbs = []
-    for r in rows[verb_header_idx + 1:]:
-        if not r or not r[0]:
-            break
-        gloss, yo_form = str(r[0]).strip(), r[1]
-        if not yo_form:
-            continue
-        dative = any(cell in ("X", "as indirect object") for cell in r)
-        conj = conjugate_preterite(str(yo_form))
-        verbs.append({
-            "id": _slugify(gloss) or f"verb_{len(verbs)}",
-            "gloss": gloss.lower(),
-            "conj": conj,
-            "dative": dative,
-            "hint_image": f"/static/images/phantom_pronouns/verbs/{_slugify(gloss)}.webp",
-        })
+        schemas = {}
+        for schema_number in range(1, 6):
+            schema_name = f"schema_{schema_number}"
+            headers, rows = _read_workbook_table(worksheets, schema_name)
+            schema_pairs = []
+            for row in rows:
+                subject_id = subjects_by_label.get(_table_key(row[headers[0]]))
+                if not subject_id:
+                    continue
+                for object_label in headers[1:]:
+                    object_id = objects_by_label.get(_table_key(object_label))
+                    if object_id and _table_key(row[object_label]) == "a":
+                        schema_pairs.append((subject_id, object_id))
+            schemas[schema_number] = schema_pairs
 
-    return {"verbs": verbs, "clitics": clitics}
+        object_clitics = {}
+        for row in object_pronoun_rows:
+            object_id = objects_by_label.get(
+                _table_key(row["english_object_pronouns"])
+            )
+            if not object_id:
+                continue
+            object_clitics[object_id] = {
+                _table_key(reference): str(row[reference]).strip()
+                for reference in ("s1", "s2", "s3")
+                if row.get(reference)
+            }
+
+        spanish_by_verb = {}
+        spanish_subject_columns = {
+            _table_key(subject["en"]): subject["id"]
+            for subject in SUBJECT_OPTIONS
+        }
+        for row in spanish_verb_rows:
+            verb_key = _table_key(row["english_verb"])
+            if not verb_key:
+                continue
+            forms = {
+                subject_id: str(row[column]).strip()
+                for column, subject_id in spanish_subject_columns.items()
+                if row.get(column)
+            }
+            spanish_by_verb.setdefault(verb_key, []).append({
+                "gloss": str(row["english_verb"]).strip().lower(),
+                "phonetic": str(row["feliponetica"]).strip(),
+                "clitic_reference": _table_key(row["object_pronoun_refrence"]),
+                "conj": forms,
+            })
+
+        references_by_verb = {}
+        for row in verb_schema_rows:
+            verb_key = _table_key(row["verbs"])
+            try:
+                schema_number = int(row["schema"])
+            except (TypeError, ValueError):
+                continue
+            references_by_verb.setdefault(verb_key, []).append(schema_number)
+
+        verbs = []
+        for verb_key, schema_numbers in references_by_verb.items():
+            spanish_forms = spanish_by_verb.get(verb_key, [])
+            if not spanish_forms:
+                continue
+            for index, schema_number in enumerate(schema_numbers):
+                if index < len(spanish_forms):
+                    spanish_verb = spanish_forms[index]
+                elif len(spanish_forms) == 1:
+                    spanish_verb = spanish_forms[0]
+                else:
+                    continue
+                if schema_number not in schemas:
+                    continue
+                verbs.append({
+                    **spanish_verb,
+                    "id": f"{_slugify(spanish_verb['gloss'])}-schema-{schema_number}-{index}",
+                    "schema": schema_number,
+                    "hint_image": (
+                        "/static/images/phantom_pronouns/verbs/"
+                        f"{_slugify(spanish_verb['gloss'])}.webp"
+                    ),
+                })
+
+        if not verbs or not object_clitics:
+            raise ValueError("Workbook tables did not provide usable Level 1 data")
+        return {"verbs": verbs, "schemas": schemas, "clitics": object_clitics}
+    finally:
+        workbook.close()
 
 
 def _get_level1_data():
@@ -477,13 +406,10 @@ def _get_level1_data():
     if _level1_cache is None:
         try:
             _level1_cache = _parse_level1_workbook()
-            if not _level1_cache["verbs"] or not _level1_cache["clitics"]:
-                raise ValueError("Workbook parsed but produced no data")
-        except Exception:
-            _level1_cache = {
-                "verbs": _FALLBACK_LEVEL1_VERBS,
-                "clitics": _FALLBACK_SUBJECT_OBJECT_CLITICS,
-            }
+        except Exception as error:
+            raise RuntimeError(
+                f"Could not load the Level 1 phantom pronoun workbook at {EXCEL_PATH}"
+            ) from error
     return _level1_cache
 
 
@@ -497,35 +423,31 @@ def _capitalize(word):
 
 def _build_level1_exercise():
     data = _get_level1_data()
-    verb = random.choice(data["verbs"])
-    clitics = data["clitics"]
-
-    # Only offer subjects for which at least one object is grammatical.
-    candidate_subjects = [
-        sid for sid in SUBJECTS_BY_ID
-        if any(clitics.get(sid, {}).get(obj_id) for obj_id in DIRECT_OBJECT_WORDS_BY_ID)
-    ] or list(SUBJECTS_BY_ID)
-    subject_id = random.choice(candidate_subjects)
+    usable_verbs = [
+        verb for verb in data["verbs"]
+        if any(
+            data["clitics"].get(object_id, {}).get(verb["clitic_reference"])
+            for _, object_id in data["schemas"].get(verb["schema"], [])
+        )
+    ]
+    if not usable_verbs:
+        raise ValueError("No verbs have an accepted subject/object pair in their schema")
+    verb = random.choice(usable_verbs)
+    accepted_pairs = [
+        {"subject_id": subject_id, "object_id": object_id}
+        for subject_id, object_id in data["schemas"][verb["schema"]]
+        if data["clitics"].get(object_id, {}).get(verb["clitic_reference"])
+    ]
+    accepted_pair = random.choice(accepted_pairs)
+    subject_id = accepted_pair["subject_id"]
+    object_id = accepted_pair["object_id"]
     subject = SUBJECTS_BY_ID[subject_id]
-
-    valid_objects = [
-        obj_id for obj_id in DIRECT_OBJECT_WORDS_BY_ID
-        if clitics.get(subject_id, {}).get(obj_id)
-    ] or list(DIRECT_OBJECT_WORDS_BY_ID)
-    object_id = random.choice(valid_objects)
     object_word = DIRECT_OBJECT_WORDS_BY_ID[object_id]
-
-    candidate_clitics = clitics.get(subject_id, {}).get(object_id) or ["lo"]
-    if verb["dative"] and object_id in ("him", "her", "them", "it"):
-        dative_only = [c for c in candidate_clitics if c.startswith("le")]
-        candidate_clitics = dative_only or candidate_clitics
-    object_es = random.choice(candidate_clitics)
-
-    conj_group = subject["conj_group"]
-    conjugated = verb["conj"][conj_group]
+    object_es = data["clitics"][object_id][verb["clitic_reference"]]
+    conjugated = verb["conj"][subject_id]
 
     context_line = None
-    if conj_group == "3rd_singular":
+    if subject["conj_group"] == "3rd_singular":
         context_line = random.choice(CONTEXT_NOUNS[subject["gender"]])
 
     target_clause = f"{_capitalize(object_es)} {conjugated}."
@@ -535,7 +457,7 @@ def _build_level1_exercise():
     return {
         "spanish_prompt": spanish_prompt,
         "verb_infinitive": verb["gloss"],
-        "verb_phonetic": feliponetica_for(verb["gloss"]),
+        "verb_phonetic": f"[ {verb['phonetic']} ]",
         "hint_image": verb["hint_image"],
         "subject_options": SUBJECT_OPTIONS,
         "correct_subject_id": subject_id,
@@ -625,7 +547,7 @@ def build_exercise_set(level_id, count=EXERCISES_PER_ROUND):
 
 
 def build_review_set(completed_level_ids, count=EXERCISES_PER_ROUND):
-    pool = [lid for lid in completed_level_ids if lid in LEVELS_BY_ID]
+    pool = [lid for lid in completed_level_ids if lid in AVAILABLE_LEVEL_IDS]
     if not pool:
         return []
     return [build_exercise(random.choice(pool)) for _ in range(count)]
@@ -671,6 +593,7 @@ def get_levels():
         {"id": lv["id"], "key": lv["key"], "title": lv["title"],
          "blurb": lv["blurb"], "category": lv["category"]}
         for lv in LEVELS
+        if lv["id"] in AVAILABLE_LEVEL_IDS
     ])
 
 
@@ -709,8 +632,8 @@ def get_exercise_set():
     except ValueError:
         return jsonify({"error": "Invalid level"}), 400
 
-    if level_id not in LEVELS_BY_ID:
-        return jsonify({"error": "Level not found"}), 404
+    if level_id not in AVAILABLE_LEVEL_IDS:
+        return jsonify({"error": "Level not available"}), 404
 
     session["pp_active_level"] = level_id
     return jsonify(build_exercise_set(level_id, count))
