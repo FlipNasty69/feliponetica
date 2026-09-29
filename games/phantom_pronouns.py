@@ -17,7 +17,7 @@ Example:
 LEVEL 1 IS DATA-DRIVEN
 ----------------------
 Level 1 reads the named tables in
-static/data/phantom_pronouns_lev_1.xlsx at runtime. The verb/schema table
+static/data/phantom_pronouns.xlsx at runtime. The verb/schema table
 selects a schema, its A/X marks select an accepted subject/object pair,
 and the Spanish verb and object-pronoun tables provide the conjugation,
 phonetic spelling, and Spanish sentence opening.
@@ -29,7 +29,7 @@ DROP-IN INSTRUCTIONS
 ---------------------
 1. pip install openpyxl   (only new dependency)
 2. Save this file as: games/phantom_pronouns.py
-3. Save the spreadsheet as: static/data/phantom_pronouns_lev_1.xlsx
+3. Save the spreadsheet as: static/data/phantom_pronouns.xlsx
 4. In app.py, where vocab_bp is imported/registered, add:
 
         from games.phantom_pronouns import phantom_pronouns_bp
@@ -52,6 +52,7 @@ import os
 import re
 import random
 import sqlite3
+import unicodedata
 
 from flask import Blueprint, render_template, jsonify, request, session, current_app
 
@@ -60,7 +61,7 @@ phantom_pronouns_bp = Blueprint(
 )
 
 EXCEL_PATH = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), "..", "static", "data", "phantom_pronouns_lev_1.xlsx"
+    os.path.dirname(__file__), "..", "static", "data", "phantom_pronouns.xlsx"
 ))
 
 # ============================================================
@@ -87,9 +88,9 @@ SUBJECTS_BY_ID = {p["id"]: p for p in SUBJECT_OPTIONS}
 # Short Spanish phrases that establish the missing gender/animacy when
 # the verb ending alone can't tell you if it's "he", "she", or "it".
 CONTEXT_NOUNS = {
-    "he":  ["Mi hermano.", "El niño.", "Mi papá.", "El maestro."],
-    "she": ["Mi hermana.", "La niña.", "Mi mamá.", "La maestra."],
-    "it":  ["un objecto.", "un animal.", "una cosa."],
+    "he":  ["[ Mi hermano ]", "[ El niño ]", "[ Mi papá ]", "[ El maestro ]"],
+    "she": ["[ Mi hermana ]", "[ La niña ]", "[ Mi mamá ]", "[ La maestra ]"],
+    "it":  ["[ un objecto]", "[ un animal ]", "[ algo ]", "[ una cosa ]"],
 }
 
 DIRECT_OBJECT_WORDS = [
@@ -166,11 +167,11 @@ LEVELS = [
      "eligible_subjects": ["i", "we", "you", "they", "he", "she", "it"],
      "requires_tense_choice": False, "tenses": ["preterite"],
     "blurb": "Use subject-object choices allowed by each verb's schema."},
-    {"id": 2, "key": "level_2", "title": "Reciprocal Pronouns",
-     "category": "reciprocal", "clitic": True,
-     "eligible_subjects": ["we", "they"],
-     "requires_tense_choice": True, "tenses": ["preterite", "present"],
-     "blurb": "\"Se ayudan\" = they help each other. Only plural subjects qualify — and you pick the tense."},
+    {"id": 2, "key": "level_2", "title": "Reflexive Pronouns",
+     "category": "reflexive", "clitic": True,
+     "eligible_subjects": ["i", "we", "you", "they", "he", "she", "it"],
+     "requires_tense_choice": False, "tenses": ["preterite"],
+     "blurb": "Choose the subject and reflexive pronoun that fit each Spanish sentence."},
     {"id": 3, "key": "level_3", "title": "Reflexive Pronouns",
      "category": "reflexive", "clitic": True,
      "eligible_subjects": ["i", "we", "you", "they", "he", "she", "it"],
@@ -198,7 +199,7 @@ LEVELS = [
      "blurb": "Cualquiera / cualesquiera — pronouns that don't care about number."},
 ]
 LEVELS_BY_ID = {lv["id"]: lv for lv in LEVELS}
-AVAILABLE_LEVEL_IDS = {1}
+AVAILABLE_LEVEL_IDS = {1, 2}
 
 # ============================================================
 # LEVELS 2-7 VERB BANKS (unchanged — no spreadsheet for these yet)
@@ -266,6 +267,7 @@ def _slugify(text):
 
 
 _level1_cache = None  # Parsed schema, verb, and object-clitic tables.
+_level2_cache = None
 
 
 def _read_workbook_table(worksheets, table_name):
@@ -285,6 +287,11 @@ def _read_workbook_table(worksheets, table_name):
 
 def _table_key(value):
     return str(value).strip().casefold() if value is not None else ""
+
+
+def _normalized_spanish_form(value):
+    decomposed = unicodedata.normalize("NFD", value.casefold())
+    return "".join(char for char in decomposed if not unicodedata.combining(char))
 
 
 def _parse_level1_workbook():
@@ -413,6 +420,135 @@ def _get_level1_data():
     return _level1_cache
 
 
+def _parse_level2_workbook():
+    import openpyxl
+
+    workbook = openpyxl.load_workbook(EXCEL_PATH, data_only=True, read_only=False)
+    try:
+        worksheets = workbook.worksheets
+        _, pronoun_rows = _read_workbook_table(
+            worksheets, "lev_2_pronoun_table_1"
+        )
+        _, verb_rows = _read_workbook_table(worksheets, "lev_2_verb_table_1")
+        _, ending_rows = _read_workbook_table(
+            worksheets, "lev_2_verb_table_1.1"
+        )
+        _, translation_rows = _read_workbook_table(
+            worksheets, "lev_2_verb_table_1.2"
+        )
+
+        subjects_by_label = {
+            _table_key(subject["en"]): subject["id"]
+            for subject in SUBJECT_OPTIONS
+        }
+        pronouns = {}
+        reflexive_options = []
+        for row in pronoun_rows:
+            subject_id = subjects_by_label.get(
+                _table_key(row["lev_2_pronoun_table_1"])
+            )
+            if not subject_id:
+                continue
+            pronoun = {
+                "reflexive": str(row["reflexive"]).strip(),
+                "phonetic": str(row["reflexive_feliponetica"]).strip(),
+                "spanish_pronoun_1": str(row["spanish_pronoun_1"]).strip(),
+                "spanish_pronoun_2": str(row["spanish_pronoun_2"]).strip(),
+                "help_texts": [
+                    str(row[column]).strip()
+                    for column in row
+                    if column.startswith("spanish_help_text") and row[column]
+                ],
+            }
+            pronouns[subject_id] = pronoun
+            reflexive_options.append({
+                "id": REFLEXIVE_EN_BY_SUBJECT[subject_id],
+                "en": pronoun["reflexive"],
+                "phonetic": f"[ {pronoun['phonetic']} ]",
+            })
+
+        translations = {
+            _table_key(row["verbs"]): row for row in translation_rows
+        }
+        endings_by_verb = {
+            _table_key(row["verbs"]): row for row in ending_rows
+        }
+        verbs = []
+        for row in verb_rows:
+            verb_key = _table_key(row["verbs"])
+            translation = translations.get(verb_key)
+            if not verb_key or not translation:
+                continue
+            forms = {}
+            for label, value in translation.items():
+                subject_id = subjects_by_label.get(_table_key(label))
+                form = str(value).strip() if value is not None else ""
+                if subject_id and form and _table_key(form) != "x":
+                    forms[subject_id] = form
+            eligible_subjects = [
+                subject_id
+                for label, value in row.items()
+                if (subject_id := subjects_by_label.get(_table_key(label)))
+                and _table_key(value) == "a"
+                and subject_id in forms
+            ]
+            if not eligible_subjects:
+                continue
+
+            ending_row = endings_by_verb.get(verb_key, {})
+            endings = []
+            for index in range(1, 6):
+                english = ending_row.get(f"extra_end{index}")
+                spanish = ending_row.get(f"sp_extra_end{index}")
+                if english and _table_key(english) != "x":
+                    endings.append({
+                        "english": str(english).strip(),
+                        "spanish": (
+                            str(spanish).strip()
+                            if spanish and _table_key(spanish) != "x"
+                            else ""
+                        ),
+                    })
+
+            verbs.append({
+                "id": _slugify(verb_key),
+                "gloss": str(row["verbs"]).strip().lower(),
+                "phonetic": str(ending_row.get("feliponetica") or "").strip(),
+                "eligible_subjects": eligible_subjects,
+                "forms": forms,
+                "pronoun_1_reference": _table_key(
+                    translation.get("spanish_pronoun_1_refrence")
+                ),
+                "pronoun_2_reference": _table_key(
+                    translation.get("spanish_pronoun_2_refrence")
+                ),
+                "endings": endings,
+                "hint_image": (
+                    "/static/images/phantom_pronouns/verbs/"
+                    f"{_slugify(verb_key)}.webp"
+                ),
+            })
+
+        if not verbs or not pronouns:
+            raise ValueError("Workbook tables did not provide usable Level 2 data")
+        return {"verbs": verbs, "pronouns": pronouns,
+                "reflexive_options": reflexive_options}
+    finally:
+        workbook.close()
+
+
+def _get_level2_data():
+    global _level2_cache
+    if _level2_cache is None:
+        try:
+            _level2_cache = _parse_level2_workbook()
+        except Exception as error:
+            raise RuntimeError(
+                f"Could not load the Level 2 phantom pronoun workbook at {EXCEL_PATH}"
+            ) from error
+    return _level2_cache
+
+
 # ============================================================
 # EXERCISE GENERATION
 # ============================================================
@@ -463,6 +599,88 @@ def _build_level1_exercise():
         "correct_subject_id": subject_id,
         "object_options": DIRECT_OBJECT_WORDS,
         "correct_object_id": object_id,
+        "requires_tense_choice": False,
+        "tense_options": None,
+        "correct_tense_id": None,
+        "english_sentence": english_sentence,
+    }
+
+
+_LEVEL2_IT_HELP_TEXT_BY_VERB = {
+    "need to wash": "[un animal]",
+    "need to dry": "[un animal]",
+    "confused": "[algo]",
+    "didn't clean": "[un objeto]",
+    "cleaned": "[un objeto]",
+    "hurt": "[un animal]",
+    "cut": "[un animal]",
+    "burned": "[un objeto]",
+    "injured": "[un animal]",
+    "scratched": "[un animal]",
+    "adapted": "[una maquina]",
+    "pushed": "[un objeto]",
+}
+
+
+def _build_level2_exercise():
+    data = _get_level2_data()
+    verb = random.choice(data["verbs"])
+    subject_id = random.choice(verb["eligible_subjects"])
+    subject = SUBJECTS_BY_ID[subject_id]
+    pronoun = data["pronouns"][subject_id]
+    reflexive_id = REFLEXIVE_EN_BY_SUBJECT[subject_id]
+    reflexive = next(
+        option for option in data["reflexive_options"]
+        if option["id"] == reflexive_id
+    )
+    spanish_form = verb["forms"][subject_id]
+    spanish_parts = []
+    if verb["pronoun_1_reference"] == "a":
+        spanish_parts.append(pronoun["spanish_pronoun_1"])
+    if verb["pronoun_2_reference"] == "a":
+        spanish_parts.append(pronoun["spanish_pronoun_2"])
+    spanish_parts.append(spanish_form)
+
+    ending = random.choice(verb["endings"]) if verb["endings"] else None
+    if ending and ending["spanish"]:
+        spanish_parts.append(ending["spanish"])
+    spanish_clause = " ".join(part for part in spanish_parts if part)
+
+    gender_subjects = ["he", "she", "it"]
+    matching_gender_subjects = [
+        candidate for candidate in gender_subjects
+        if candidate in verb["eligible_subjects"]
+        and _normalized_spanish_form(verb["forms"].get(candidate, ""))
+        == _normalized_spanish_form(spanish_form)
+    ]
+    context_line = None
+    if subject_id in matching_gender_subjects and len(matching_gender_subjects) > 1:
+        help_texts = pronoun["help_texts"]
+        if subject_id == "it":
+            preferred = _LEVEL2_IT_HELP_TEXT_BY_VERB.get(verb["gloss"])
+            context_line = next(
+                (text for text in help_texts if text.casefold() == (preferred or "").casefold()),
+                help_texts[0] if help_texts else None,
+            )
+        elif help_texts:
+            context_line = random.choice(help_texts)
+    if context_line:
+        spanish_clause = f"{context_line} {spanish_clause}"
+
+    english_parts = [subject["en"], verb["gloss"], reflexive["en"]]
+    if ending:
+        english_parts.append(ending["english"])
+    english_sentence = f"{_capitalize(' '.join(english_parts))}."
+
+    return {
+        "spanish_prompt": f"{_capitalize(spanish_clause)}.",
+        "verb_infinitive": verb["gloss"],
+        "verb_phonetic": f"[ {verb['phonetic']} ]",
+        "hint_image": verb["hint_image"],
+        "subject_options": SUBJECT_OPTIONS,
+        "correct_subject_id": subject_id,
+        "object_options": data["reflexive_options"],
+        "correct_object_id": reflexive_id,
         "requires_tense_choice": False,
         "tense_options": None,
         "correct_tense_id": None,
@@ -539,6 +757,8 @@ def _build_other_level_exercise(level_id):
 def build_exercise(level_id):
     if level_id == 1:
         return _build_level1_exercise()
+    if level_id == 2:
+        return _build_level2_exercise()
     return _build_other_level_exercise(level_id)
 
 
