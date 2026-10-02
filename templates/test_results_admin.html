@@ -33,7 +33,46 @@
         <section class="admin-content" aria-labelledby="admin-title">
             <p class="test-kicker">PRIVATE AREA</p>
             <h1 id="admin-title">Test results</h1>
-            <p class="landing-copy">Submitted Final English Test reports.</p>
+            <p class="landing-copy">Registration details, saved game progress, assessment approvals, and submitted reports. Passwords are stored as hashes and cannot be viewed here.</p>
+            <section class="admin-section" aria-labelledby="students-title">
+                <h2 id="students-title">Registered students</h2>
+                {% if students %}
+                <div class="results-list">
+                    {% for student in students %}
+                    <article class="result-card student-card">
+                        <header class="result-heading">
+                            <div>
+                                <h3>{{ student.name }} {{ student.last_name }}</h3>
+                                <p>{{ student.email }}</p>
+                            </div>
+                            <span class="approval-status">{{ "Assessment approved" if student.assessment_approved else "Assessment approval needed" }}</span>
+                        </header>
+                        <form class="approval-form" method="post" action="{{ url_for('admin_update_test_approval', user_id=student.id) }}">
+                            <input type="hidden" name="category" value="assessment">
+                            <input type="hidden" name="approved" value="{{ 0 if student.assessment_approved else 1 }}">
+                            <button class="tactile-button admin-action" type="submit">{{ "Revoke assessment access" if student.assessment_approved else "Approve assessment access" }}</button>
+                        </form>
+                        <div class="student-progress">
+                            <h4>Game progress and scores</h4>
+                            {% if student.game_progress %}
+                            <ul>
+                                {% for progress in student.game_progress %}
+                                <li><strong>{{ progress.game }} — {{ progress.level }}</strong><span>Score: {{ progress.score }} · {{ progress.completed }}</span></li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p>No saved game progress yet.</p>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="empty-results">No registered students yet.</p>
+                {% endif %}
+            </section>
+            <section class="admin-section" aria-labelledby="results-title">
+                <h2 id="results-title">Assessment attempts</h2>
             {% if results %}
             <div class="results-list">
                 {% for result in results %}
@@ -65,6 +104,7 @@
             {% else %}
             <p class="empty-results">No completed tests yet.</p>
             {% endif %}
+            </section>
         </section>
         {% endif %}
     </main>

@@ -34,6 +34,14 @@ body.test-page {
     font-family: Inter, "Segoe UI", Arial, sans-serif;
 }
 
+body.test-page.admin-page {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
 button,
 input {
     font: inherit;
@@ -656,6 +664,79 @@ summary:focus-visible {
 .empty-results {
     margin-top: 34px;
     color: rgba(207, 235, 250, 0.75);
+}
+
+.admin-section {
+    margin-top: 44px;
+}
+
+.admin-section > h2 {
+    margin: 0;
+    color: var(--ice-bright);
+    font-size: 1.5rem;
+    letter-spacing: -0.025em;
+}
+
+.admin-section .results-list {
+    margin-top: 20px;
+}
+
+.student-card h3 {
+    margin: 0;
+    font-size: 1.12rem;
+}
+
+.approval-status {
+    color: var(--ice-bright);
+    font-size: 0.82rem;
+}
+
+.approval-form {
+    margin-top: 18px;
+}
+
+.admin-action {
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 12px;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.student-progress {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(168, 216, 240, 0.18);
+}
+
+.student-progress h4 {
+    margin: 0;
+    color: var(--ice-bright);
+    font-size: 0.92rem;
+}
+
+.student-progress ul {
+    display: grid;
+    margin: 12px 0 0;
+    padding-left: 20px;
+    gap: 10px;
+}
+
+.student-progress li {
+    padding-left: 3px;
+}
+
+.student-progress li strong,
+.student-progress li span {
+    display: block;
+    line-height: 1.5;
+}
+
+.student-progress li span,
+.student-progress > p {
+    margin: 3px 0 0;
+    color: rgba(207, 235, 250, 0.72);
+    font-size: 0.86rem;
 }
 
 @media (max-width: 640px) {

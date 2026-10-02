@@ -6,6 +6,7 @@ import re
 import secrets
 import zipfile
 
+from contextlib import closing
 from email.message import EmailMessage
 from flask import request, render_template
 from flask import Flask, render_template, request, send_from_directory, abort
@@ -13,7 +14,8 @@ from flask import session, redirect, url_for
 from features.feliponetica import feliponetica_bp
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
+from word_order.storage import connect_database as connect_word_order_database
 
 app = Flask(__name__)
 
@@ -58,8 +60,12 @@ app.register_blueprint(feliponetica_bp)
 register_cli(app)
 
 
+def student_database_path():
+    return os.fspath(app.config.get("STUDENT_DATABASE_PATH", STUDENT_DATABASE_PATH))
+
+
 def init_student_database():
-    with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
+    with closing(sqlite3.connect(student_database_path())) as connection, connection:
         connection.execute("""
             CREATE TABLE IF NOT EXISTS student_users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,6 +75,16 @@ def init_student_database():
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 role TEXT NOT NULL DEFAULT 'student'
+            )
+        """)
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS student_test_approvals (
+                user_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                approved INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, category),
+                FOREIGN KEY (user_id) REFERENCES student_users(id)
             )
         """)
         connection.execute("""
@@ -104,6 +120,16 @@ def init_student_database():
         connection.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS student_users_username_idx ON student_users(username)"
         )
+        for user_id, password_hash in connection.execute(
+            "SELECT id, password_hash FROM student_users"
+        ).fetchall():
+            if password_hash and not password_hash.startswith(
+                ("scrypt:", "pbkdf2:", "argon2:")
+            ):
+                connection.execute(
+                    "UPDATE student_users SET password_hash = ? WHERE id = ?",
+                    (generate_password_hash(password_hash), user_id),
+                )
 
 
 init_student_database()
@@ -119,6 +145,7 @@ def init_test_results_database():
         connection.execute("""
             CREATE TABLE IF NOT EXISTS test_results (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
                 test_name TEXT NOT NULL,
                 name TEXT NOT NULL,
                 email TEXT NOT NULL,
@@ -128,6 +155,11 @@ def init_test_results_database():
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(test_results)")
+        }
+        if "user_id" not in columns:
+            connection.execute("ALTER TABLE test_results ADD COLUMN user_id INTEGER")
         connection.commit()
     finally:
         connection.close()
@@ -224,6 +256,24 @@ def require_login():
         return redirect(url_for("login"))
     return None
 
+
+def local_next_url(value):
+    if not value.startswith("/") or value.startswith("//"):
+        return url_for("home")
+    return value
+
+
+def current_student():
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    with closing(sqlite3.connect(student_database_path())) as connection, connection:
+        connection.row_factory = sqlite3.Row
+        return connection.execute(
+            "SELECT id, name, last_name, email, role FROM student_users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+
 # ============================================================
 # JSON DATA
 # ============================================================
@@ -267,7 +317,7 @@ def login():
         user = USERS.get(username)
         registered_user = None
         if not user:
-            with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
+            with closing(sqlite3.connect(student_database_path())) as connection, connection:
                 connection.row_factory = sqlite3.Row
                 registered_user = connection.execute(
                     "SELECT * FROM student_users WHERE email = ? OR username = ?",
@@ -276,20 +326,27 @@ def login():
 
         configured_password_matches = user and user["password"] == password
         registered_password_matches = (
-            registered_user and registered_user["password_hash"] == password
+            registered_user
+            and registered_user["password_hash"]
+            and check_password_hash(registered_user["password_hash"], password)
         )
         if configured_password_matches or registered_password_matches:
+            session.clear()
             session["username"] = username
-            session["role"] = user["role"] if user else registered_user["role"]
+            session["role"] = (
+                user["role"]
+                if user
+                else "enrolled student"
+                if registered_user["role"] == "student"
+                else registered_user["role"]
+            )
             if registered_user:
                 session["user_id"] = registered_user["id"]
                 session["display_name"] = f"{registered_user['name']} {registered_user['last_name']}"
             else:
                 session.pop("user_id", None)
                 session["display_name"] = username
-            if not next_url.startswith("/") or next_url.startswith("//"):
-                next_url = url_for("home")
-            return redirect(next_url)
+            return redirect(local_next_url(next_url))
         else:
             message = "Invalid email or password."
 
@@ -305,32 +362,43 @@ def logout():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     message = ""
+    next_url = request.args.get("next", "")
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         last_name = request.form.get("last_name", "").strip()
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+        next_url = request.form.get("next", next_url)
         if not all([name, last_name, email, password]):
             message = "All fields are required."
+        elif len(name) > 120 or len(last_name) > 120:
+            message = "Names must be 120 characters or fewer."
+        elif not valid_test_email(email):
+            message = "Enter a valid email address."
+        elif len(password) < 8:
+            message = "Use a password with at least 8 characters."
         else:
-            with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
+            with closing(sqlite3.connect(student_database_path())) as connection, connection:
                 try:
                     connection.execute(
                         "INSERT INTO student_users (name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
-                        (name, last_name, email, password, "student")
+                        (name, last_name, email, generate_password_hash(password), "student")
                     )
                     connection.commit()
                 except sqlite3.IntegrityError:
                     message = "That email is already registered."
                 else:
+                    session.clear()
                     session["username"] = email
                     session["role"] = "enrolled student"
                     session["user_id"] = connection.execute(
                         "SELECT id FROM student_users WHERE email = ?", (email,)
                     ).fetchone()[0]
                     session["display_name"] = f"{name} {last_name}"
+                    if next_url:
+                        return redirect(local_next_url(next_url))
                     return redirect(url_for("verb_conjugation_game"))
-    return render_template("register.html", message=message)
+    return render_template("register.html", message=message, next_url=next_url)
 
 
 @app.route("/verb-conjugation-game")
@@ -361,7 +429,7 @@ def conjugation_progress():
         score = max(0, int(payload.get("score", 0)))
         if not group_name:
             return {"error": "group_name is required"}, 400
-        with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
+        with closing(sqlite3.connect(STUDENT_DATABASE_PATH)) as connection, connection:
             connection.execute("""
                 INSERT INTO conjugation_progress (user_id, group_name, completed_series, current_verb, score)
                 VALUES (?, ?, ?, ?, ?)
@@ -373,7 +441,7 @@ def conjugation_progress():
             connection.commit()
         return {"saved": True}
 
-    with sqlite3.connect(STUDENT_DATABASE_PATH) as connection:
+    with closing(sqlite3.connect(STUDENT_DATABASE_PATH)) as connection, connection:
         rows = connection.execute("""
             SELECT group_name, completed_series, current_verb, score
             FROM conjugation_progress
@@ -743,26 +811,46 @@ def test_center():
     return render_template("test_center.html")
 
 
+def assessment_is_approved(user_id):
+    with closing(sqlite3.connect(student_database_path())) as connection, connection:
+        row = connection.execute(
+            """
+            SELECT approved FROM student_test_approvals
+            WHERE user_id = ? AND category = 'assessment'
+            """,
+            (user_id,),
+        ).fetchone()
+    return bool(row and row[0])
+
+
 @app.route("/tests/final-english/register", methods=["GET", "POST"])
 def final_english_register():
-    message = ""
-    if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        if not name or len(name) > 120:
-            message = "Enter your name (up to 120 characters)."
-        elif not valid_test_email(email):
-            message = "Enter a valid email address."
-        else:
-            session["final_english_tester"] = {"name": name, "email": email}
-            return redirect(url_for("final_english_take"))
-    return render_template("test_registration.html", message=message)
+    student = current_student()
+    if not student:
+        return redirect(url_for(
+            "login",
+            next=url_for("final_english_register"),
+        ))
+    approved = assessment_is_approved(student["id"])
+    if approved:
+        return redirect(url_for("final_english_take"))
+    return render_template(
+        "test_registration.html",
+        authenticated=True,
+        approved=False,
+        student=student,
+    )
 
 
 @app.route("/tests/final-english/take")
 def final_english_take():
-    tester = session.get("final_english_tester")
-    if not tester:
+    student = current_student()
+    if not student:
+        return redirect(url_for(
+            "login",
+            next=url_for("final_english_register"),
+        ))
+    if not assessment_is_approved(student["id"]):
         return redirect(url_for("final_english_register"))
     try:
         questions = load_final_english_test()
@@ -786,9 +874,11 @@ def final_english_take():
 
 @app.route("/tests/final-english/submit", methods=["POST"])
 def final_english_submit():
-    tester = session.get("final_english_tester")
-    if not tester:
-        return {"error": "Register before submitting the test."}, 401
+    student = current_student()
+    if not student:
+        return {"error": "Sign in to an approved student account before submitting."}, 401
+    if not assessment_is_approved(student["id"]):
+        return {"error": "Administrator approval is required for this assessment."}, 403
     if not request.is_json:
         return {"error": "A JSON answer report is required."}, 400
     answers = request.get_json(silent=True)
@@ -829,13 +919,14 @@ def final_english_submit():
         connection.execute(
             """
             INSERT INTO test_results (
-                test_name, name, email, score, question_count, report_json
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                user_id, test_name, name, email, score, question_count, report_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                student["id"],
                 "Final English Test",
-                tester["name"],
-                tester["email"],
+                f"{student['name']} {student['last_name']}".strip(),
+                student["email"],
                 score,
                 len(questions),
                 json.dumps(report, ensure_ascii=False),
@@ -844,8 +935,93 @@ def final_english_submit():
         connection.commit()
     finally:
         connection.close()
-    session.pop("final_english_tester", None)
     return {"submitted": True}
+
+
+def load_admin_students():
+    with closing(sqlite3.connect(student_database_path())) as connection, connection:
+        connection.row_factory = sqlite3.Row
+        users = [
+            dict(row)
+            for row in connection.execute(
+                "SELECT id, name, last_name, email FROM student_users ORDER BY name, last_name, id"
+            )
+        ]
+        approvals = connection.execute(
+            """
+            SELECT user_id, category, approved
+            FROM student_test_approvals
+            """
+        ).fetchall()
+        conjugation_progress = connection.execute(
+            """
+            SELECT user_id, group_name, completed_series, score
+            FROM conjugation_progress ORDER BY group_name
+            """
+        ).fetchall()
+        game_tables = {
+            row[0] for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        phantom_progress = []
+        if "phantom_pronouns_progress" in game_tables:
+            phantom_progress = connection.execute(
+                """
+                SELECT user_id, level_key, best_score, completed
+                FROM phantom_pronouns_progress ORDER BY level_key
+                """
+            ).fetchall()
+
+    by_id = {user["id"]: user for user in users}
+    profile_user_ids = {f"user:{user['id']}": user["id"] for user in users}
+    for user in users:
+        user["assessment_approved"] = False
+        user["game_progress"] = []
+    for approval in approvals:
+        if approval["category"] == "assessment" and approval["user_id"] in by_id:
+            by_id[approval["user_id"]]["assessment_approved"] = bool(approval["approved"])
+    for progress in conjugation_progress:
+        if progress["user_id"] in by_id:
+            by_id[progress["user_id"]]["game_progress"].append({
+                "game": "Verb conjugation",
+                "level": progress["group_name"],
+                "score": progress["score"],
+                "completed": f"{progress['completed_series']} series completed",
+            })
+    for progress in phantom_progress:
+        if progress["user_id"] in by_id:
+            by_id[progress["user_id"]]["game_progress"].append({
+                "game": "Phantom Pronouns",
+                "level": progress["level_key"],
+                "score": progress["best_score"],
+                "completed": "Completed" if progress["completed"] else "In progress",
+            })
+
+    connection = connect_word_order_database()
+    try:
+        progress_rows = connection.execute(
+            """
+            SELECT p.profile_key, p.level_id, p.best_score, p.completed_at,
+                l.level_name_en
+            FROM word_order_progress AS p
+            LEFT JOIN levels AS l ON l.level_id = p.level_id
+            WHERE p.profile_key LIKE 'user:%'
+            ORDER BY p.level_id
+            """
+        ).fetchall()
+    finally:
+        connection.close()
+    for progress in progress_rows:
+        user_id = profile_user_ids.get(progress["profile_key"])
+        if user_id is not None:
+            by_id[user_id]["game_progress"].append({
+                "game": "Word Order",
+                "level": progress["level_name_en"] or f"Level {progress['level_id']}",
+                "score": progress["best_score"],
+                "completed": "Completed" if progress["completed_at"] else "In progress",
+            })
+    return users
 
 
 @app.route("/admin/test-results", methods=["GET", "POST"])
@@ -879,6 +1055,7 @@ def admin_test_results():
     response = app.make_response(render_template(
         "test_results_admin.html",
         authenticated=True,
+        students=load_admin_students(),
         results=[
             {**dict(result), "report": json.loads(result["report_json"])}
             for result in results
@@ -886,6 +1063,35 @@ def admin_test_results():
     ))
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@app.route("/admin/test-results/users/<int:user_id>/approvals", methods=["POST"])
+def admin_update_test_approval(user_id):
+    if not session.get("test_results_admin_authenticated"):
+        abort(403)
+    category = request.form.get("category", "")
+    approved_value = request.form.get("approved", "")
+    if category != "assessment" or approved_value not in {"0", "1"}:
+        abort(400, description="Choose a valid test category and approval state.")
+    with closing(sqlite3.connect(student_database_path())) as connection, connection:
+        user_exists = connection.execute(
+            "SELECT 1 FROM student_users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+        if not user_exists:
+            abort(404)
+        connection.execute(
+            """
+            INSERT INTO student_test_approvals (user_id, category, approved)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id, category) DO UPDATE SET
+                approved = excluded.approved,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (user_id, category, int(approved_value)),
+        )
+        connection.commit()
+    return redirect(url_for("admin_test_results"))
 
 
 @app.route("/admin/test-results/logout", methods=["POST"])
