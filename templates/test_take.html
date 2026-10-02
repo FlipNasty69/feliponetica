@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0A1A2F">
+    <title>{{ test_name }} | English Course</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/test_center.css') }}">
+</head>
+<body class="test-page">
+    <main class="test-shell quiz-shell" id="quiz" data-submit-url="{{ url_for('final_english_submit') }}"
+          data-center-url="{{ url_for('test_center') }}"
+          data-questions='{{ questions|tojson|forceescape }}'>
+        <header class="test-header quiz-header">
+            <a class="test-brand" href="{{ url_for('test_center') }}">English<span>Course</span></a>
+            <div class="progress-block">
+                <span id="question-counter" aria-live="polite"></span>
+                <progress id="question-progress" max="{{ questions|length }}" value="1"></progress>
+            </div>
+            <span class="quiz-title">{{ test_name }}</span>
+        </header>
+        <section class="test-stage" id="test-stage" aria-live="polite">
+            <article class="question-panel">
+                <p class="test-kicker" id="question-category"></p>
+                <h1 id="question-text"></h1>
+            </article>
+            <div class="answer-grid" id="answer-options" role="group" aria-label="Answer choices"></div>
+        </section>
+        <nav class="test-controls" aria-label="Question navigation">
+            <button class="tactile-button secondary-button" id="previous-button" type="button">Previous</button>
+            <button class="tactile-button primary-button" id="next-button" type="button" disabled>Next</button>
+        </nav>
+        <p class="test-error" id="test-error" role="alert" hidden></p>
+    </main>
+    <script src="{{ url_for('static', filename='scripts/test_center.js') }}" defer></script>
+</body>
+</html>

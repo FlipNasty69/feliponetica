@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Test Results | Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/test_center.css') }}">
+</head>
+<body class="test-page admin-page">
+    <main class="admin-shell">
+        <header class="test-header">
+            <a class="test-brand" href="{{ url_for('home') }}">English<span>Course</span></a>
+            {% if authenticated %}
+            <form method="post" action="{{ url_for('admin_test_results_logout') }}">
+                <button class="quiet-button" type="submit">Sign out</button>
+            </form>
+            {% endif %}
+        </header>
+        {% if not authenticated %}
+        <section class="registration-card admin-login" aria-labelledby="admin-title">
+            <p class="test-kicker">PRIVATE AREA</p>
+            <h1 id="admin-title">Test results</h1>
+            <p class="landing-copy">Enter the administrator password to view submitted test reports.</p>
+            {% if message %}<p class="form-message" role="alert">{{ message }}</p>{% endif %}
+            <form class="registration-form" method="post" action="{{ url_for('admin_test_results') }}">
+                <label for="password">Administrator password</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" required>
+                <button class="tactile-button primary-button" type="submit">View results</button>
+            </form>
+        </section>
+        {% else %}
+        <section class="admin-content" aria-labelledby="admin-title">
+            <p class="test-kicker">PRIVATE AREA</p>
+            <h1 id="admin-title">Test results</h1>
+            <p class="landing-copy">Submitted Final English Test reports.</p>
+            {% if results %}
+            <div class="results-list">
+                {% for result in results %}
+                <article class="result-card">
+                    <header class="result-heading">
+                        <div>
+                            <h2>{{ result.name }}</h2>
+                            <p>{{ result.email }}</p>
+                        </div>
+                        <time>{{ result.created_at }}</time>
+                    </header>
+                    <p class="result-score">Score: {{ result.score }} / {{ result.question_count }}</p>
+                    <details>
+                        <summary>Open full report</summary>
+                        <ol class="report-questions">
+                            {% for item in result.report %}
+                            <li>
+                                <strong>{{ item.question }}</strong>
+                                <span>Selected: {{ item.selected_answer }} — {{ item.choices[item.selected_answer] }}</span>
+                                <span>Correct: {{ item.correct_answer }} — {{ item.choices[item.correct_answer] }}</span>
+                                <span>{{ "Correct" if item.is_correct else "Incorrect" }}</span>
+                            </li>
+                            {% endfor %}
+                        </ol>
+                    </details>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-results">No completed tests yet.</p>
+            {% endif %}
+        </section>
+        {% endif %}
+    </main>
+</body>
+</html>

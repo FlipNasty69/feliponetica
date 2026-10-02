@@ -2,7 +2,9 @@ import sqlite3
 import os
 import smtplib
 import json
+import re
 import secrets
+import zipfile
 
 from email.message import EmailMessage
 from flask import request, render_template
@@ -10,6 +12,8 @@ from flask import Flask, render_template, request, send_from_directory, abort
 from flask import session, redirect, url_for
 from features.feliponetica import feliponetica_bp
 from openpyxl import load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
+from werkzeug.security import check_password_hash
 
 app = Flask(__name__)
 
@@ -20,6 +24,10 @@ app.config.update(
     SESSION_COOKIE_SECURE=os.environ.get("FLASK_COOKIE_SECURE", "0") == "1",
 )
 STUDENT_DATABASE_PATH = os.path.join(app.root_path, "student_users.db")
+TEST_RESULTS_ADMIN_PASSWORD_HASH = os.environ.get(
+    "TEST_RESULTS_ADMIN_PASSWORD_HASH",
+    "pbkdf2:sha256:600000$pgzAbeZ0AQmCtlwz$249a511824fc4651e9f4a0be139f920088c6ab99db794a1ce50a8c45391107a8",
+)
 USERS = {
     "felipe": {
         "password": "felipe",
@@ -99,6 +107,112 @@ def init_student_database():
 
 
 init_student_database()
+
+
+def test_results_database_path():
+    return app.config.get("TEST_RESULTS_DATABASE_PATH", STUDENT_DATABASE_PATH)
+
+
+def init_test_results_database():
+    connection = sqlite3.connect(test_results_database_path())
+    try:
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS test_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                test_name TEXT NOT NULL,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                score INTEGER NOT NULL,
+                question_count INTEGER NOT NULL,
+                report_json TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        connection.commit()
+    finally:
+        connection.close()
+
+
+init_test_results_database()
+
+
+def load_final_english_test():
+    workbook_path = app.config.get(
+        "FINAL_ENGLISH_TEST_WORKBOOK",
+        os.path.join(app.root_path, "static", "data", "tests.xlsx"),
+    )
+    try:
+        workbook = load_workbook(workbook_path, read_only=True, data_only=True)
+        try:
+            if "English Test" not in workbook.sheetnames:
+                raise ValueError("The workbook must contain an 'English Test' sheet.")
+            worksheet = workbook["English Test"]
+            questions = []
+            question_ids = set()
+            for row in worksheet.iter_rows(min_row=2, values_only=True):
+                if not row or len(row) < 11 or not row[5]:
+                    continue
+                question_type = str(row[1] or "").strip()
+                if question_type != "Multiple Choice":
+                    raise ValueError(
+                        f"Unsupported question type in question {row[0]}: {question_type}"
+                    )
+                choices = {
+                    label: str(row[column]).strip()
+                    for label, column in zip("ABCD", range(6, 10))
+                    if row[column] is not None and str(row[column]).strip()
+                }
+                correct_answer = str(row[10] or "").strip().upper()
+                question_id = str(row[0] or len(questions) + 1).strip()
+                if (
+                    question_id in question_ids
+                    or len(choices) < 2
+                    or correct_answer not in choices
+                ):
+                    raise ValueError(
+                        f"Question {question_id} has a duplicate ID, incomplete choices, "
+                        "or an invalid answer."
+                    )
+                question_ids.add(question_id)
+                questions.append({
+                    "id": question_id,
+                    "category": str(row[3] or "").strip(),
+                    "question": str(row[5]).strip(),
+                    "choices": choices,
+                    "correct_answer": correct_answer,
+                })
+            if not questions:
+                raise ValueError("The workbook does not contain any test questions.")
+            return questions
+        finally:
+            workbook.close()
+    except (OSError, ValueError, KeyError, zipfile.BadZipFile, InvalidFileException) as error:
+        app.logger.exception("Could not load the Final English Test workbook.")
+        raise RuntimeError("The Final English Test is temporarily unavailable.") from error
+
+
+def valid_test_email(email):
+    if not email or len(email) > 254 or email.count("@") != 1:
+        return False
+    local, domain = email.rsplit("@", 1)
+    if (
+        not local
+        or len(local) > 64
+        or local.startswith(".")
+        or local.endswith(".")
+        or ".." in local
+        or not re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+", local)
+    ):
+        return False
+    labels = domain.split(".")
+    return (
+        len(labels) >= 2
+        and all(
+            len(label) <= 63
+            and re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?", label)
+            for label in labels
+        )
+    )
 
 
 def is_logged_in():
@@ -622,6 +736,163 @@ def course():
         return access_error
 
     return render_template('course.html')
+
+
+@app.route("/test-center")
+def test_center():
+    return render_template("test_center.html")
+
+
+@app.route("/tests/final-english/register", methods=["GET", "POST"])
+def final_english_register():
+    message = ""
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        if not name or len(name) > 120:
+            message = "Enter your name (up to 120 characters)."
+        elif not valid_test_email(email):
+            message = "Enter a valid email address."
+        else:
+            session["final_english_tester"] = {"name": name, "email": email}
+            return redirect(url_for("final_english_take"))
+    return render_template("test_registration.html", message=message)
+
+
+@app.route("/tests/final-english/take")
+def final_english_take():
+    tester = session.get("final_english_tester")
+    if not tester:
+        return redirect(url_for("final_english_register"))
+    try:
+        questions = load_final_english_test()
+    except RuntimeError:
+        abort(503, description="The Final English Test is temporarily unavailable.")
+    public_questions = [
+        {
+            "id": question["id"],
+            "category": question["category"],
+            "question": question["question"],
+            "choices": question["choices"],
+        }
+        for question in questions
+    ]
+    return render_template(
+        "test_take.html",
+        questions=public_questions,
+        test_name="Final English Test",
+    )
+
+
+@app.route("/tests/final-english/submit", methods=["POST"])
+def final_english_submit():
+    tester = session.get("final_english_tester")
+    if not tester:
+        return {"error": "Register before submitting the test."}, 401
+    if not request.is_json:
+        return {"error": "A JSON answer report is required."}, 400
+    answers = request.get_json(silent=True)
+    if not isinstance(answers, dict):
+        return {"error": "The submitted answers are invalid."}, 400
+    try:
+        questions = load_final_english_test()
+    except RuntimeError:
+        abort(503, description="The Final English Test is temporarily unavailable.")
+
+    expected_ids = {question["id"] for question in questions}
+    if set(answers) != expected_ids or any(
+        not isinstance(answer, str)
+        or answer not in question["choices"]
+        for question in questions
+        for answer in [answers.get(question["id"])]
+    ):
+        return {"error": "Answer every question before submitting."}, 400
+
+    report = []
+    score = 0
+    for question in questions:
+        selected_answer = answers[question["id"]]
+        is_correct = selected_answer == question["correct_answer"]
+        score += int(is_correct)
+        report.append({
+            "question_id": question["id"],
+            "category": question["category"],
+            "question": question["question"],
+            "choices": question["choices"],
+            "selected_answer": selected_answer,
+            "correct_answer": question["correct_answer"],
+            "is_correct": is_correct,
+        })
+
+    connection = sqlite3.connect(test_results_database_path())
+    try:
+        connection.execute(
+            """
+            INSERT INTO test_results (
+                test_name, name, email, score, question_count, report_json
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "Final English Test",
+                tester["name"],
+                tester["email"],
+                score,
+                len(questions),
+                json.dumps(report, ensure_ascii=False),
+            ),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+    session.pop("final_english_tester", None)
+    return {"submitted": True}
+
+
+@app.route("/admin/test-results", methods=["GET", "POST"])
+def admin_test_results():
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        if check_password_hash(TEST_RESULTS_ADMIN_PASSWORD_HASH, password):
+            session["test_results_admin_authenticated"] = True
+            return redirect(url_for("admin_test_results"))
+        return render_template(
+            "test_results_admin.html",
+            authenticated=False,
+            message="Incorrect password.",
+        ), 401
+
+    if not session.get("test_results_admin_authenticated"):
+        return render_template(
+            "test_results_admin.html",
+            authenticated=False,
+            message="",
+        )
+
+    connection = sqlite3.connect(test_results_database_path())
+    try:
+        connection.row_factory = sqlite3.Row
+        results = connection.execute(
+            "SELECT * FROM test_results ORDER BY created_at DESC, id DESC"
+        ).fetchall()
+    finally:
+        connection.close()
+    response = app.make_response(render_template(
+        "test_results_admin.html",
+        authenticated=True,
+        results=[
+            {**dict(result), "report": json.loads(result["report_json"])}
+            for result in results
+        ],
+    ))
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.route("/admin/test-results/logout", methods=["POST"])
+def admin_test_results_logout():
+    session.pop("test_results_admin_authenticated", None)
+    return redirect(url_for("admin_test_results"))
+
 
 # ============================================================
 # MODULES

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0A1A2F">
+    <title>Register | Final English Test</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/test_center.css') }}">
+</head>
+<body class="test-page">
+    <main class="test-shell registration-shell">
+        <header class="test-header">
+            <a class="test-brand" href="{{ url_for('test_center') }}">English<span>Course</span></a>
+            <a class="quiet-link" href="{{ url_for('test_center') }}">Back to tests</a>
+        </header>
+        <section class="registration-card" aria-labelledby="registration-title">
+            <p class="test-kicker">FINAL ENGLISH TEST</p>
+            <h1 id="registration-title">Before you begin</h1>
+            <p class="landing-copy">Enter your name and email to register. Your results will be sent privately for review.</p>
+            {% if message %}<p class="form-message" role="alert">{{ message }}</p>{% endif %}
+            <form class="registration-form" method="post" action="{{ url_for('final_english_register') }}">
+                <label for="name">Your name</label>
+                <input id="name" name="name" type="text" autocomplete="name" maxlength="120" required>
+                <label for="email">Email address</label>
+                <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required>
+                <button class="tactile-button primary-button" type="submit">Continue to test</button>
+            </form>
+        </section>
+        <footer class="test-footer">Your results are not shown after the test.</footer>
+    </main>
+</body>
+</html>
