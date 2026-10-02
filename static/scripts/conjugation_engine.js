@@ -18,6 +18,8 @@ let attempts = new Map();
 let completedForms = new Set();
 const progressStorageKey = "feliponetica-conjugation-progress";
 const savedUser = document.body.dataset.savedUser === "true";
+const adminMode = document.body.dataset.adminMode === "true";
+let customVerbs = [];
 let progressState = {};
 const CORRECT_ANSWER_AUDIO_URLS = Array.from(
     { length: 11 },
@@ -53,8 +55,8 @@ document.addEventListener("DOMContentLoaded", () => {
 async function initializeGame() {
     try {
         await loadProgress();
-        const response = await fetch("/static/data/verb_conjugation.json");
-        if (!response.ok) throw new Error("Unable to load verb_conjugation.json");
+        const response = await fetch("/api/conjugation-data");
+        if (!response.ok) throw new Error("Unable to load conjugation data");
         const data = await response.json();
         groups = Object.entries(data).map(([name, group]) => ({ name, series: group.series || [] }));
         if (!groups.length || !groups.some(group => group.series.length)) throw new Error("No verb series found");
@@ -271,6 +273,57 @@ function renderSetList() {
         button.addEventListener("click", () => selectGroup(index));
         list.appendChild(button);
     });
+    if (adminMode) {
+        const customButton = document.createElement("button");
+        customButton.type = "button";
+        customButton.className = "set-card";
+        customButton.innerHTML = "<strong>Add your own verbs</strong><span>No preset list</span>";
+        customButton.addEventListener("click", openCustomEntry);
+        list.appendChild(customButton);
+    }
+}
+
+function openCustomEntry() {
+    customVerbs = [];
+    document.getElementById("custom-verb-form").reset();
+    document.getElementById("custom-verb-list").innerHTML = "";
+    document.getElementById("custom-verb-count").textContent = "No verbs added";
+    document.getElementById("custom-done").disabled = true;
+    document.getElementById("custom-entry").hidden = false;
+    document.getElementById("custom-verb-form").elements.namedItem("past").focus();
+}
+
+function addCustomVerb(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.reportValidity()) return;
+    if (FORM_DEFINITIONS.some(({ key }) => !form.elements.namedItem(key).value.trim())) {
+        document.getElementById("custom-verb-count").textContent = "Please enter all seven forms before adding this verb.";
+        return;
+    }
+    const verb = Object.fromEntries(FORM_DEFINITIONS.map(({ key }) => [key, form.elements.namedItem(key).value.trim()]));
+    verb.verb = verb["base form"];
+    customVerbs.push(verb);
+    const item = document.createElement("li");
+    item.textContent = verb.verb;
+    document.getElementById("custom-verb-list").appendChild(item);
+    document.getElementById("custom-verb-count").textContent = `${customVerbs.length} ${customVerbs.length === 1 ? "verb" : "verbs"} added`;
+    document.getElementById("custom-done").disabled = false;
+    form.reset();
+    form.elements.namedItem("past").focus();
+}
+
+function startCustomVerbSet() {
+    if (!customVerbs.length) return;
+    const group = {
+        name: `Admin verbs ${Date.now()}`,
+        isCustom: true,
+        series: [{ title: "Your verbs", verbs: customVerbs }]
+    };
+    groups.push(group);
+    document.getElementById("custom-entry").hidden = true;
+    selectGroup(groups.length - 1);
+    startSeries();
 }
 
 function renderProgress() {
@@ -447,3 +500,10 @@ function fireConfetti() {
 
 document.getElementById("start-button").addEventListener("click", startSeries);
 document.getElementById("next-button").addEventListener("click", nextSeries);
+if (adminMode) {
+    document.getElementById("custom-verb-form").addEventListener("submit", addCustomVerb);
+    document.getElementById("custom-done").addEventListener("click", startCustomVerbSet);
+    document.getElementById("custom-cancel").addEventListener("click", () => {
+        document.getElementById("custom-entry").hidden = true;
+    });
+}

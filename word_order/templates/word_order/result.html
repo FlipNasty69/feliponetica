@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Level Results | English Course</title>
+  <link rel="stylesheet" href="{{ url_for('word_order.static', filename='word_order.css') }}">
+</head>
+<body data-page="result">
+  <header class="wo-topbar">
+    <a class="wo-brand" href="{{ url_for('games_dashboard') }}">English Course <span>Games</span></a>
+    <a class="wo-back" href="{{ url_for('word_order.levels_page') }}">Levels</a>
+  </header>
+  <main class="wo-result-page">
+    <section class="wo-result" aria-labelledby="result-title">
+      <p class="wo-eyebrow">{{ result.level_name_es }}</p>
+      <h1 id="result-title">Level complete</h1>
+      <p class="wo-result-level">{{ result.level_name_en }}</p>
+      <div class="wo-result-score">{{ result.score }} <span>points</span></div>
+      <p class="wo-result-detail">{{ result.correct_count }} of {{ result.challenge_count }} correct · {{ result.completion_percentage }}%</p>
+      <p class="wo-result-detail">Best streak: {{ result.best_streak }} · Missed: {{ result.mistakes }}</p>
+      <div class="wo-result-actions">
+        <a class="wo-button wo-button-secondary" href="{{ url_for('word_order.levels_page') }}">See levels</a>
+        <a class="wo-button wo-button-primary" href="{{ url_for('word_order.play_level', level_id=result.level_id) }}">Play again</a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

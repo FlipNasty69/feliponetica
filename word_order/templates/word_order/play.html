@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Build the Sentence | English Course</title>
+  <link rel="stylesheet" href="{{ url_for('word_order.static', filename='word_order.css') }}">
+</head>
+<body data-page="play" data-level-id="{{ level_id }}">
+  <header class="wo-topbar">
+    <a class="wo-brand" href="{{ url_for('games_dashboard') }}">English Course <span>Games</span></a>
+    <a class="wo-back" href="{{ url_for('word_order.levels_page') }}">Exit</a>
+  </header>
+  <main class="wo-play-page">
+    <div class="wo-play-heading">
+      <div class="wo-level-heading">
+        <p class="wo-eyebrow" id="level-name-es">Word Order</p>
+        <h1 id="level-name-en">Build the sentence</h1>
+      </div>
+      <div class="wo-score" aria-label="Current score"><span>Score</span><strong id="score">0</strong></div>
+    </div>
+    <div class="wo-round-progress">
+      <span id="round-progress-label">1 / 1</span>
+      <div class="wo-progress-track" role="progressbar" aria-label="Level progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span id="round-progress-fill"></span>
+      </div>
+      <span id="streak-label">Streak 0</span>
+    </div>
+    <section class="wo-exercise" aria-labelledby="challenge-prompt">
+      <p class="wo-instruction">Ordena las palabras para construir la respuesta en inglés.</p>
+      <h2 id="challenge-prompt" class="wo-prompt">Loading challenge...</h2>
+      <p id="skill-tag" class="wo-skill-tag"></p>
+      <div class="wo-answer-wrap">
+        <div class="wo-zone-label">Your sentence</div>
+        <div id="answer-lane" class="wo-tile-lane wo-answer-lane" aria-label="Your answer"></div>
+      </div>
+      <div class="wo-word-bank-wrap">
+        <div class="wo-zone-label">Word tiles</div>
+        <div id="word-bank" class="wo-tile-lane wo-word-bank" aria-label="Available word tiles"></div>
+      </div>
+      <div id="feedback" class="wo-feedback" role="status" aria-live="polite" hidden></div>
+      <p id="play-message" class="wo-message" role="alert"></p>
+      <div class="wo-actions">
+        <button id="check-answer" class="wo-button wo-button-primary" type="button">Check</button>
+        <button id="continue-game" class="wo-button wo-button-primary" type="button" hidden>Continue</button>
+      </div>
+    </section>
+  </main>
+  <script defer src="{{ url_for('word_order.static', filename='word_order.js') }}"></script>
+</body>
+</html>

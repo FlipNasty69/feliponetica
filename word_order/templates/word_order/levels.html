@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Order | English Course</title>
+  <link rel="stylesheet" href="{{ url_for('word_order.static', filename='word_order.css') }}">
+</head>
+<body data-page="levels" data-selected-level="{{ selected_level_id or '' }}">
+  <header class="wo-topbar">
+    <a class="wo-brand" href="{{ url_for('games_dashboard') }}">English Course <span>Games</span></a>
+    <a class="wo-back" href="{{ url_for('games_dashboard') }}">All games</a>
+  </header>
+  <main class="wo-page">
+    <div class="wo-heading-row">
+      <div>
+        <p class="wo-eyebrow">Word Order</p>
+        <h1>Choose a level</h1>
+      </div>
+      <div class="wo-total-progress" aria-label="Overall game progress">
+        <span id="overall-progress-label">0 of 0 levels complete</span>
+        <div class="wo-progress-track"><span id="overall-progress-fill"></span></div>
+      </div>
+    </div>
+    <p id="levels-message" class="wo-message" role="status" aria-live="polite"></p>
+    <section id="levels-grid" class="wo-level-grid" aria-label="Word order levels"></section>
+  </main>
+  <script defer src="{{ url_for('word_order.static', filename='word_order.js') }}"></script>
+</body>
+</html>

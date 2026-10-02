@@ -104,6 +104,83 @@ class PhantomPronounsRoutesTestCase(unittest.TestCase):
         self.assertTrue(exercise["spanish_prompt"].startswith("[algo] "))
         self.assertEqual(exercise["correct_subject_id"], "it")
 
+    def test_level_two_point_one_builds_modal_reflexive_translation(self):
+        previous_cache = phantom_pronouns._level21_cache
+        try:
+            phantom_pronouns._level21_cache = None
+            data = phantom_pronouns._get_level2_1_data()
+            self.assertGreater(len(data["exercises"]), 40)
+            self.assertEqual(len(data["subject_options"]), 8)
+
+            phantom_pronouns._level21_cache = data
+            with patch.object(phantom_pronouns.random, "choice", side_effect=lambda choices: choices[0]):
+                exercise = phantom_pronouns._build_level2_1_exercise()
+        finally:
+            phantom_pronouns._level21_cache = previous_cache
+
+        self.assertEqual(exercise["spanish_prompt"], "Alguien puede lastimarse.")
+        self.assertEqual(exercise["correct_subject_id"], "someone")
+        self.assertEqual(exercise["accepted_subject_ids"], ["someone", "somebody"])
+        self.assertEqual(exercise["correct_object_id"], "themselves")
+        self.assertEqual(exercise["english_sentence"], "Someone can hurt themselves.")
+        self.assertEqual(
+            exercise["english_sentence_variants"]["somebody"],
+            "Somebody can hurt themselves.",
+        )
+        self.assertEqual(
+            {option["id"] for option in exercise["object_options"]},
+            {option["id"] for option in phantom_pronouns.REFLEXIVE_WORDS},
+        )
+
+    def test_level_two_point_one_accepts_each_subject_synonym_pair(self):
+        data = phantom_pronouns._get_level2_1_data()
+        for pair in phantom_pronouns._LEVEL21_SUBJECT_PAIRS:
+            expected_ids = [phantom_pronouns._slugify(label) for label in pair]
+            with self.subTest(pair=expected_ids):
+                entry = next(
+                    item for item in data["exercises"]
+                    if item["subject_id"] == expected_ids[0]
+                )
+                previous_cache = phantom_pronouns._level21_cache
+                try:
+                    phantom_pronouns._level21_cache = dict(data, exercises=[entry])
+                    with patch.object(
+                        phantom_pronouns.random,
+                        "choice",
+                        side_effect=lambda choices: choices[0],
+                    ):
+                        exercise = phantom_pronouns._build_level2_1_exercise()
+                finally:
+                    phantom_pronouns._level21_cache = previous_cache
+
+                self.assertEqual(exercise["accepted_subject_ids"], expected_ids)
+                self.assertEqual(
+                    set(exercise["english_sentence_variants"]),
+                    set(expected_ids),
+                )
+
+    def test_level_two_point_one_pairs_english_and_spanish_endings(self):
+        previous_cache = phantom_pronouns._level21_cache
+        try:
+            data = phantom_pronouns._get_level2_1_data()
+            entry = next(
+                item for item in data["exercises"]
+                if item["subject_id"] == "someone"
+                and item["modal"] == "could"
+                and item["verb"] == "hurt"
+            )
+            self.assertTrue(entry["endings"])
+            data = dict(data, exercises=[entry])
+            phantom_pronouns._level21_cache = data
+            with patch.object(phantom_pronouns.random, "choice", side_effect=lambda choices: choices[0]):
+                exercise = phantom_pronouns._build_level2_1_exercise()
+        finally:
+            phantom_pronouns._level21_cache = previous_cache
+
+        ending = entry["endings"][0]
+        self.assertTrue(exercise["english_sentence"].endswith(f"{ending['english']}."))
+        self.assertTrue(exercise["spanish_prompt"].endswith(f"{ending['spanish']}."))
+
     def test_level_one_uses_referenced_schema_forms_and_clitics(self):
         previous_cache = phantom_pronouns._level1_cache
         try:
@@ -158,16 +235,21 @@ class PhantomPronounsRoutesTestCase(unittest.TestCase):
         level_two_response = self.client.get(
             "/phantom-pronouns/api/exercise-set?level=2"
         )
+        level_two_point_one_response = self.client.get(
+            "/phantom-pronouns/api/exercise-set?level=2.1"
+        )
         unavailable_level_response = self.client.get(
             "/phantom-pronouns/api/exercise-set?level=3"
         )
 
         self.assertEqual(levels_response.status_code, 200)
-        self.assertEqual([level["id"] for level in levels_response.get_json()], [1, 2])
+        self.assertEqual([level["id"] for level in levels_response.get_json()], [1, 2, "2.1"])
         self.assertEqual(exercise_response.status_code, 200)
         self.assertEqual(len(exercise_response.get_json()), 10)
         self.assertEqual(level_two_response.status_code, 200)
         self.assertEqual(len(level_two_response.get_json()), 10)
+        self.assertEqual(level_two_point_one_response.status_code, 200)
+        self.assertEqual(len(level_two_point_one_response.get_json()), 10)
         self.assertEqual(unavailable_level_response.status_code, 404)
 
 

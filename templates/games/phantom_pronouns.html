@@ -365,7 +365,7 @@
     if (ex.requires_tense_choice) {
       slots.push({ type: 'tense', label: 'When does this happen?', options: ex.tense_options, correctId: ex.correct_tense_id, labelKey: 'label' });
     }
-    slots.push({ type: 'subject', label: 'Tap to choose the (phantom) subject pronoun', options: ex.subject_options, correctId: ex.correct_subject_id, labelKey: 'en' });
+    slots.push({ type: 'subject', label: 'Tap to choose the (phantom) subject pronoun', options: ex.subject_options, correctId: ex.correct_subject_id, acceptedIds: ex.accepted_subject_ids, labelKey: 'en' });
     slots.push({ type: 'object', label: 'Tap to choose the pronoun that finishes it', options: ex.object_options, correctId: ex.correct_object_id, labelKey: 'en' });
     slotIndex = 0;
     renderCurrentSlot();
@@ -392,7 +392,13 @@
 
   function handleChipClick(slot, opt, chipEl) {
     const ex = exercises[exerciseIndex];
-    if (opt.id === slot.correctId) {
+    const isCorrect = slot.type === 'subject'
+      ? (slot.acceptedIds || [slot.correctId]).includes(opt.id)
+      : opt.id === slot.correctId;
+    if (isCorrect) {
+      if (slot.type === 'subject' && ex.english_sentence_variants) {
+        ex.english_sentence = ex.english_sentence_variants[opt.id] || ex.english_sentence;
+      }
       flashGreen();
       fillSlotVisual(slot, opt, ex);
       slotIndex++;

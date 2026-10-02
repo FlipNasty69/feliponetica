@@ -9,6 +9,7 @@ from flask import request, render_template
 from flask import Flask, render_template, request, send_from_directory, abort
 from flask import session, redirect, url_for
 from features.feliponetica import feliponetica_bp
+from openpyxl import load_workbook
 
 app = Flask(__name__)
 
@@ -35,7 +36,9 @@ USERS = {
 # GAME_BLUEPRINTS = [vocab_bp]
 from games.vocab_game import vocab_bp
 from games.phantom_pronouns import phantom_pronouns_bp
-GAME_BLUEPRINTS = [vocab_bp, phantom_pronouns_bp]
+from word_order import word_order_bp
+from word_order.cli import register_cli
+GAME_BLUEPRINTS = [vocab_bp, phantom_pronouns_bp, word_order_bp]
 
 def register_game_blueprints():
     for blueprint in GAME_BLUEPRINTS:
@@ -44,6 +47,7 @@ def register_game_blueprints():
 
 register_game_blueprints()
 app.register_blueprint(feliponetica_bp)
+register_cli(app)
 
 
 def init_student_database():
@@ -224,7 +228,8 @@ def verb_conjugation_game():
         "verb_conjugation_game.html",
         display_name=session.get("display_name", "Guest") if saved_user else "Guest",
         saved_user=saved_user,
-        guest_mode=guest_mode
+        guest_mode=guest_mode,
+        admin_mode=session.get("role") == "admin"
     )
 
 
@@ -267,6 +272,59 @@ def conjugation_progress():
             for row in rows
         }
     }
+
+
+@app.route("/api/conjugation-data")
+def conjugation_data():
+    workbook_path = os.path.join(
+        app.root_path, "static", "data", "verbs_master_table.xlsx"
+    )
+    workbook = load_workbook(workbook_path, read_only=True, data_only=True)
+    try:
+        worksheet = workbook["Verbs"]
+        header_row = next(worksheet.iter_rows(min_row=1, max_row=1, values_only=True), ())
+        headers = [header for header in header_row if header]
+        required_headers = {"parent_category", "series_id", "series_title"}
+        if not required_headers.issubset(headers):
+            return {"error": "The verbs master table has an invalid header row."}, 500
+
+        groups = {}
+        series_by_key = {}
+        metadata_headers = {"parent_category", "series_id", "series_title"}
+        for row in worksheet.iter_rows(min_row=2, values_only=True):
+            if not row or all(value is None for value in row):
+                continue
+            values = {
+                header: row[index] if index < len(row) else None
+                for index, header in enumerate(header_row)
+                if header
+            }
+            category = values.get("parent_category")
+            if not category:
+                continue
+
+            group = groups.setdefault(category, {"series": []})
+            series_key = (category, values.get("series_id"))
+            series = series_by_key.get(series_key)
+            if series is None:
+                series = {
+                    "id": values.get("series_id") or "",
+                    "title": values.get("series_title") or "",
+                    "verbs": [],
+                }
+                series_by_key[series_key] = series
+                group["series"].append(series)
+
+            series["verbs"].append({
+                header: "" if value is None else value
+                for header, value in values.items()
+                if header not in metadata_headers
+            })
+        return app.response_class(
+            json.dumps(groups, ensure_ascii=False), mimetype="application/json"
+        )
+    finally:
+        workbook.close()
 
 
 
