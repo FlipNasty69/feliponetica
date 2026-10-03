@@ -4,12 +4,14 @@ import sqlite3
 import tempfile
 import unittest
 from contextlib import closing
+from unittest.mock import patch
 
 from app import (
     app,
     init_student_database,
     init_test_results_database,
     load_final_english_test,
+    test_results_database_path,
 )
 from werkzeug.security import check_password_hash
 from word_order.storage import connect_database as connect_word_order_database
@@ -61,6 +63,13 @@ class FinalEnglishTestRoutes(unittest.TestCase):
                 "next": "/tests/final-english/register",
             },
         )
+
+    def test_test_results_database_can_use_configured_persistent_path(self):
+        configured_path = os.path.join(self.temp_dir.name, "persistent", "results.sqlite3")
+        with patch.dict(os.environ, {"TEST_RESULTS_DATABASE_PATH": configured_path}):
+            app.config.pop("TEST_RESULTS_DATABASE_PATH", None)
+            self.assertEqual(test_results_database_path(), configured_path)
+        app.config["TEST_RESULTS_DATABASE_PATH"] = self.database_path
 
     def approve_assessment(self, email="test@example.com"):
         with closing(sqlite3.connect(self.student_database_path)) as connection, connection:

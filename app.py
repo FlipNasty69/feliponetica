@@ -136,7 +136,11 @@ init_student_database()
 
 
 def test_results_database_path():
-    return app.config.get("TEST_RESULTS_DATABASE_PATH", STUDENT_DATABASE_PATH)
+    return os.fspath(
+        app.config.get("TEST_RESULTS_DATABASE_PATH")
+        or os.environ.get("TEST_RESULTS_DATABASE_PATH")
+        or STUDENT_DATABASE_PATH
+    )
 
 
 def init_test_results_database():
