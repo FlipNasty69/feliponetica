@@ -65,6 +65,60 @@
         }, 200);
     }
 
+    function renderCompletion(result) {
+        const completion = document.createElement("section");
+        completion.className = "completion-panel";
+
+        const card = document.createElement("div");
+        card.className = "completion-card";
+
+        const kicker = document.createElement("p");
+        kicker.className = "test-kicker";
+        kicker.textContent = "FINAL ENGLISH TEST";
+        card.append(kicker);
+
+        const heading = document.createElement("h1");
+        heading.textContent = "Test submitted";
+        card.append(heading);
+
+        const score = document.createElement("p");
+        score.className = "completion-score";
+        score.textContent = `Your score: ${result.score} / ${result.question_count}`;
+        card.append(score);
+
+        const missedHeading = document.createElement("p");
+        missedHeading.className = "missed-heading";
+        const missedQuestions = document.createElement("ol");
+        missedQuestions.className = "missed-questions";
+
+        if (result.incorrect_questions.length) {
+            missedHeading.textContent = "Questions answered incorrectly";
+            result.incorrect_questions.forEach(({ question_number }) => {
+                const item = document.createElement("li");
+                item.textContent = `Q${question_number}`;
+                missedQuestions.append(item);
+            });
+            card.append(missedHeading, missedQuestions);
+        } else {
+            missedHeading.textContent = "All questions correct.";
+            card.append(missedHeading);
+        }
+
+        const note = document.createElement("p");
+        note.className = "completion-note";
+        note.textContent = "Correct answers are not shown.";
+        card.append(note);
+
+        const returnLink = document.createElement("a");
+        returnLink.className = "tactile-button primary-button";
+        returnLink.href = quiz.dataset.centerUrl;
+        returnLink.textContent = "Return to test center";
+        card.append(returnLink);
+
+        completion.append(card);
+        stage.replaceChildren(completion);
+    }
+
     async function submitTest() {
         nextButton.disabled = true;
         previousButton.disabled = true;
@@ -78,18 +132,16 @@
                 body: JSON.stringify(Object.fromEntries(answers)),
             });
             const result = await response.json();
-            if (!response.ok || result.submitted !== true) {
+            if (
+                !response.ok
+                || result.submitted !== true
+                || !Number.isInteger(result.score)
+                || !Number.isInteger(result.question_count)
+                || !Array.isArray(result.incorrect_questions)
+            ) {
                 throw new Error(result.error || "Your test could not be submitted. Please try again.");
             }
-            stage.innerHTML = `
-                <section class="completion-panel">
-                    <div class="completion-card">
-                        <p class="test-kicker">FINAL ENGLISH TEST</p>
-                        <h1>Test submitted</h1>
-                        <p>Your report has been sent for review. Results are not displayed here.</p>
-                        <a class="tactile-button primary-button" href="${quiz.dataset.centerUrl}">Return to test center</a>
-                    </div>
-                </section>`;
+            renderCompletion(result);
             document.querySelector(".test-controls").hidden = true;
             counter.textContent = "Complete";
             progress.value = questions.length;

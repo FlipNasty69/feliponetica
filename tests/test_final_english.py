@@ -11,6 +11,8 @@ from app import (
     init_student_database,
     init_test_results_database,
     load_final_english_test,
+    prepare_database_path,
+    student_database_path,
     test_results_database_path,
 )
 from werkzeug.security import check_password_hash
@@ -71,6 +73,28 @@ class FinalEnglishTestRoutes(unittest.TestCase):
             self.assertEqual(test_results_database_path(), configured_path)
         app.config["TEST_RESULTS_DATABASE_PATH"] = self.database_path
 
+    def test_student_and_default_results_databases_use_persistent_path(self):
+        configured_path = os.path.join(
+            self.temp_dir.name,
+            "persistent",
+            "students.sqlite3",
+        )
+        with patch.dict(os.environ, {"STUDENT_DATABASE_PATH": configured_path}):
+            app.config.pop("STUDENT_DATABASE_PATH", None)
+            app.config.pop("TEST_RESULTS_DATABASE_PATH", None)
+            self.assertEqual(student_database_path(), configured_path)
+            self.assertEqual(test_results_database_path(), configured_path)
+            self.assertEqual(prepare_database_path(configured_path), configured_path)
+            self.assertTrue(os.path.isdir(os.path.dirname(configured_path)))
+        app.config["STUDENT_DATABASE_PATH"] = self.student_database_path
+        app.config["TEST_RESULTS_DATABASE_PATH"] = self.database_path
+
+    def test_render_can_start_without_database_or_secret_configuration(self):
+        with patch.dict(os.environ, {"RENDER": "true"}, clear=False):
+            os.environ.pop("DATABASE_URL", None)
+            os.environ.pop("FLASK_SECRET_KEY", None)
+            self.assertEqual(test_results_database_path(), self.database_path)
+
     def approve_assessment(self, email="test@example.com"):
         with closing(sqlite3.connect(self.student_database_path)) as connection, connection:
             user_id = connection.execute(
@@ -98,6 +122,11 @@ class FinalEnglishTestRoutes(unittest.TestCase):
 
         test_center = self.client.get("/test-center")
         self.assertIn(b"Final English Test", test_center.data)
+
+    def test_test_workbook_and_answer_key_are_not_publicly_downloadable(self):
+        response = self.client.get("/static/data/tests.xlsx")
+
+        self.assertEqual(response.status_code, 404)
 
     def test_account_registration_rejects_invalid_email(self):
         response = self.client.post(
@@ -188,7 +217,11 @@ class FinalEnglishTestRoutes(unittest.TestCase):
         response = self.client.post("/tests/final-english/submit", json=answers)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json, {"submitted": True})
+        self.assertEqual(response.json["submitted"], True)
+        self.assertEqual(response.json["score"], 100)
+        self.assertEqual(response.json["question_count"], 100)
+        self.assertEqual(response.json["incorrect_questions"], [])
+        self.assertNotIn("correct_answer", response.json)
         retake = self.client.get("/tests/final-english/take")
         self.assertEqual(retake.status_code, 200)
         lower_score_answers = dict(answers)
@@ -197,13 +230,23 @@ class FinalEnglishTestRoutes(unittest.TestCase):
             for answer in questions[0]["choices"]
             if answer != questions[0]["correct_answer"]
         )
-        self.assertEqual(
-            self.client.post(
-                "/tests/final-english/submit",
-                json=lower_score_answers,
-            ).status_code,
-            200,
+        retake_response = self.client.post(
+            "/tests/final-english/submit",
+            json=lower_score_answers,
         )
+        self.assertEqual(retake_response.status_code, 200)
+        self.assertEqual(retake_response.json["score"], 99)
+        self.assertEqual(
+            retake_response.json["incorrect_questions"],
+            [{
+                "question_number": 1,
+                "question": questions[0]["question"],
+                "selected_answer": questions[0]["choices"][
+                    lower_score_answers[questions[0]["id"]]
+                ],
+            }],
+        )
+        self.assertNotIn("correct_answer", retake_response.json)
         connection = sqlite3.connect(self.database_path)
         try:
             result = connection.execute(

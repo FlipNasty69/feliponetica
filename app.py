@@ -23,7 +23,10 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=os.environ.get("FLASK_COOKIE_SECURE", "0") == "1",
+    SESSION_COOKIE_SECURE=os.environ.get(
+        "FLASK_COOKIE_SECURE",
+        "1" if os.environ.get("RENDER") else "0",
+    ) == "1",
 )
 STUDENT_DATABASE_PATH = os.path.join(app.root_path, "student_users.db")
 TEST_RESULTS_ADMIN_PASSWORD_HASH = os.environ.get(
@@ -60,12 +63,67 @@ app.register_blueprint(feliponetica_bp)
 register_cli(app)
 
 
+@app.route("/static/data/tests.xlsx")
+def private_test_workbook():
+    abort(404)
+
+
+class StudentDatabaseConnection:
+    def __init__(self, connection):
+        self.connection = connection
+
+    def execute(self, query, parameters=()):
+        return self.connection.execute(query, parameters)
+
+    def commit(self):
+        self.connection.commit()
+
+    def close(self):
+        self.connection.close()
+
+    def __enter__(self):
+        self.connection.__enter__()
+        return self
+
+    def __exit__(self, exception_type, exception, traceback):
+        return self.connection.__exit__(exception_type, exception, traceback)
+
+
+def connect_student_database():
+    connection = sqlite3.connect(prepare_database_path(student_database_path()))
+    connection.row_factory = sqlite3.Row
+    return StudentDatabaseConnection(connection)
+
+
+def connect_test_results_database():
+    if test_results_database_path() == student_database_path():
+        return connect_student_database()
+    connection = sqlite3.connect(prepare_database_path(test_results_database_path()))
+    connection.row_factory = sqlite3.Row
+    return StudentDatabaseConnection(connection)
+
+
+def database_integrity_errors():
+    return (sqlite3.IntegrityError,)
+
+
 def student_database_path():
-    return os.fspath(app.config.get("STUDENT_DATABASE_PATH", STUDENT_DATABASE_PATH))
+    return os.fspath(
+        app.config.get("STUDENT_DATABASE_PATH")
+        or os.environ.get("STUDENT_DATABASE_PATH")
+        or STUDENT_DATABASE_PATH
+    )
+
+
+def prepare_database_path(database_path):
+    database_path = os.path.abspath(os.fspath(database_path))
+    os.makedirs(os.path.dirname(database_path), exist_ok=True)
+    return database_path
 
 
 def init_student_database():
-    with closing(sqlite3.connect(student_database_path())) as connection, connection:
+    connection = connect_student_database()
+    with closing(connection) as connection, connection:
         connection.execute("""
             CREATE TABLE IF NOT EXISTS student_users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,19 +154,20 @@ def init_student_database():
                 current_verb INTEGER NOT NULL DEFAULT 0,
                 score INTEGER NOT NULL DEFAULT 0,
                 UNIQUE(user_id, group_name),
-                FOREIGN KEY(user_id) REFERENCES student_users(id)
+                FOREIGN KEY (user_id) REFERENCES student_users(id)
             )
         """)
         columns = {
-            row[1]
+            row["name"]
             for row in connection.execute("PRAGMA table_info(conjugation_progress)").fetchall()
         }
         if "current_verb" not in columns:
             connection.execute(
-                "ALTER TABLE conjugation_progress ADD COLUMN current_verb INTEGER NOT NULL DEFAULT 0"
+                "ALTER TABLE conjugation_progress ADD COLUMN current_verb "
+                "INTEGER NOT NULL DEFAULT 0"
             )
         student_columns = {
-            row[1]
+            row["name"]
             for row in connection.execute("PRAGMA table_info(student_users)").fetchall()
         }
         if "username" not in student_columns:
@@ -120,9 +179,11 @@ def init_student_database():
         connection.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS student_users_username_idx ON student_users(username)"
         )
-        for user_id, password_hash in connection.execute(
+        for student in connection.execute(
             "SELECT id, password_hash FROM student_users"
         ).fetchall():
+            user_id = student["id"]
+            password_hash = student["password_hash"]
             if password_hash and not password_hash.startswith(
                 ("scrypt:", "pbkdf2:", "argon2:")
             ):
@@ -139,13 +200,16 @@ def test_results_database_path():
     return os.fspath(
         app.config.get("TEST_RESULTS_DATABASE_PATH")
         or os.environ.get("TEST_RESULTS_DATABASE_PATH")
-        or STUDENT_DATABASE_PATH
+        or student_database_path()
     )
 
 
 def init_test_results_database():
-    connection = sqlite3.connect(test_results_database_path())
-    try:
+    database_path = prepare_database_path(test_results_database_path())
+    sqlite_connection = sqlite3.connect(database_path)
+    sqlite_connection.row_factory = sqlite3.Row
+    connection = StudentDatabaseConnection(sqlite_connection)
+    with closing(connection) as connection, connection:
         connection.execute("""
             CREATE TABLE IF NOT EXISTS test_results (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -160,13 +224,10 @@ def init_test_results_database():
             )
         """)
         columns = {
-            row[1] for row in connection.execute("PRAGMA table_info(test_results)")
+            row["name"] for row in connection.execute("PRAGMA table_info(test_results)")
         }
         if "user_id" not in columns:
             connection.execute("ALTER TABLE test_results ADD COLUMN user_id INTEGER")
-        connection.commit()
-    finally:
-        connection.close()
 
 
 init_test_results_database()
@@ -271,8 +332,7 @@ def current_student():
     user_id = session.get("user_id")
     if not user_id:
         return None
-    with closing(sqlite3.connect(student_database_path())) as connection, connection:
-        connection.row_factory = sqlite3.Row
+    with closing(connect_student_database()) as connection, connection:
         return connection.execute(
             "SELECT id, name, last_name, email, role FROM student_users WHERE id = ?",
             (user_id,),
@@ -321,8 +381,7 @@ def login():
         user = USERS.get(username)
         registered_user = None
         if not user:
-            with closing(sqlite3.connect(student_database_path())) as connection, connection:
-                connection.row_factory = sqlite3.Row
+            with closing(connect_student_database()) as connection, connection:
                 registered_user = connection.execute(
                     "SELECT * FROM student_users WHERE email = ? OR username = ?",
                     (username.strip().lower(), username.strip().lower())
@@ -382,14 +441,14 @@ def register():
         elif len(password) < 8:
             message = "Use a password with at least 8 characters."
         else:
-            with closing(sqlite3.connect(student_database_path())) as connection, connection:
+            with closing(connect_student_database()) as connection, connection:
                 try:
                     connection.execute(
                         "INSERT INTO student_users (name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
                         (name, last_name, email, generate_password_hash(password), "student")
                     )
                     connection.commit()
-                except sqlite3.IntegrityError:
+                except database_integrity_errors():
                     message = "That email is already registered."
                 else:
                     session.clear()
@@ -397,7 +456,7 @@ def register():
                     session["role"] = "enrolled student"
                     session["user_id"] = connection.execute(
                         "SELECT id FROM student_users WHERE email = ?", (email,)
-                    ).fetchone()[0]
+                    ).fetchone()["id"]
                     session["display_name"] = f"{name} {last_name}"
                     if next_url:
                         return redirect(local_next_url(next_url))
@@ -433,7 +492,7 @@ def conjugation_progress():
         score = max(0, int(payload.get("score", 0)))
         if not group_name:
             return {"error": "group_name is required"}, 400
-        with closing(sqlite3.connect(STUDENT_DATABASE_PATH)) as connection, connection:
+        with closing(connect_student_database()) as connection, connection:
             connection.execute("""
                 INSERT INTO conjugation_progress (user_id, group_name, completed_series, current_verb, score)
                 VALUES (?, ?, ?, ?, ?)
@@ -445,7 +504,7 @@ def conjugation_progress():
             connection.commit()
         return {"saved": True}
 
-    with closing(sqlite3.connect(STUDENT_DATABASE_PATH)) as connection, connection:
+    with closing(connect_student_database()) as connection, connection:
         rows = connection.execute("""
             SELECT group_name, completed_series, current_verb, score
             FROM conjugation_progress
@@ -454,7 +513,11 @@ def conjugation_progress():
     return {
         "saved": True,
         "progress": {
-            row[0]: {"completedSeries": row[1], "currentVerb": row[2], "score": row[3]}
+            row["group_name"]: {
+                "completedSeries": row["completed_series"],
+                "currentVerb": row["current_verb"],
+                "score": row["score"],
+            }
             for row in rows
         }
     }
@@ -816,7 +879,7 @@ def test_center():
 
 
 def assessment_is_approved(user_id):
-    with closing(sqlite3.connect(student_database_path())) as connection, connection:
+    with closing(connect_student_database()) as connection, connection:
         row = connection.execute(
             """
             SELECT approved FROM student_test_approvals
@@ -824,7 +887,7 @@ def assessment_is_approved(user_id):
             """,
             (user_id,),
         ).fetchone()
-    return bool(row and row[0])
+    return bool(row and row["approved"])
 
 
 @app.route("/tests/final-english/register", methods=["GET", "POST"])
@@ -918,7 +981,17 @@ def final_english_submit():
             "is_correct": is_correct,
         })
 
-    connection = sqlite3.connect(test_results_database_path())
+    incorrect_questions = [
+        {
+            "question_number": index,
+            "question": result["question"],
+            "selected_answer": result["choices"][result["selected_answer"]],
+        }
+        for index, result in enumerate(report, start=1)
+        if not result["is_correct"]
+    ]
+
+    connection = connect_test_results_database()
     try:
         connection.execute(
             """
@@ -939,12 +1012,16 @@ def final_english_submit():
         connection.commit()
     finally:
         connection.close()
-    return {"submitted": True}
+    return {
+        "submitted": True,
+        "score": score,
+        "question_count": len(questions),
+        "incorrect_questions": incorrect_questions,
+    }
 
 
 def load_admin_students():
-    with closing(sqlite3.connect(student_database_path())) as connection, connection:
-        connection.row_factory = sqlite3.Row
+    with closing(connect_student_database()) as connection, connection:
         users = [
             dict(row)
             for row in connection.execute(
@@ -964,7 +1041,7 @@ def load_admin_students():
             """
         ).fetchall()
         game_tables = {
-            row[0] for row in connection.execute(
+            row["name"] for row in connection.execute(
                 "SELECT name FROM sqlite_master WHERE type = 'table'"
             )
         }
@@ -1048,9 +1125,8 @@ def admin_test_results():
             message="",
         )
 
-    connection = sqlite3.connect(test_results_database_path())
+    connection = connect_test_results_database()
     try:
-        connection.row_factory = sqlite3.Row
         results = connection.execute(
             "SELECT * FROM test_results ORDER BY created_at DESC, id DESC"
         ).fetchall()
@@ -1077,7 +1153,7 @@ def admin_update_test_approval(user_id):
     approved_value = request.form.get("approved", "")
     if category != "assessment" or approved_value not in {"0", "1"}:
         abort(400, description="Choose a valid test category and approval state.")
-    with closing(sqlite3.connect(student_database_path())) as connection, connection:
+    with closing(connect_student_database()) as connection, connection:
         user_exists = connection.execute(
             "SELECT 1 FROM student_users WHERE id = ?",
             (user_id,),
