@@ -13,6 +13,7 @@
     const previousButton = document.getElementById("previous-button");
     const nextButton = document.getElementById("next-button");
     const error = document.getElementById("test-error");
+    const participantName = document.getElementById("participant-name");
     let currentIndex = 0;
     let transitioning = false;
 
@@ -74,7 +75,7 @@
 
         const kicker = document.createElement("p");
         kicker.className = "test-kicker";
-        kicker.textContent = "FINAL ENGLISH TEST";
+        kicker.textContent = quiz.dataset.testName.toUpperCase();
         card.append(kicker);
 
         const heading = document.createElement("h1");
@@ -129,7 +130,10 @@
             const response = await fetch(quiz.dataset.submitUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(Object.fromEntries(answers)),
+                body: JSON.stringify({
+                    answers: Object.fromEntries(answers),
+                    name: participantName.value.trim(),
+                }),
             });
             const result = await response.json();
             if (

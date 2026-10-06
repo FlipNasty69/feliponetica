@@ -4,3 +4,4 @@ student_users.db
 admin_users.json
 __pycache__/
 instance/word_order.sqlite3
+instance/test_results.sqlite3

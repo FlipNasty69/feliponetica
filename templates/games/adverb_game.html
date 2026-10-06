@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Adverb Game | English Course</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/adverb_game.css') }}">
+    <script src="{{ url_for('static', filename='scripts/adverb_game.js') }}" defer></script>
+</head>
+<body>
+    <main class="game-shell">
+        <a class="back-link" href="{{ url_for('course') }}">← Back to course</a>
+
+        <section class="game-card" aria-labelledby="game-title">
+            <header class="game-header">
+                <div>
+                    <p class="eyebrow">Word power · Adverbs</p>
+                    <h1 id="game-title">Adverb Adventure</h1>
+                    <p class="intro">Learn what adverbs mean and where they belong in a sentence.</p>
+                </div>
+                <span class="adverb-mark" aria-hidden="true">-ly</span>
+            </header>
+
+            <div class="progress-row hidden" id="progress-row">
+                <span id="question-count">Question 1 of 10</span>
+                <div class="progress-track" role="progressbar" aria-label="Round progress" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <span class="score" id="live-score">0 pts</span>
+            </div>
+
+            <section id="setup-screen">
+                <h2>Choose your challenge</h2>
+                <div class="mode-options" role="group" aria-label="Game mode">
+                    <button class="mode-option selected" type="button" data-mode="meaning" aria-pressed="true">
+                        <span class="mode-icon" aria-hidden="true">Aa</span>
+                        <strong>Meaning Match</strong>
+                        <span>Match an English adverb to its Spanish meaning.</span>
+                    </button>
+                    <button class="mode-option" type="button" data-mode="placement" aria-pressed="false">
+                        <span class="mode-icon" aria-hidden="true">↔</span>
+                        <strong>Sentence Spotter</strong>
+                        <span>Decide whether an adverb is in the right place.</span>
+                    </button>
+                </div>
+
+                <label class="category-label" for="category-select">Adverb category</label>
+                <select id="category-select">
+                    <option value="all">All categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.key }}">{{ category.label }}</option>
+                    {% endfor %}
+                </select>
+                <button class="primary-button" id="start-button" type="button">Start a round</button>
+                <p class="error-message hidden" id="error-message" role="alert"></p>
+            </section>
+
+            <section class="question-screen hidden" id="question-screen" aria-live="polite">
+                <p class="question-kicker" id="question-kicker"></p>
+                <h2 class="question-prompt" id="question-prompt"></h2>
+                <p class="sentence-card hidden" id="sentence-card"></p>
+                <div class="answer-options" id="answer-options"></div>
+                <div class="feedback hidden" id="feedback" role="status"></div>
+                <button class="primary-button hidden" id="next-button" type="button">Next question</button>
+            </section>
+
+            <section class="results-screen hidden" id="results-screen" aria-live="polite">
+                <span class="result-star" aria-hidden="true">★</span>
+                <h2>Round complete!</h2>
+                <p class="result-score" id="result-score"></p>
+                <p id="result-message"></p>
+                <button class="primary-button" id="play-again-button" type="button">Play again</button>
+            </section>
+        </section>
+    </main>
+</body>
+</html>

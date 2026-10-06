@@ -8,8 +8,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/test_center.css') }}">
 </head>
 <body class="test-page">
-    <main class="test-shell quiz-shell" id="quiz" data-submit-url="{{ url_for('final_english_submit') }}"
+    <main class="test-shell quiz-shell" id="quiz" data-submit-url="{{ url_for('final_english_submit', test_id=test_id) }}"
           data-center-url="{{ url_for('test_center') }}"
+          data-test-name="{{ test_name }}"
           data-questions='{{ questions|tojson|forceescape }}'>
         <header class="test-header quiz-header">
             <a class="test-brand" href="{{ url_for('test_center') }}">English<span>Course</span></a>
@@ -19,6 +20,10 @@
             </div>
             <span class="quiz-title">{{ test_name }}</span>
         </header>
+        <div class="participant-field">
+            <label for="participant-name">Name for your record (optional)</label>
+            <input id="participant-name" type="text" maxlength="120" autocomplete="name">
+        </div>
         <section class="test-stage" id="test-stage" aria-live="polite">
             <article class="question-panel">
                 <p class="test-kicker" id="question-category"></p>

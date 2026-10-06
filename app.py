@@ -49,9 +49,10 @@ USERS = {
 # GAME_BLUEPRINTS = [vocab_bp]
 from games.vocab_game import vocab_bp
 from games.phantom_pronouns import phantom_pronouns_bp
+from games.adverb_game import adverb_game_bp
 from word_order import word_order_bp
 from word_order.cli import register_cli
-GAME_BLUEPRINTS = [vocab_bp, phantom_pronouns_bp, word_order_bp]
+GAME_BLUEPRINTS = [vocab_bp, phantom_pronouns_bp, adverb_game_bp, word_order_bp]
 
 def register_game_blueprints():
     for blueprint in GAME_BLUEPRINTS:
@@ -74,6 +75,9 @@ class StudentDatabaseConnection:
 
     def execute(self, query, parameters=()):
         return self.connection.execute(query, parameters)
+
+    def executemany(self, query, parameters):
+        return self.connection.executemany(query, parameters)
 
     def commit(self):
         self.connection.commit()
@@ -200,7 +204,7 @@ def test_results_database_path():
     return os.fspath(
         app.config.get("TEST_RESULTS_DATABASE_PATH")
         or os.environ.get("TEST_RESULTS_DATABASE_PATH")
-        or student_database_path()
+        or os.path.join(app.instance_path, "test_results.sqlite3")
     )
 
 
@@ -229,63 +233,312 @@ def init_test_results_database():
         if "user_id" not in columns:
             connection.execute("ALTER TABLE test_results ADD COLUMN user_id INTEGER")
 
+    legacy_database_path = os.path.abspath(student_database_path())
+    if (
+        os.path.abspath(database_path) != legacy_database_path
+        and os.path.isfile(legacy_database_path)
+    ):
+        with closing(sqlite3.connect(legacy_database_path)) as legacy_connection:
+            legacy_connection.row_factory = sqlite3.Row
+            legacy_tables = {
+                row["name"]
+                for row in legacy_connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                )
+            }
+            if "test_results" in legacy_tables:
+                legacy_columns = {
+                    row["name"]
+                    for row in legacy_connection.execute(
+                        "PRAGMA table_info(test_results)"
+                    )
+                }
+                result_columns = [
+                    "id",
+                    "user_id",
+                    "test_name",
+                    "name",
+                    "email",
+                    "score",
+                    "question_count",
+                    "report_json",
+                    "created_at",
+                ]
+                required_legacy_columns = set(result_columns) - {"user_id"}
+                if required_legacy_columns.issubset(legacy_columns):
+                    user_id_expression = (
+                        "user_id" if "user_id" in legacy_columns else "NULL AS user_id"
+                    )
+                    legacy_results = legacy_connection.execute(
+                        f"""
+                        SELECT id, {user_id_expression}, test_name, name, email,
+                            score, question_count, report_json, created_at
+                        FROM test_results
+                        """
+                    ).fetchall()
+                    if legacy_results:
+                        placeholders = ", ".join("?" for _ in result_columns)
+                        with closing(connect_test_results_database()) as results_connection, results_connection:
+                            results_connection.executemany(
+                                f"""
+                                INSERT OR IGNORE INTO test_results (
+                                    {", ".join(result_columns)}
+                                ) VALUES ({placeholders})
+                                """,
+                                [tuple(result[column] for column in result_columns)
+                                 for result in legacy_results],
+                            )
+
 
 init_test_results_database()
 
 
-def load_final_english_test():
+def _normalize_test_header(value):
+    header = str(value or "").strip().lower()
+    normalized = re.sub(r"[^a-z0-9]", "", header)
+    if header.endswith("#") and normalized.startswith("question"):
+        return "questionnumber"
+    return normalized
+
+
+def _test_header_indexes(header):
+    aliases = {
+        "id": {"id", "questionid", "questionnumber", "number", "qid"},
+        "type": {"type", "questiontype"},
+        "category": {"category", "topic", "section", "grammar"},
+        "question": {"question", "questiontext", "prompt", "statement"},
+        "choice_a": {"a", "choicea", "optiona", "answera"},
+        "choice_b": {"b", "choiceb", "optionb", "answerb"},
+        "choice_c": {"c", "choicec", "optionc", "answerc"},
+        "choice_d": {"d", "choiced", "optiond", "answerd"},
+        "correct_answer": {
+            "correct",
+            "correctanswer",
+            "correctoption",
+            "answer",
+            "answerkey",
+            "key",
+        },
+    }
+    normalized = [_normalize_test_header(value) for value in header]
+    indexes = {}
+    for field, field_aliases in aliases.items():
+        for index, value in enumerate(normalized):
+            if value in field_aliases:
+                indexes[field] = index
+                break
+    return indexes
+
+
+def _parse_test_questions(rows, source_name, header=None, allow_legacy_layout=True):
+    header_indexes = _test_header_indexes(header or ())
+    uses_headers = (
+        "question" in header_indexes
+        and "choice_a" in header_indexes
+        and "choice_b" in header_indexes
+        and "correct_answer" in header_indexes
+    )
+    if header is not None and not uses_headers and (
+        not allow_legacy_layout or len(header) < 11
+    ):
+        return []
+
+    questions = []
+    question_ids = set()
+    for row in rows:
+        if uses_headers:
+            value = lambda field, fallback: (
+                row[header_indexes[field]]
+                if field in header_indexes and header_indexes[field] < len(row)
+                else fallback
+            )
+            question_text = value("question", None)
+            choices = {
+                label: str(value(f"choice_{label.lower()}", None)).strip()
+                for label in "ABCD"
+                if value(f"choice_{label.lower()}", None) is not None
+                and str(value(f"choice_{label.lower()}", None)).strip()
+            }
+            question_id_value = value("id", len(questions) + 1)
+            question_type = value("type", "Multiple Choice")
+            category = value("category", "")
+            correct_answer_value = value("correct_answer", "")
+        else:
+            if len(row) < 11:
+                continue
+            question_text = row[5]
+            if not question_text:
+                continue
+            question_id_value = row[0] or len(questions) + 1
+            question_type = row[1] or "Multiple Choice"
+            category = row[3] or ""
+            choices = {
+                label: str(row[column]).strip()
+                for label, column in zip("ABCD", range(6, 10))
+                if row[column] is not None and str(row[column]).strip()
+            }
+            correct_answer_value = row[10] or ""
+
+        if len(row) >= 11 and row[5]:
+            question_text = row[5]
+
+        if not question_text:
+            continue
+        normalized_type = str(question_type or "").strip().lower()
+        if normalized_type not in {"multiple choice", "multiple-choice", "mcq", "mc"}:
+            raise ValueError(
+                f"Unsupported question type in {source_name}, question "
+                f"{question_id_value}: {question_type}"
+            )
+        question_id = str(question_id_value or len(questions) + 1).strip()
+        correct_answer = str(correct_answer_value or "").strip().upper()
+        if (
+            question_id in question_ids
+            or len(choices) < 2
+            or correct_answer not in choices
+        ):
+            raise ValueError(
+                f"Question {question_id} in {source_name} has a duplicate ID, "
+                "incomplete choices, or an invalid answer."
+            )
+        question_ids.add(question_id)
+        questions.append({
+            "id": question_id,
+            "category": str(category or "").strip(),
+            "question": str(question_text).strip(),
+            "choices": choices,
+            "correct_answer": correct_answer,
+        })
+    return questions
+
+
+def _test_identifier(value):
+    return re.sub(r"[^a-z0-9]+", "-", str(value).strip().lower()).strip("-") or "test"
+
+
+def load_workbook_tests():
     workbook_path = app.config.get(
         "FINAL_ENGLISH_TEST_WORKBOOK",
         os.path.join(app.root_path, "static", "data", "tests.xlsx"),
     )
     try:
-        workbook = load_workbook(workbook_path, read_only=True, data_only=True)
+        workbook = load_workbook(workbook_path, data_only=True)
         try:
-            if "English Test" not in workbook.sheetnames:
-                raise ValueError("The workbook must contain an 'English Test' sheet.")
-            worksheet = workbook["English Test"]
-            questions = []
-            question_ids = set()
-            for row in worksheet.iter_rows(min_row=2, values_only=True):
-                if not row or len(row) < 11 or not row[5]:
-                    continue
-                question_type = str(row[1] or "").strip()
-                if question_type != "Multiple Choice":
-                    raise ValueError(
-                        f"Unsupported question type in question {row[0]}: {question_type}"
-                    )
-                choices = {
-                    label: str(row[column]).strip()
-                    for label, column in zip("ABCD", range(6, 10))
-                    if row[column] is not None and str(row[column]).strip()
-                }
-                correct_answer = str(row[10] or "").strip().upper()
-                question_id = str(row[0] or len(questions) + 1).strip()
-                if (
-                    question_id in question_ids
-                    or len(choices) < 2
-                    or correct_answer not in choices
-                ):
-                    raise ValueError(
-                        f"Question {question_id} has a duplicate ID, incomplete choices, "
-                        "or an invalid answer."
-                    )
-                question_ids.add(question_id)
-                questions.append({
-                    "id": question_id,
-                    "category": str(row[3] or "").strip(),
-                    "question": str(row[5]).strip(),
-                    "choices": choices,
-                    "correct_answer": correct_answer,
+            tests = []
+            used_ids = set()
+
+            def add_test(
+                source_name,
+                display_name,
+                rows,
+                header=None,
+                allow_legacy_layout=True,
+            ):
+                questions = _parse_test_questions(
+                    rows,
+                    source_name,
+                    header,
+                    allow_legacy_layout,
+                )
+                if not questions:
+                    return
+                identifier = _test_identifier(source_name)
+                base_identifier = identifier
+                suffix = 2
+                while identifier in used_ids:
+                    identifier = f"{base_identifier}-{suffix}"
+                    suffix += 1
+                used_ids.add(identifier)
+                tests.append({
+                    "id": identifier,
+                    "name": display_name,
+                    "questions": questions,
                 })
-            if not questions:
+
+            for worksheet in workbook.worksheets:
+                if worksheet.tables:
+                    for table in worksheet.tables.values():
+                        table_rows = [
+                            [cell.value for cell in row]
+                            for row in worksheet[table.ref]
+                        ]
+                        if table_rows:
+                            add_test(
+                                f"{worksheet.title}-{table.displayName}",
+                                f"{worksheet.title} — {table.displayName}",
+                                table_rows[1:],
+                                table_rows[0],
+                                allow_legacy_layout=False,
+                            )
+                    continue
+
+                worksheet_rows = list(
+                    worksheet.iter_rows(values_only=True)
+                )
+                if not worksheet_rows:
+                    continue
+                header = worksheet_rows[0]
+                display_name = (
+                    "Final English Test"
+                    if worksheet.title == "English Test"
+                    else worksheet.title
+                )
+                source_name = (
+                    "final-english"
+                    if worksheet.title == "English Test"
+                    else worksheet.title
+                )
+                questions = _parse_test_questions(
+                    worksheet_rows[1:],
+                    worksheet.title,
+                    header,
+                )
+                if questions:
+                    identifier = _test_identifier(source_name)
+                    base_identifier = identifier
+                    suffix = 2
+                    while identifier in used_ids:
+                        identifier = f"{base_identifier}-{suffix}"
+                        suffix += 1
+                    used_ids.add(identifier)
+                    tests.append({
+                        "id": identifier,
+                        "name": display_name,
+                        "questions": questions,
+                    })
+            if not tests:
                 raise ValueError("The workbook does not contain any test questions.")
-            return questions
+            return tests
         finally:
             workbook.close()
     except (OSError, ValueError, KeyError, zipfile.BadZipFile, InvalidFileException) as error:
-        app.logger.exception("Could not load the Final English Test workbook.")
-        raise RuntimeError("The Final English Test is temporarily unavailable.") from error
+        app.logger.exception("Could not load the test workbook.")
+        raise RuntimeError("The tests are temporarily unavailable.") from error
+
+
+def load_final_english_test():
+    return _primary_workbook_test(load_workbook_tests())["questions"]
+
+
+def _primary_workbook_test(tests):
+    return next(
+        (
+            test
+            for test in tests
+            if test["id"] == "final-english"
+            or test["name"] == "Final English Test"
+            or test["name"].startswith("English Test — ")
+        ),
+        tests[0],
+    )
+
+
+def _find_workbook_test(test_id):
+    tests = load_workbook_tests()
+    test = next((item for item in tests if item["id"] == test_id), None)
+    if test is None and test_id == "final-english":
+        return _primary_workbook_test(tests)
+    return test
 
 
 def valid_test_email(email):
@@ -875,54 +1128,31 @@ def course():
 
 @app.route("/test-center")
 def test_center():
-    return render_template("test_center.html")
-
-
-def assessment_is_approved(user_id):
-    with closing(connect_student_database()) as connection, connection:
-        row = connection.execute(
-            """
-            SELECT approved FROM student_test_approvals
-            WHERE user_id = ? AND category = 'assessment'
-            """,
-            (user_id,),
-        ).fetchone()
-    return bool(row and row["approved"])
+    try:
+        tests = load_workbook_tests()
+    except RuntimeError:
+        abort(503, description="The tests are temporarily unavailable.")
+    return render_template("test_center.html", tests=tests)
 
 
 @app.route("/tests/final-english/register", methods=["GET", "POST"])
 def final_english_register():
-    student = current_student()
-    if not student:
-        return redirect(url_for(
-            "login",
-            next=url_for("final_english_register"),
-        ))
-    approved = assessment_is_approved(student["id"])
-    if approved:
-        return redirect(url_for("final_english_take"))
-    return render_template(
-        "test_registration.html",
-        authenticated=True,
-        approved=False,
-        student=student,
-    )
-
-
-@app.route("/tests/final-english/take")
-def final_english_take():
-    student = current_student()
-    if not student:
-        return redirect(url_for(
-            "login",
-            next=url_for("final_english_register"),
-        ))
-    if not assessment_is_approved(student["id"]):
-        return redirect(url_for("final_english_register"))
     try:
-        questions = load_final_english_test()
+        test = _primary_workbook_test(load_workbook_tests())
     except RuntimeError:
-        abort(503, description="The Final English Test is temporarily unavailable.")
+        abort(503, description="The tests are temporarily unavailable.")
+    return redirect(url_for("final_english_take", test_id=test["id"]))
+
+
+@app.route("/tests/<test_id>/take")
+def final_english_take(test_id):
+    try:
+        test = _find_workbook_test(test_id)
+    except RuntimeError:
+        abort(503, description="The tests are temporarily unavailable.")
+    if test is None:
+        abort(404)
+    questions = test["questions"]
     public_questions = [
         {
             "id": question["id"],
@@ -935,26 +1165,38 @@ def final_english_take():
     return render_template(
         "test_take.html",
         questions=public_questions,
-        test_name="Final English Test",
+        test_id=test["id"],
+        test_name=test["name"],
     )
 
 
-@app.route("/tests/final-english/submit", methods=["POST"])
-def final_english_submit():
-    student = current_student()
-    if not student:
-        return {"error": "Sign in to an approved student account before submitting."}, 401
-    if not assessment_is_approved(student["id"]):
-        return {"error": "Administrator approval is required for this assessment."}, 403
+@app.route("/tests/<test_id>/submit", methods=["POST"])
+def final_english_submit(test_id):
     if not request.is_json:
         return {"error": "A JSON answer report is required."}, 400
-    answers = request.get_json(silent=True)
+    submission = request.get_json(silent=True)
+    if not isinstance(submission, dict):
+        return {"error": "The submitted answers are invalid."}, 400
+    if (
+        isinstance(submission.get("answers"), dict)
+        and set(submission).issubset({"answers", "name"})
+    ):
+        answers = submission.get("answers")
+        participant_name = submission.get("name", "")
+    else:
+        answers = submission
+        participant_name = ""
+    if not isinstance(participant_name, str) or len(participant_name.strip()) > 120:
+        return {"error": "Names must be 120 characters or fewer."}, 400
     if not isinstance(answers, dict):
         return {"error": "The submitted answers are invalid."}, 400
     try:
-        questions = load_final_english_test()
+        test = _find_workbook_test(test_id)
     except RuntimeError:
-        abort(503, description="The Final English Test is temporarily unavailable.")
+        abort(503, description="The tests are temporarily unavailable.")
+    if test is None:
+        abort(404)
+    questions = test["questions"]
 
     expected_ids = {question["id"] for question in questions}
     if set(answers) != expected_ids or any(
@@ -991,6 +1233,10 @@ def final_english_submit():
         if not result["is_correct"]
     ]
 
+    student = current_student()
+    name = participant_name.strip()
+    if not name and student:
+        name = f"{student['name']} {student['last_name']}".strip()
     connection = connect_test_results_database()
     try:
         connection.execute(
@@ -1000,10 +1246,10 @@ def final_english_submit():
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                student["id"],
-                "Final English Test",
-                f"{student['name']} {student['last_name']}".strip(),
-                student["email"],
+                student["id"] if student else None,
+                test["name"],
+                name or "Guest",
+                student["email"] if student else "",
                 score,
                 len(questions),
                 json.dumps(report, ensure_ascii=False),

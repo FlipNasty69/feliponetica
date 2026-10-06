@@ -10,25 +10,27 @@
 <body class="test-page">
     <main class="test-shell landing-shell">
         <header class="test-header">
-            <a class="test-brand" href="{{ url_for('course') }}">English<span>Course</span></a>
-            <a class="quiet-link" href="{{ url_for('course') }}">Back to course</a>
+            <a class="test-brand" href="{{ url_for('home') }}">English<span>Course</span></a>
+            <a class="quiet-link" href="{{ url_for('home') }}">Back to home</a>
         </header>
         <section class="landing-content" aria-labelledby="test-center-title">
-            <p class="test-kicker">ASSESSMENT · 01</p>
+            <p class="test-kicker">ASSESSMENTS · {{ tests|length }}</p>
             <h1 id="test-center-title">Test Center</h1>
-            <p class="landing-copy">Choose an assessment to begin. Your results are sent privately for review.</p>
+            <p class="landing-copy">Choose an assessment to begin. No account or sign-in is required. Your score appears when you finish.</p>
             <div class="test-selection">
-                <a class="test-option tactile-button" href="{{ url_for('final_english_register') }}">
-                    <span class="option-index">01</span>
+                {% for test in tests %}
+                <a class="test-option tactile-button" href="{{ url_for('final_english_take', test_id=test.id) }}">
+                    <span class="option-index">{{ "%02d"|format(loop.index) }}</span>
                     <span class="option-copy">
-                        <strong>Final English Test</strong>
-                        <span>100 questions · Multiple choice</span>
+                        <strong>{{ test.name }}</strong>
+                        <span>{{ test.questions|length }} questions · Multiple choice</span>
                     </span>
                     <span class="option-arrow" aria-hidden="true">→</span>
                 </a>
+                {% endfor %}
             </div>
         </section>
-        <footer class="test-footer">A focused assessment experience</footer>
+        <footer class="test-footer">Results are saved for future review.</footer>
     </main>
 </body>
 </html>

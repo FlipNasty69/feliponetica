@@ -193,6 +193,7 @@ a {
 .quiet-link:focus-visible,
 .quiet-button:focus-visible,
 .registration-form input:focus-visible,
+.participant-field input:focus-visible,
 summary:focus-visible {
     outline: 3px solid var(--ice-bright);
     outline-offset: 4px;
@@ -367,6 +368,29 @@ summary:focus-visible {
 .progress-block progress::-webkit-progress-value {
     border-radius: 8px;
     background: var(--ice);
+}
+
+.participant-field {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    gap: 10px;
+    color: rgba(207, 235, 250, 0.76);
+    font-size: 0.78rem;
+}
+
+.participant-field input {
+    width: min(100%, 280px);
+    min-height: 36px;
+    padding: 0 11px;
+    border: 1px solid rgba(168, 216, 240, 0.35);
+    border-radius: 10px;
+    color: var(--white);
+    background: rgba(5, 6, 8, 0.66);
+}
+
+.participant-field input:focus-visible {
+    border-color: var(--ice);
 }
 
 .test-stage {
@@ -803,6 +827,17 @@ summary:focus-visible {
 
     .quiz-title {
         font-size: 0.68rem;
+    }
+
+    .participant-field {
+        min-height: 32px;
+        gap: 7px;
+        font-size: 0.68rem;
+    }
+
+    .participant-field input {
+        min-height: 32px;
+        width: min(62%, 220px);
     }
 
     .progress-block {

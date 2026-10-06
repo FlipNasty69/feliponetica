@@ -6,11 +6,15 @@ import unittest
 from contextlib import closing
 from unittest.mock import patch
 
+from openpyxl import Workbook, load_workbook
+from openpyxl.worksheet.table import Table
+
 from app import (
     app,
     init_student_database,
     init_test_results_database,
     load_final_english_test,
+    load_workbook_tests,
     prepare_database_path,
     student_database_path,
     test_results_database_path,
@@ -25,18 +29,38 @@ class FinalEnglishTestRoutes(unittest.TestCase):
         self.database_path = os.path.join(self.temp_dir.name, "test-results.sqlite3")
         self.student_database_path = os.path.join(self.temp_dir.name, "students.sqlite3")
         self.word_order_database_path = os.path.join(self.temp_dir.name, "word-order.sqlite3")
+        self.workbook_path = os.path.join(self.temp_dir.name, "tests.xlsx")
         self.previous_database_path = app.config.get("TEST_RESULTS_DATABASE_PATH")
         self.previous_student_database_path = app.config.get("STUDENT_DATABASE_PATH")
         self.previous_word_order_database_path = app.config.get("WORD_ORDER_DATABASE")
+        self.previous_workbook_path = app.config.get("FINAL_ENGLISH_TEST_WORKBOOK")
         app.config.update(
             TESTING=True,
             TEST_RESULTS_DATABASE_PATH=self.database_path,
             STUDENT_DATABASE_PATH=self.student_database_path,
             WORD_ORDER_DATABASE=self.word_order_database_path,
+            FINAL_ENGLISH_TEST_WORKBOOK=self.workbook_path,
         )
+        self.create_workbook()
         init_student_database()
         init_test_results_database()
         self.client = app.test_client()
+
+    def create_workbook(self):
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "English Test"
+        worksheet.append([
+            "Question ID", "Type", "Objective", "Category", "Subcategory",
+            "Question", "A", "B", "C", "D", "Answer",
+        ])
+        for index in range(1, 101):
+            worksheet.append([
+                f"Q{index}", "Multiple Choice", "", "Grammar", "",
+                f"Question {index}", "Correct answer", "Wrong answer B",
+                "Wrong answer C", "Wrong answer D", "A",
+            ])
+        workbook.save(self.workbook_path)
 
     def tearDown(self):
         if self.previous_database_path is None:
@@ -51,6 +75,10 @@ class FinalEnglishTestRoutes(unittest.TestCase):
             app.config.pop("WORD_ORDER_DATABASE", None)
         else:
             app.config["WORD_ORDER_DATABASE"] = self.previous_word_order_database_path
+        if self.previous_workbook_path is None:
+            app.config.pop("FINAL_ENGLISH_TEST_WORKBOOK", None)
+        else:
+            app.config["FINAL_ENGLISH_TEST_WORKBOOK"] = self.previous_workbook_path
         app.config["TESTING"] = False
         self.temp_dir.cleanup()
 
@@ -83,11 +111,54 @@ class FinalEnglishTestRoutes(unittest.TestCase):
             app.config.pop("STUDENT_DATABASE_PATH", None)
             app.config.pop("TEST_RESULTS_DATABASE_PATH", None)
             self.assertEqual(student_database_path(), configured_path)
-            self.assertEqual(test_results_database_path(), configured_path)
-            self.assertEqual(prepare_database_path(configured_path), configured_path)
-            self.assertTrue(os.path.isdir(os.path.dirname(configured_path)))
+            results_path = test_results_database_path()
+            self.assertEqual(
+                results_path,
+                os.path.join(app.instance_path, "test_results.sqlite3"),
+            )
+            self.assertEqual(prepare_database_path(results_path), results_path)
+            self.assertTrue(os.path.isdir(os.path.dirname(results_path)))
         app.config["STUDENT_DATABASE_PATH"] = self.student_database_path
         app.config["TEST_RESULTS_DATABASE_PATH"] = self.database_path
+
+    def test_old_results_are_copied_to_the_new_file_without_deleting_the_source(self):
+        with closing(sqlite3.connect(self.student_database_path)) as connection, connection:
+            connection.execute(
+                """
+                CREATE TABLE test_results (
+                    id INTEGER PRIMARY KEY,
+                    test_name TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    score INTEGER NOT NULL,
+                    question_count INTEGER NOT NULL,
+                    report_json TEXT NOT NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO test_results (
+                    id, test_name, name, email, score, question_count,
+                    report_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (41, "Old Test", "Saved Student", "", 3, 5, "[]", "2026-01-01"),
+            )
+
+        init_test_results_database()
+        with closing(sqlite3.connect(self.database_path)) as connection:
+            migrated = connection.execute(
+                "SELECT id, name, score, user_id FROM test_results"
+            ).fetchone()
+        with closing(sqlite3.connect(self.student_database_path)) as connection:
+            source_count = connection.execute(
+                "SELECT COUNT(*) FROM test_results"
+            ).fetchone()[0]
+
+        self.assertEqual(migrated, (41, "Saved Student", 3, None))
+        self.assertEqual(source_count, 1)
 
     def test_render_can_start_without_database_or_secret_configuration(self):
         with patch.dict(os.environ, {"RENDER": "true"}, clear=False):
@@ -122,6 +193,104 @@ class FinalEnglishTestRoutes(unittest.TestCase):
 
         test_center = self.client.get("/test-center")
         self.assertIn(b"Final English Test", test_center.data)
+
+    def test_added_worksheets_and_excel_tables_appear_as_tests(self):
+        workbook = load_workbook(self.workbook_path)
+        table_sheet = workbook.create_sheet("Unit Two")
+        table_sheet.append([
+            "Question ID", "Category", "Question",
+            "Option A", "Option B", "Correct Answer",
+        ])
+        table_sheet.append(["T1", "Vocabulary", "Table question", "Right", "Wrong", "A"])
+        table_sheet.append(["T2", "Vocabulary", "Second table question", "Right", "Wrong", "A"])
+        table_sheet.add_table(Table(displayName="UnitTwoQuestions", ref="A1:F3"))
+
+        sheet = workbook.create_sheet("Grammar Review")
+        sheet.append([
+            "Question ID", "Category", "Question",
+            "Option A", "Option B", "Correct Answer",
+        ])
+        sheet.append(["G1", "Grammar", "Sheet question", "Right", "Wrong", "A"])
+        workbook.save(self.workbook_path)
+
+        tests = load_workbook_tests()
+        self.assertEqual(
+            [test["id"] for test in tests],
+            ["final-english", "unit-two-unittwoquestions", "grammar-review"],
+        )
+        self.assertEqual(tests[1]["name"], "Unit Two — UnitTwoQuestions")
+        self.assertEqual(len(tests[1]["questions"]), 2)
+
+        response = self.client.get("/test-center")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Unit Two", response.data)
+        self.assertIn(b"Grammar Review", response.data)
+        take = self.client.get("/tests/unit-two-unittwoquestions/take")
+        self.assertEqual(take.status_code, 200)
+        self.assertIn(b"Table question", take.data)
+
+    def test_eleven_column_tables_take_question_text_from_column_f(self):
+        workbook = load_workbook(self.workbook_path)
+        sheet = workbook.create_sheet("Each Every")
+        sheet.append([
+            "Question #", "Question Type", "Difficulty Level", "Category",
+            "Part of Speech Being Tested", "Question", "Answer A", "Answer B",
+            "Answer C", "Correct Answer",
+        ])
+        sheet.append([
+            1, "Multiple Choice", "easy", "determiner", "Grammar",
+            "Choose the correct word: ___ student has a book.",
+            "Each", "Every", "Each & Every", "C",
+        ])
+        sheet.add_table(Table(displayName="EachEveryQuestions", ref="A1:J2"))
+        workbook.save(self.workbook_path)
+
+        test = next(
+            test for test in load_workbook_tests()
+            if test["id"] == "each-every-eacheveryquestions"
+        )
+
+        self.assertEqual(
+            test["questions"][0]["question"],
+            "Choose the correct word: ___ student has a book.",
+        )
+        self.assertEqual(
+            test["questions"][0]["choices"],
+            {"A": "Each", "B": "Every", "C": "Each & Every"},
+        )
+        self.assertEqual(test["questions"][0]["correct_answer"], "C")
+        take = self.client.get(f"/tests/{test['id']}/take")
+        self.assertEqual(take.status_code, 200)
+        self.assertIn(
+            b"Choose the correct word: ___ student has a book.",
+            take.data,
+        )
+
+    def test_anyone_can_submit_and_results_are_saved_without_sign_in(self):
+        home = self.client.get("/")
+        self.assertIn(b"Test Center", home.data)
+        take = self.client.get("/tests/final-english/take")
+        self.assertEqual(take.status_code, 200)
+
+        answers = {
+            question["id"]: question["correct_answer"]
+            for question in load_final_english_test()
+        }
+        response = self.client.post(
+            "/tests/final-english/submit",
+            json={"answers": answers, "name": "Walk-in Student"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["score"], 100)
+        self.assertEqual(response.json["question_count"], 100)
+        init_test_results_database()
+        with closing(sqlite3.connect(self.database_path)) as connection:
+            saved_result = connection.execute(
+                "SELECT user_id, name, email FROM test_results"
+            ).fetchone()
+        self.assertEqual(saved_result, (None, "Walk-in Student", ""))
+        self.assertTrue(os.path.isfile(self.database_path))
 
     def test_test_workbook_and_answer_key_are_not_publicly_downloadable(self):
         response = self.client.get("/static/data/tests.xlsx")
@@ -158,7 +327,7 @@ class FinalEnglishTestRoutes(unittest.TestCase):
             self.assertEqual(user_session["display_name"], "Test Taker")
             self.assertIn("user_id", user_session)
 
-    def test_registration_uses_a_password_hash_and_assessment_requires_approval(self):
+    def test_registration_uses_a_password_hash_but_tests_need_no_approval(self):
         self.register()
         with closing(sqlite3.connect(self.student_database_path)) as connection, connection:
             password_hash = connection.execute(
@@ -169,12 +338,11 @@ class FinalEnglishTestRoutes(unittest.TestCase):
         self.assertTrue(check_password_hash(password_hash, "student-password"))
 
         take = self.client.get("/tests/final-english/take")
-        self.assertEqual(take.status_code, 302)
+        self.assertEqual(take.status_code, 200)
         pending = self.client.get("/tests/final-english/register")
-        self.assertEqual(pending.status_code, 200)
-        self.assertIn(b"Approval required", pending.data)
+        self.assertEqual(pending.status_code, 302)
         submit = self.client.post("/tests/final-english/submit", json={})
-        self.assertEqual(submit.status_code, 403)
+        self.assertEqual(submit.status_code, 400)
         self.assertEqual(
             self.client.post(
                 "/admin/test-results/users/1/approvals",
