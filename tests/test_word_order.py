@@ -1,3 +1,4 @@
+import json
 import shutil
 import sqlite3
 import tempfile
@@ -68,20 +69,124 @@ class WordOrderTestCase(unittest.TestCase):
         try:
             counts = {
                 table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-                for table in ("levels", "words", "verb_forms", "patterns", "pattern_slots", "challenges")
+                for table in (
+                    "levels", "words", "verb_forms", "patterns",
+                    "pattern_slots", "challenges", "along_exercises",
+                )
             }
             foreign_key_errors = connection.execute("PRAGMA foreign_key_check").fetchall()
         finally:
             connection.close()
 
-        self.assertEqual(first["inserted"], 597)
-        self.assertEqual(second["unchanged"], 597)
+        self.assertEqual(first["inserted"], 604)
+        self.assertEqual(second["unchanged"], 604)
         self.assertEqual(second["updated"], 0)
         self.assertEqual(counts, {
             "levels": 12, "words": 244, "verb_forms": 40,
             "patterns": 59, "pattern_slots": 170, "challenges": 72,
+            "along_exercises": 7,
         })
         self.assertEqual(foreign_key_errors, [])
+
+    def test_along_table_preserves_prompt_and_ordered_word_slots(self):
+        import_workbook(WORKBOOK, self.database_path)
+        connection = self.connect()
+        try:
+            row = connection.execute(
+                "SELECT prompt_es, ordered_tokens FROM along_exercises WHERE exercise_id = 1"
+            ).fetchone()
+        finally:
+            connection.close()
+
+        self.assertEqual(
+            row["prompt_es"],
+            "Hay una linea amarilla en medio de la calle.",
+        )
+        self.assertEqual(
+            json.loads(row["ordered_tokens"]),
+            ["There is", "a", "yellow", "stripe", "along",
+             "the middle of", "the", "street"],
+        )
+
+    def test_word_order_along_mode_uses_imported_rows_without_level_progress(self):
+        page = self.client.get("/games/word-order/along")
+        state = self.client.post("/games/word-order/api/along/session").get_json()
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b'data-mode="along"', page.data)
+        self.assertIn(b'id="along-celebration"', page.data)
+        self.assertNotIn("correct_en", state)
+        self.assertEqual(state["total_challenges"], 7)
+
+        connection = self.connect()
+        try:
+            exercises = connection.execute(
+                "SELECT exercise_id, prompt_es, ordered_tokens "
+                "FROM along_exercises ORDER BY exercise_id"
+            ).fetchall()
+        finally:
+            connection.close()
+
+        for index, exercise in enumerate(exercises):
+            expected_tokens = json.loads(exercise["ordered_tokens"])
+            self.assertEqual(state["prompt_es"], exercise["prompt_es"])
+            self.assertCountEqual(state["tokens"], expected_tokens)
+            checked = self.client.post("/games/word-order/along/check", json={
+                "session_id": state["session_id"],
+                "answer": join_tokens(expected_tokens),
+            })
+            self.assertEqual(checked.status_code, 200)
+            self.assertTrue(checked.get_json()["correct"])
+
+            advanced = self.client.post(
+                "/games/word-order/api/along/continue",
+                json={"session_id": state["session_id"]},
+            ).get_json()
+            if index < len(exercises) - 1:
+                self.assertFalse(advanced["completed"])
+                state = advanced["challenge"]
+            else:
+                self.assertTrue(advanced["completed"])
+                self.assertEqual(advanced["correct_count"], 7)
+                self.assertEqual(advanced["score"], 70)
+
+        connection = self.connect()
+        try:
+            level_progress_count = connection.execute(
+                "SELECT COUNT(*) FROM word_order_progress"
+            ).fetchone()[0]
+            along_completed = connection.execute(
+                "SELECT completed_at FROM along_sessions WHERE session_id = ?",
+                (state["session_id"],),
+            ).fetchone()
+        finally:
+            connection.close()
+        self.assertEqual(level_progress_count, 0)
+        self.assertIsNotNone(along_completed["completed_at"])
+
+    def test_along_workbook_table_is_optional_for_standard_imports(self):
+        modified_workbook = Path(self.temp_dir.name) / "without-along.xlsx"
+        shutil.copyfile(WORKBOOK, modified_workbook)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            workbook = load_workbook(modified_workbook)
+            along_sheet = next(
+                sheet for sheet in workbook.worksheets if "along" in sheet.tables
+            )
+            del along_sheet.tables["along"]
+            workbook.save(modified_workbook)
+            workbook.close()
+
+        result = import_workbook(modified_workbook, self.database_path)
+        connection = self.connect()
+        try:
+            along_count = connection.execute(
+                "SELECT COUNT(*) FROM along_exercises"
+            ).fetchone()[0]
+        finally:
+            connection.close()
+        self.assertEqual(result["inserted"], 597)
+        self.assertEqual(along_count, 0)
 
     def test_invalid_foreign_key_rolls_back_import(self):
         modified_workbook = Path(self.temp_dir.name) / "invalid.xlsx"
@@ -231,7 +336,7 @@ class WordOrderTestCase(unittest.TestCase):
         runner = app.test_cli_runner()
         result = runner.invoke(args=["word-order", "sync-data", str(WORKBOOK)])
         self.assertEqual(result.exit_code, 0, result.output)
-        self.assertIn("inserted=597", result.output)
+        self.assertIn("inserted=604", result.output)
 
     def test_level_route_starts_game_and_answers_are_server_checked(self):
         redirect = self.client.get("/games/word-order/level/1")

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Question Builder | English Course</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/question_game.css') }}">
+    <script src="{{ url_for('static', filename='scripts/question_game.js') }}" defer></script>
+</head>
+<body>
+    <main class="game-shell">
+        <a class="back-link" href="{{ url_for('games_dashboard') }}">← Back to games</a>
+        <section class="game-card" aria-labelledby="game-title">
+            <header class="game-header">
+                <div>
+                    <p class="eyebrow">Sentence building · Questions</p>
+                    <h1 id="game-title">Question Builder</h1>
+                    <p class="intro">Use the Spanish prompt to build the English question.</p>
+                </div>
+                <span class="game-mark" aria-hidden="true">?</span>
+            </header>
+
+            <section id="setup-screen">
+                <div id="level-selection">
+                    <h2>Choose your level</h2>
+                    <div class="level-options" role="group" aria-label="Question game level">
+                        <button class="level-option selected" type="button" data-level="level1" aria-pressed="true">
+                            <span class="level-icon" aria-hidden="true">01</span>
+                            <strong>Level 1</strong>
+                            <span>Choose an exercise to practice question building.</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="exercise-selection" class="hidden">
+                    <button class="secondary-button" id="back-to-levels" type="button">← Levels</button>
+                    <h2>Choose a Level 1 exercise</h2>
+                    <div class="level-options" id="exercise-options" role="group" aria-label="Level 1 exercise"></div>
+                </div>
+                <p class="how-to-play">Build one question at a time by dragging a word into each slot, or selecting a word and then a slot. Questions with the same final answer share a word bank.</p>
+                <button class="primary-button hidden" id="start-button" type="button" disabled>Start a round</button>
+                <p class="error-message hidden" id="error-message" role="alert"></p>
+            </section>
+
+            <section class="play-screen hidden" id="play-screen" aria-live="polite">
+                <div class="progress-row">
+                    <span id="progress-label">Question 1 of 32</span>
+                    <div class="progress-track" role="progressbar" aria-label="Round progress" aria-valuemin="0" aria-valuemax="32" aria-valuenow="0">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <span class="score" id="live-score">0 pts</span>
+                </div>
+                <h2 class="level-title" id="level-title"></h2>
+                <div class="column-labels" id="column-labels" aria-hidden="true"></div>
+                <div class="challenge-grid" id="challenge-grid"></div>
+                <section class="word-bank-section" aria-labelledby="word-bank-title">
+                    <div class="word-bank-heading">
+                        <h3 id="word-bank-title">Word bank</h3>
+                        <span>Choices return after every prompt</span>
+                    </div>
+                    <div class="word-bank" id="word-bank"></div>
+                </section>
+                <p class="error-message hidden" id="play-error" role="alert"></p>
+                <div class="feedback hidden" id="feedback" role="status" aria-live="polite"></div>
+            </section>
+
+            <section class="results-screen hidden" id="results-screen" aria-live="polite">
+                <span class="result-star" aria-hidden="true">★</span>
+                <h2>Level complete!</h2>
+                <p class="result-score" id="result-score"></p>
+                <p id="result-message"></p>
+                <button class="primary-button" id="play-again-button" type="button">Play again</button>
+            </section>
+        </section>
+    </main>
+</body>
+</html>

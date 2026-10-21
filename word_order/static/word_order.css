@@ -93,6 +93,18 @@ h1 { margin-bottom: 0; font-size: 32px; line-height: 1.15; }
 .wo-result-score span { color: var(--wo-muted); font-size: 15px; }
 .wo-result-detail { margin: 8px 0; color: var(--wo-muted); font-size: 13px; font-weight: 800; }
 .wo-result-actions { display: flex; justify-content: center; gap: 10px; margin-top: 24px; }
+.wo-celebration { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 24px; overflow: auto; background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, .94), rgba(233, 249, 220, .97) 56%, rgba(28, 176, 246, .92)); }
+.wo-celebration-card { position: relative; width: min(620px, 100%); padding: 46px 28px; border: 4px solid #fff; border-radius: 32px; background: #fff; box-shadow: 0 18px 70px rgba(19, 82, 121, .28); text-align: center; animation: wo-celebrate-in .55s cubic-bezier(.2, 1.4, .4, 1) both; }
+.wo-celebration-card h2 { margin: 4px 0 10px; color: var(--wo-green-dark); font-size: clamp(42px, 10vw, 68px); line-height: 1; }
+.wo-celebration-copy { margin: 0; color: var(--wo-ink); font-size: clamp(16px, 4vw, 22px); font-weight: 800; }
+.wo-celebration-score { margin: 22px 0; color: var(--wo-muted); font-size: 17px; font-weight: 800; }
+.wo-celebration-score strong { color: #c49400; font-size: 34px; }
+.wo-fireworks { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 10px; font-size: clamp(42px, 10vw, 68px); }
+.wo-fireworks span { display: inline-block; animation: wo-firework 1.2s ease-in-out infinite alternate; }
+.wo-fireworks span:nth-child(2) { animation-delay: .2s; }
+.wo-fireworks span:nth-child(3) { animation-delay: .4s; }
+@keyframes wo-celebrate-in { from { opacity: 0; transform: translateY(24px) scale(.88); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes wo-firework { from { transform: translateY(5px) rotate(-12deg) scale(.85); } to { transform: translateY(-8px) rotate(12deg) scale(1.15); } }
 [hidden] { display: none !important; }
 
 @media (max-width: 620px) {
@@ -114,6 +126,7 @@ h1 { margin-bottom: 0; font-size: 32px; line-height: 1.15; }
   .wo-actions .wo-button { width: 100%; }
   .wo-result { padding: 24px 17px; }
   .wo-result-actions { flex-direction: column; }
+  .wo-celebration-card { padding: 34px 18px; }
   .wo-result-actions .wo-button { width: 100%; }
 }
 

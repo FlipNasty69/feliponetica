@@ -111,6 +111,7 @@
                             <iframe
                                 src="https://www.youtube.com/embed/{{ video.video_id }}"
                                 title="{{ video.title }}"
+                                loading="lazy"
                                 frameborder="0"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                 allowfullscreen>
@@ -185,8 +186,10 @@
                                 <div class="question-image">
 
                                     <img
-                                        src="{{ url_for('static', filename=item.image) }}"
+                                        src="{{ gallery_thumbnail_url(url_for('static', filename=item.image)) }}"
                                         alt="{{ item.image_alt | default('Question image') }}"
+                                        loading="lazy"
+                                        decoding="async"
                                     >
 
                                 </div>
@@ -257,7 +260,7 @@
 
                                     <button
                                         class="btn btn-help"
-                                        data-audio-help='{{ url_for("static", filename=item.audio_help) | tojson | forceescape }}'
+                                        data-audio-help='{{ public_audio_url(url_for("static", filename=item.audio_help)) | tojson | forceescape }}'
                                         onclick="playFelipeHelp(JSON.parse(this.dataset.audioHelp))"
                                     >
                                         🔊 Help me Felipe
@@ -322,10 +325,10 @@
                                 </p>
                             {% endif %}
 
-                            <audio controls>
+                            <audio controls preload="none">
 
                                 <source
-                                    src="{{ url_for('static', filename=audio.file) }}"
+                                    src="{{ public_audio_url(url_for('static', filename=audio.file)) }}"
                                 >
 
                                 Your browser does not support audio.
@@ -361,7 +364,7 @@
                         <div class="module-image">
 
                             <img
-                                src="{{ url_for('static', filename=image.file) }}"
+                                src="{{ gallery_thumbnail_url(url_for('static', filename=image.file)) }}"
                                 alt="{{ image.alt | default('Module image') }}"
                             >
 

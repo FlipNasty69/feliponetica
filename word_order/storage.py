@@ -86,6 +86,12 @@ CREATE TABLE IF NOT EXISTS challenges (
     FOREIGN KEY (level_id) REFERENCES levels(level_id) ON UPDATE CASCADE,
     FOREIGN KEY (pattern_id) REFERENCES patterns(pattern_id) ON UPDATE CASCADE
 );
+CREATE TABLE IF NOT EXISTS along_exercises (
+    exercise_id INTEGER PRIMARY KEY,
+    prompt_es TEXT NOT NULL,
+    ordered_tokens TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1
+);
 CREATE INDEX IF NOT EXISTS words_lookup_idx ON words(pos, subtype, level_min, active);
 CREATE INDEX IF NOT EXISTS words_cefr_idx ON words(cefr);
 CREATE INDEX IF NOT EXISTS verb_forms_lookup_idx ON verb_forms(verb_class, level_min);
@@ -144,6 +150,20 @@ CREATE TABLE IF NOT EXISTS word_order_progress (
     completed_at TEXT,
     PRIMARY KEY(profile_key, level_id),
     FOREIGN KEY (level_id) REFERENCES levels(level_id)
+);
+CREATE TABLE IF NOT EXISTS along_sessions (
+    session_id TEXT PRIMARY KEY,
+    profile_key TEXT NOT NULL,
+    exercise_ids TEXT NOT NULL,
+    current_index INTEGER NOT NULL DEFAULT 0,
+    score INTEGER NOT NULL DEFAULT 0,
+    correct_count INTEGER NOT NULL DEFAULT 0,
+    streak INTEGER NOT NULL DEFAULT 0,
+    checked INTEGER NOT NULL DEFAULT 0,
+    last_correct INTEGER,
+    started_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT
 );
 """
 

@@ -346,6 +346,182 @@ def continue_session(connection, session_id, profile_key):
     return {"completed": True, "result_url": f"/games/word-order/result/{session_id}"}
 
 
+def _along_session(connection, session_id, profile_key):
+    game_session = connection.execute(
+        "SELECT * FROM along_sessions WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    if not game_session or game_session["profile_key"] != profile_key:
+        raise GameStateError("No encontramos esa partida.", 404)
+    return game_session
+
+
+def _current_along_exercise(connection, game_session):
+    exercise_ids = json.loads(game_session["exercise_ids"])
+    index = game_session["current_index"]
+    if index >= len(exercise_ids):
+        return None
+    return connection.execute(
+        "SELECT * FROM along_exercises WHERE exercise_id = ?",
+        (exercise_ids[index],),
+    ).fetchone()
+
+
+def serialize_along_session(connection, game_session):
+    if game_session["completed_at"]:
+        return {
+            "session_id": game_session["session_id"],
+            "completed": True,
+            "score": game_session["score"],
+            "correct_count": game_session["correct_count"],
+            "total_challenges": len(json.loads(game_session["exercise_ids"])),
+        }
+    exercise = _current_along_exercise(connection, game_session)
+    exercise_ids = json.loads(game_session["exercise_ids"])
+    if not exercise:
+        return {
+            "session_id": game_session["session_id"],
+            "completed": True,
+            "score": game_session["score"],
+            "correct_count": game_session["correct_count"],
+            "total_challenges": len(exercise_ids),
+        }
+
+    tokens = json.loads(exercise["ordered_tokens"])
+    random.Random(
+        f"{game_session['session_id']}:along-{exercise['exercise_id']}"
+    ).shuffle(tokens)
+    state = {
+        "session_id": game_session["session_id"],
+        "challenge_id": f"along-{exercise['exercise_id']}",
+        "level_name_en": "Along",
+        "level_name_es": "A lo largo",
+        "prompt_es": exercise["prompt_es"],
+        "tokens": tokens,
+        "skill_tag": "along",
+        "challenge_index": game_session["current_index"],
+        "challenge_number": game_session["current_index"] + 1,
+        "total_challenges": len(exercise_ids),
+        "score": game_session["score"],
+        "streak": game_session["streak"],
+        "checked": bool(game_session["checked"]),
+        "completed": bool(game_session["completed_at"]),
+    }
+    if game_session["checked"]:
+        state["feedback"] = {
+            "correct": bool(game_session["last_correct"]),
+            "correct_answer": join_tokens(json.loads(exercise["ordered_tokens"])),
+            "explanation_es": "",
+            "skill_tag": "along",
+            "score_change": 0,
+            "streak": game_session["streak"],
+            "next_available": game_session["current_index"] + 1 < len(exercise_ids),
+        }
+    return state
+
+
+def start_along_session(connection, profile_key):
+    exercise_ids = [
+        row["exercise_id"]
+        for row in connection.execute(
+            "SELECT exercise_id FROM along_exercises WHERE active = 1 ORDER BY exercise_id"
+        ).fetchall()
+    ]
+    if not exercise_ids:
+        raise GameStateError("El juego Along todavía no tiene ejercicios activos.", 404)
+
+    now = utc_now()
+    session_id = uuid.uuid4().hex
+    connection.execute("""
+        INSERT INTO along_sessions
+            (session_id, profile_key, exercise_ids, started_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+    """, (session_id, profile_key, json.dumps(exercise_ids), now, now))
+    game_session = connection.execute(
+        "SELECT * FROM along_sessions WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    return serialize_along_session(connection, game_session)
+
+
+def resume_along_session(connection, session_id, profile_key):
+    game_session = _along_session(connection, session_id, profile_key)
+    return serialize_along_session(connection, game_session)
+
+
+def submit_along_answer(connection, session_id, profile_key, answer):
+    game_session = _along_session(connection, session_id, profile_key)
+    if game_session["completed_at"]:
+        raise GameStateError("Esta partida ya terminó.", 409)
+    if game_session["checked"]:
+        raise GameStateError("Esta respuesta ya fue revisada.", 409)
+
+    exercise = _current_along_exercise(connection, game_session)
+    if not exercise:
+        raise GameStateError("Este ejercicio ya no está disponible.", 409)
+    expected = join_tokens(json.loads(exercise["ordered_tokens"]))
+    is_correct = normalize_answer(answer) == normalize_answer(expected)
+    streak = game_session["streak"] + 1 if is_correct else 0
+    score_change = 10 if is_correct else 0
+    connection.execute("""
+        UPDATE along_sessions SET
+            checked = 1,
+            score = score + ?,
+            correct_count = correct_count + ?,
+            streak = ?,
+            last_correct = ?,
+            updated_at = ?
+        WHERE session_id = ?
+    """, (
+        score_change, int(is_correct), streak, int(is_correct),
+        utc_now(), session_id,
+    ))
+    total = len(json.loads(game_session["exercise_ids"]))
+    return {
+        "correct": is_correct,
+        "correct_answer": expected,
+        "explanation_es": "",
+        "skill_tag": "along",
+        "score_change": score_change,
+        "streak": streak,
+        "next_available": game_session["current_index"] + 1 < total,
+    }
+
+
+def continue_along_session(connection, session_id, profile_key):
+    game_session = _along_session(connection, session_id, profile_key)
+    if game_session["completed_at"]:
+        raise GameStateError("Esta partida ya terminó.", 409)
+    if not game_session["checked"]:
+        raise GameStateError("Revisa tu respuesta antes de continuar.", 409)
+
+    exercise_ids = json.loads(game_session["exercise_ids"])
+    now = utc_now()
+    next_index = game_session["current_index"] + 1
+    if next_index < len(exercise_ids):
+        connection.execute("""
+            UPDATE along_sessions
+            SET current_index = ?, checked = 0, updated_at = ?
+            WHERE session_id = ?
+        """, (next_index, now, session_id))
+        updated = connection.execute(
+            "SELECT * FROM along_sessions WHERE session_id = ?", (session_id,)
+        ).fetchone()
+        return {
+            "completed": False,
+            "challenge": serialize_along_session(connection, updated),
+        }
+
+    connection.execute(
+        "UPDATE along_sessions SET completed_at = ?, updated_at = ? WHERE session_id = ?",
+        (now, now, session_id),
+    )
+    return {
+        "completed": True,
+        "score": game_session["score"],
+        "correct_count": game_session["correct_count"],
+        "total_challenges": len(exercise_ids),
+    }
+
+
 def get_result(connection, session_id, profile_key):
     game_session = _profile_session(connection, session_id, profile_key)
     if not game_session["completed_at"]:

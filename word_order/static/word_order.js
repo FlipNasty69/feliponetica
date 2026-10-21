@@ -1,4 +1,5 @@
 const pageType = document.body.dataset.page;
+const isAlongMode = document.body.dataset.mode === "along";
 
 if (pageType === "levels") {
     loadLevels();
@@ -76,8 +77,12 @@ async function loadGame() {
     const sessionId = new URLSearchParams(location.search).get("session_id");
     try {
         const response = sessionId
-            ? await fetch(`/games/word-order/api/session/${encodeURIComponent(sessionId)}`)
-            : await fetch("/games/word-order/api/session", {
+            ? await fetch(isAlongMode
+                ? `/games/word-order/api/along/session/${encodeURIComponent(sessionId)}`
+                : `/games/word-order/api/session/${encodeURIComponent(sessionId)}`)
+            : await fetch(isAlongMode
+                ? "/games/word-order/api/along/session"
+                : "/games/word-order/api/session", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ level_id: levelId })
@@ -85,7 +90,8 @@ async function loadGame() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "No se pudo iniciar el nivel.");
         if (data.completed) {
-            location.assign(`/games/word-order/result/${encodeURIComponent(data.session_id)}`);
+            if (isAlongMode) showAlongCelebration(data);
+            else location.assign(`/games/word-order/result/${encodeURIComponent(data.session_id)}`);
             return;
         }
         gameState = data;
@@ -192,7 +198,9 @@ async function checkCurrentAnswer() {
     const checkButton = document.getElementById("check-answer");
     checkButton.disabled = true;
     try {
-        const response = await fetch("/games/word-order/check", {
+        const response = await fetch(isAlongMode
+            ? "/games/word-order/along/check"
+            : "/games/word-order/check", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -237,16 +245,28 @@ function showFeedback(data) {
     document.getElementById("streak-label").textContent = `Streak ${data.streak}`;
     document.getElementById("check-answer").hidden = true;
     const continueButton = document.getElementById("continue-game");
-    continueButton.textContent = "Continue";
+    continueButton.textContent = isAlongMode && !data.next_available ? "Celebrate" : "Continue";
     continueButton.hidden = false;
     continueButton.focus();
+}
+
+function showAlongCelebration(data) {
+    document.querySelector(".wo-exercise").hidden = true;
+    document.getElementById("along-final-score").textContent = data.score;
+    document.getElementById("along-final-correct").textContent =
+        `${data.correct_count} / ${data.total_challenges} correct`;
+    const celebration = document.getElementById("along-celebration");
+    celebration.hidden = false;
+    document.getElementById("along-celebration-title").focus();
 }
 
 async function continueGame() {
     const button = document.getElementById("continue-game");
     button.disabled = true;
     try {
-        const response = await fetch("/games/word-order/api/continue", {
+        const response = await fetch(isAlongMode
+            ? "/games/word-order/api/along/continue"
+            : "/games/word-order/api/continue", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ session_id: gameState.session_id })
@@ -254,7 +274,8 @@ async function continueGame() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "No se pudo continuar.");
         if (data.completed) {
-            location.assign(data.result_url);
+            if (isAlongMode) showAlongCelebration(data);
+            else location.assign(data.result_url);
             return;
         }
         showChallenge(data.challenge);

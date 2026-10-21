@@ -55,6 +55,7 @@ import sqlite3
 import unicodedata
 
 from flask import Blueprint, render_template, jsonify, request, session, current_app
+from gallery import exercise_image_url, current_app
 
 phantom_pronouns_bp = Blueprint(
     "phantom_pronouns", __name__, url_prefix="/phantom-pronouns"
@@ -1044,7 +1045,10 @@ def get_exercise_set():
         exercises = build_review_set(completed_ids, count)
         if not exercises:
             return jsonify({"error": "No completed levels to review yet."}), 400
-        return jsonify(exercises)
+        return jsonify([
+            {**exercise, "hint_image": exercise_image_url(exercise["hint_image"])}
+            for exercise in exercises
+        ])
 
     level_id = _parse_level_id(level_param)
     if level_id is None:
@@ -1054,7 +1058,10 @@ def get_exercise_set():
         return jsonify({"error": "Level not available"}), 404
 
     session["pp_active_level"] = level_id
-    return jsonify(build_exercise_set(level_id, count))
+    return jsonify([
+        {**exercise, "hint_image": exercise_image_url(exercise["hint_image"])}
+        for exercise in build_exercise_set(level_id, count)
+    ])
 
 
 @phantom_pronouns_bp.route("/api/submit-score", methods=["POST"])

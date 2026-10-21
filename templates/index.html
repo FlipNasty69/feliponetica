@@ -1337,6 +1337,7 @@ body:has(.hero) .testimonial-window {
 <a href="/about">Nosotros</a>
 <a href="/contact">Contacto</a>
 <a href="/lessons">Lecciones</a>
+<a href="{{ url_for('gallery.gallery_page') }}">Galería</a>
 <a href="{{ url_for('test_center') }}">Test Center</a>
 <a href="/course">Curso</a>
 <a href="{{ url_for('live_classes') }}">Clases</a>
@@ -1416,11 +1417,7 @@ body:has(.hero) .testimonial-window {
 
 <section class="testimonials landing-section" id="testimonios">
 
-<div class="testimonial-bg" id="testimonial-bg"
-data-image-count="42"
-data-image-folder="{{ url_for('static', filename='images/class_pics') }}"
-data-image-prefix="class_pics"
-data-image-extensions="jpg,jpeg"></div>
+<div class="testimonial-bg" id="testimonial-bg"></div>
 <div class="testimonial-overlay"></div>
 
 <div class="testimonial-inner">
@@ -1584,7 +1581,6 @@ data-image-extensions="jpg,jpeg"></div>
 Aprende inglés. Entiende inglés. Habla inglés.
 </footer>
 
-<script src="{{ url_for('static', filename='scripts/background_engine.js') }}"></script>
 
 <script>
 /* =========================================================

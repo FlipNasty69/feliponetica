@@ -12,6 +12,8 @@ from flask import request, render_template
 from flask import Flask, render_template, request, send_from_directory, abort
 from flask import session, redirect, url_for
 from features.feliponetica import feliponetica_bp
+from flask_compress import Compress
+from gallery import exercise_image_url, gallery_bp, public_audio_url
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -23,11 +25,23 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
+    SEND_FILE_MAX_AGE_DEFAULT=3600,
+    PUBLIC_ASSET_BASE_URL=os.environ.get("PUBLIC_ASSET_BASE_URL", ""),
+    PUBLIC_IMAGE_BASE_URL=os.environ.get(
+        "PUBLIC_IMAGE_BASE_URL",
+        os.environ.get("GALLERY_ASSET_BASE_URL", ""),
+    ),
     SESSION_COOKIE_SECURE=os.environ.get(
         "FLASK_COOKIE_SECURE",
         "1" if os.environ.get("RENDER") else "0",
     ) == "1",
 )
+app.config.update(
+    COMPRESS_ALGORITHM=["br", "gzip"],
+    COMPRESS_BR_LEVEL=9,
+    COMPRESS_MIN_SIZE=500,
+)
+Compress(app)
 STUDENT_DATABASE_PATH = os.path.join(app.root_path, "student_users.db")
 TEST_RESULTS_ADMIN_PASSWORD_HASH = os.environ.get(
     "TEST_RESULTS_ADMIN_PASSWORD_HASH",
@@ -50,9 +64,12 @@ USERS = {
 from games.vocab_game import vocab_bp
 from games.phantom_pronouns import phantom_pronouns_bp
 from games.adverb_game import adverb_game_bp
+from games.question_game import question_game_bp
 from word_order import word_order_bp
 from word_order.cli import register_cli
-GAME_BLUEPRINTS = [vocab_bp, phantom_pronouns_bp, adverb_game_bp, word_order_bp]
+GAME_BLUEPRINTS = [
+    vocab_bp, phantom_pronouns_bp, adverb_game_bp, question_game_bp, word_order_bp
+]
 
 def register_game_blueprints():
     for blueprint in GAME_BLUEPRINTS:
@@ -61,7 +78,34 @@ def register_game_blueprints():
 
 register_game_blueprints()
 app.register_blueprint(feliponetica_bp)
+app.register_blueprint(gallery_bp)
 register_cli(app)
+
+
+@app.context_processor
+def inject_gallery_thumbnail_url():
+    return {
+        "gallery_thumbnail_url": exercise_image_url,
+        "public_audio_url": public_audio_url,
+        "public_asset_base_url": (
+            app.config.get("PUBLIC_ASSET_BASE_URL")
+            or app.config.get("PUBLIC_IMAGE_BASE_URL")
+            or ""
+        ).rstrip("/"),
+    }
+
+
+@app.after_request
+def cache_versioned_static_assets(response):
+    if request.endpoint == "gallery.gallery_page" and response.status_code == 200:
+        response.headers["Cache-Control"] = "public, max-age=3600"
+    elif request.endpoint == "static":
+        filename = (request.view_args or {}).get("filename", "")
+        if filename.startswith("gallery-thumbnails/") or request.args.get("v"):
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable"
+            )
+    return response
 
 
 @app.route("/static/data/tests.xlsx")

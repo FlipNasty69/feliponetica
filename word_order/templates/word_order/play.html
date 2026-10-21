@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Build the Sentence | English Course</title>
+  <title>{% if mode == "along" %}Along Word Order{% else %}Build the Sentence{% endif %} | English Course</title>
   <link rel="stylesheet" href="{{ url_for('word_order.static', filename='word_order.css') }}">
 </head>
-<body data-page="play" data-level-id="{{ level_id }}">
+<body data-page="play" data-mode="{{ mode }}" data-level-id="{{ level_id }}">
   <header class="wo-topbar">
     <a class="wo-brand" href="{{ url_for('games_dashboard') }}">English Course <span>Games</span></a>
     <a class="wo-back" href="{{ url_for('word_order.levels_page') }}">Exit</a>
@@ -14,8 +14,8 @@
   <main class="wo-play-page">
     <div class="wo-play-heading">
       <div class="wo-level-heading">
-        <p class="wo-eyebrow" id="level-name-es">Word Order</p>
-        <h1 id="level-name-en">Build the sentence</h1>
+        <p class="wo-eyebrow" id="level-name-es">{% if mode == "along" %}A lo largo{% else %}Word Order{% endif %}</p>
+        <h1 id="level-name-en">{% if mode == "along" %}Along{% else %}Build the sentence{% endif %}</h1>
       </div>
       <div class="wo-score" aria-label="Current score"><span>Score</span><strong id="score">0</strong></div>
     </div>
@@ -27,7 +27,7 @@
       <span id="streak-label">Streak 0</span>
     </div>
     <section class="wo-exercise" aria-labelledby="challenge-prompt">
-      <p class="wo-instruction">Ordena las palabras para construir la respuesta en inglés.</p>
+      <p class="wo-instruction">{% if mode == "along" %}Ordena las palabras para traducir cada oración.{% else %}Ordena las palabras para construir la respuesta en inglés.{% endif %}</p>
       <h2 id="challenge-prompt" class="wo-prompt">Loading challenge...</h2>
       <p id="skill-tag" class="wo-skill-tag"></p>
       <div class="wo-answer-wrap">
@@ -45,6 +45,18 @@
         <button id="continue-game" class="wo-button wo-button-primary" type="button" hidden>Continue</button>
       </div>
     </section>
+    {% if mode == "along" %}
+    <section id="along-celebration" class="wo-celebration" aria-labelledby="along-celebration-title" aria-live="polite" hidden>
+      <div class="wo-celebration-card">
+        <div class="wo-fireworks" aria-hidden="true"><span>🎉</span><span>✨</span><span>🎆</span></div>
+        <p class="wo-eyebrow">¡Lo lograste!</p>
+        <h2 id="along-celebration-title" tabindex="-1">You did it!</h2>
+        <p class="wo-celebration-copy">You finished the Along word-order challenge!</p>
+        <p class="wo-celebration-score"><strong id="along-final-score">0</strong> points · <span id="along-final-correct">0 / 0 correct</span></p>
+        <a class="wo-button wo-button-primary" href="{{ url_for('vocab_game.along_picture_match_game') }}">Play Along again</a>
+      </div>
+    </section>
+    {% endif %}
   </main>
   <script defer src="{{ url_for('word_order.static', filename='word_order.js') }}"></script>
 </body>

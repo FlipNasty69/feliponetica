@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import sqlite3
@@ -81,6 +82,7 @@ BOOLEAN_COLUMNS = {"active"}
 INTEGER_COLUMNS = {
     "level_id", "level_min", "min_level", "max_tokens", "slot_order", "token_count",
 }
+ALONG_HEADERS = ("exercise", *(f"slot_{index}" for index in range(1, 10)), "spanish_prompt")
 
 
 class WorkbookImportError(ValueError):
@@ -198,6 +200,57 @@ def _read_workbook(path):
                     )
                 table_records.append(record)
             records[table_name] = table_records
+        along_records = []
+        if "along" in found_tables:
+            worksheet, table = found_tables["along"]
+            cells = worksheet[table.ref]
+            headers = [
+                _column_name(cell.value) if cell.value is not None else ""
+                for cell in cells[0]
+            ]
+            missing_headers = sorted(set(ALONG_HEADERS) - set(headers))
+            if missing_headers:
+                raise WorkbookImportError(
+                    "along is missing columns: " + ", ".join(missing_headers)
+                )
+
+            for row_number, row in enumerate(cells[1:], start=2):
+                values = {
+                    header: _cell_value(cell.value)
+                    for header, cell in zip(headers, row)
+                    if header
+                }
+                if not any(value is not None for value in values.values()):
+                    continue
+                exercise_id = _as_integer(values.get("exercise"), "exercise", "along")
+                if exercise_id is None or exercise_id < 1:
+                    raise WorkbookImportError(
+                        f"along row {row_number} has an invalid exercise number.",
+                        rejected=1,
+                    )
+                prompt_es = values.get("spanish_prompt")
+                ordered_tokens = [
+                    values.get(f"slot_{index}")
+                    for index in range(1, 10)
+                ]
+                ordered_tokens = [token for token in ordered_tokens if token is not None]
+                if not prompt_es:
+                    raise WorkbookImportError(
+                        f"along row {row_number} is missing: spanish_prompt",
+                        rejected=1,
+                    )
+                if not ordered_tokens:
+                    raise WorkbookImportError(
+                        f"along row {row_number} must contain at least one word slot.",
+                        rejected=1,
+                    )
+                along_records.append({
+                    "exercise_id": exercise_id,
+                    "prompt_es": prompt_es,
+                    "ordered_tokens": json.dumps(ordered_tokens, ensure_ascii=False),
+                })
+        records["along"] = along_records
+        records["has_along_table"] = "along" in found_tables
         return records
     finally:
         workbook.close()
@@ -214,6 +267,15 @@ def _validate_relationships(records):
                     rejected=1,
                 )
             seen.add(identity)
+
+    seen_exercises = set()
+    for index, exercise in enumerate(records["along"], start=2):
+        if exercise["exercise_id"] in seen_exercises:
+            raise WorkbookImportError(
+                f"along contains duplicate exercise {exercise['exercise_id']!r} at row {index}.",
+                rejected=1,
+            )
+        seen_exercises.add(exercise["exercise_id"])
 
     level_ids = {row["level_id"] for row in records["tblLevels"]}
     pattern_ids = {row["pattern_id"] for row in records["tblPatterns"]}
@@ -297,6 +359,49 @@ def import_workbook(workbook_path, database_path, deactivate_missing=False):
                         f"UPDATE {destination} SET active = 0 WHERE active = 1"
                     )
                 summary["deactivated"] += cursor.rowcount
+
+        if records["has_along_table"]:
+            existing_exercises = {
+                row[0]: row[1:]
+                for row in connection.execute(
+                    "SELECT exercise_id, prompt_es, ordered_tokens, active FROM along_exercises"
+                )
+            }
+            incoming_ids = set()
+            for exercise in records["along"]:
+                exercise_id = exercise["exercise_id"]
+                values = (exercise["prompt_es"], exercise["ordered_tokens"], 1)
+                incoming_ids.add(exercise_id)
+                existing = existing_exercises.get(exercise_id)
+                if existing is None:
+                    summary["inserted"] += 1
+                elif tuple(existing) == values:
+                    summary["unchanged"] += 1
+                    continue
+                else:
+                    summary["updated"] += 1
+                connection.execute("""
+                    INSERT INTO along_exercises
+                        (exercise_id, prompt_es, ordered_tokens, active)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(exercise_id) DO UPDATE SET
+                        prompt_es = excluded.prompt_es,
+                        ordered_tokens = excluded.ordered_tokens,
+                        active = excluded.active
+                """, (exercise_id, *values))
+
+            if incoming_ids:
+                placeholders = ", ".join("?" for _ in incoming_ids)
+                cursor = connection.execute(
+                    "UPDATE along_exercises SET active = 0 "
+                    f"WHERE active = 1 AND exercise_id NOT IN ({placeholders})",
+                    tuple(incoming_ids),
+                )
+            else:
+                cursor = connection.execute(
+                    "UPDATE along_exercises SET active = 0 WHERE active = 1"
+                )
+            summary["deactivated"] += cursor.rowcount
 
         stat = os.stat(workbook_path)
         connection.execute(

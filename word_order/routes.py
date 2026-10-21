@@ -5,12 +5,16 @@ from flask import abort, current_app, jsonify, redirect, render_template, reques
 from word_order import word_order_bp
 from word_order.gameplay import (
     GameStateError,
+    continue_along_session,
     continue_session,
     get_level_catalog,
     get_result,
     resume_session,
+    resume_along_session,
     start_session,
+    start_along_session,
     submit_answer,
+    submit_along_answer,
 )
 from word_order.storage import connect_database
 
@@ -55,7 +59,12 @@ def level_detail(level_id):
 
 @word_order_bp.route("/play/<int:level_id>")
 def play_level(level_id):
-    return render_template("word_order/play.html", level_id=level_id)
+    return render_template("word_order/play.html", level_id=level_id, mode="level")
+
+
+@word_order_bp.route("/along")
+def along_page():
+    return render_template("word_order/play.html", level_id="", mode="along")
 
 
 @word_order_bp.route("/api/levels")
@@ -71,6 +80,16 @@ def levels_api():
 def create_game_session():
     payload = request.get_json(silent=True) or {}
     return _json_game_call(start_session, _profile_key(), payload.get("level_id"))
+
+
+@word_order_bp.route("/api/along/session", methods=["POST"])
+def create_along_session():
+    return _json_game_call(start_along_session, _profile_key())
+
+
+@word_order_bp.route("/api/along/session/<session_id>")
+def resume_along_game_session(session_id):
+    return _json_game_call(resume_along_session, session_id, _profile_key())
 
 
 @word_order_bp.route("/api/session/<session_id>")
@@ -92,12 +111,35 @@ def check_answer():
     )
 
 
+@word_order_bp.route("/along/check", methods=["POST"])
+def check_along_answer():
+    payload = request.get_json(silent=True) or {}
+    if not payload.get("session_id"):
+        return jsonify({"error": "session_id is required"}), 400
+    return _json_game_call(
+        submit_along_answer,
+        payload["session_id"],
+        _profile_key(),
+        payload.get("answer", ""),
+    )
+
+
 @word_order_bp.route("/api/continue", methods=["POST"])
 def continue_game_session():
     payload = request.get_json(silent=True) or {}
     if not payload.get("session_id"):
         return jsonify({"error": "session_id is required"}), 400
     return _json_game_call(continue_session, payload["session_id"], _profile_key())
+
+
+@word_order_bp.route("/api/along/continue", methods=["POST"])
+def continue_along_game_session():
+    payload = request.get_json(silent=True) or {}
+    if not payload.get("session_id"):
+        return jsonify({"error": "session_id is required"}), 400
+    return _json_game_call(
+        continue_along_session, payload["session_id"], _profile_key()
+    )
 
 
 @word_order_bp.route("/result/<session_id>")

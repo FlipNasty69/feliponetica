@@ -17,10 +17,7 @@
     <!-- Shared depth background -->
     <div class="depth-background"
          id="depth-background"
-         data-image-count="42"
-         data-image-folder="{{ url_for('static', filename='images/class_pics') }}"
-         data-image-prefix="class_pics"
-         data-image-extensions="webp">
+         aria-hidden="true">
 
         <div class="depth-layer depth-10"></div>
         <div class="depth-layer depth-9"></div>
@@ -52,6 +49,7 @@
                 <a href="/vocab_drill">Vocabulary</a>
                 <a href="/about">About</a>
                 <a href="/lessons">Lessons</a>
+                <a href="{{ url_for('gallery.gallery_page') }}">Gallery</a>
                 <a href="/course">Course</a>
                 <a href="/live-classes">Live Classes</a>
                 <a href="{{ url_for('logout') }}">Logout</a>
@@ -230,7 +228,6 @@
 
 
     <!-- Shared depth background JavaScript -->
-    <script src="{{ url_for('static', filename='scripts/background_engine.js') }}"></script>
 
 </body>
 </html>

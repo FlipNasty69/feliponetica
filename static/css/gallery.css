@@ -1,0 +1,167 @@
+.gallery-page {
+    min-height: 100vh;
+    background: #f2f7fb;
+    color: #10223b;
+}
+
+.gallery-main {
+    width: min(1200px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: clamp(32px, 6vw, 72px) 0;
+}
+
+.gallery-heading {
+    max-width: 720px;
+    margin-bottom: 28px;
+}
+
+.gallery-eyebrow {
+    margin-bottom: 8px;
+    color: #1761a0;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.gallery-heading h1 {
+    margin-bottom: 12px;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+.gallery-heading > p:last-child {
+    color: #43566d;
+}
+
+.gallery-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 24px 0;
+}
+
+.gallery-filter {
+    border: 1px solid #bfd0df;
+    border-radius: 999px;
+    padding: 9px 15px;
+    background: white;
+    color: #163653;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.gallery-filter:hover,
+.gallery-filter.is-active {
+    border-color: #1761a0;
+    background: #1761a0;
+    color: white;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+    gap: 18px;
+}
+
+.gallery-card {
+    overflow: hidden;
+    border: 1px solid #d7e1eb;
+    border-radius: 14px;
+    padding: 0;
+    background: white;
+    color: inherit;
+    cursor: zoom-in;
+    text-align: left;
+    box-shadow: 0 5px 16px rgb(16 34 59 / 8%);
+}
+
+.gallery-card[hidden] {
+    display: none;
+}
+
+.gallery-card img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: #e7eef5;
+}
+
+.gallery-card-caption {
+    display: block;
+    padding: 11px 13px;
+    font-weight: 700;
+}
+
+.gallery-load-more {
+    display: block;
+    margin: 28px auto 0;
+    border: 0;
+    border-radius: 999px;
+    padding: 12px 22px;
+    background: #1761a0;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 800;
+}
+
+.gallery-load-more[hidden] {
+    display: none;
+}
+
+.gallery-dialog {
+    position: relative;
+    max-width: min(94vw, 1200px);
+    max-height: 94vh;
+    border: 0;
+    border-radius: 12px;
+    padding: 16px;
+    background: #101820;
+    color: white;
+}
+
+.gallery-dialog::backdrop {
+    background: rgb(0 0 0 / 82%);
+}
+
+.gallery-dialog-image {
+    display: block;
+    max-width: calc(94vw - 32px);
+    max-height: calc(86vh - 32px);
+    margin: 0 auto;
+    object-fit: contain;
+}
+
+.gallery-dialog-caption {
+    margin: 10px 42px 0 0;
+    text-align: center;
+}
+
+.gallery-dialog-close {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    z-index: 1;
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 92%);
+    color: #10223b;
+    cursor: pointer;
+    font-size: 28px;
+    line-height: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .gallery-card {
+        transition: transform .16s ease, box-shadow .16s ease;
+    }
+
+    .gallery-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 24px rgb(16 34 59 / 14%);
+    }
+}

@@ -17,13 +17,22 @@ let score = 0;
 let attempts = new Map();
 let completedForms = new Set();
 const progressStorageKey = "feliponetica-conjugation-progress";
+const publicAssetBaseUrl = (window.PUBLIC_ASSET_BASE_URL || "").replace(/\/+$/, "");
+const publicAssetUrl = url => {
+    const canonicalUrl = url.replace(
+        /^\/static\/audio\/pronunciation(?:%20| )audio\//i,
+        "/static/audio/verb_conjugation/"
+    );
+    if (!publicAssetBaseUrl || !canonicalUrl.startsWith("/static/audio/")) return canonicalUrl;
+    return `${publicAssetBaseUrl}${canonicalUrl.slice("/static".length)}`;
+};
 const savedUser = document.body.dataset.savedUser === "true";
 const adminMode = document.body.dataset.adminMode === "true";
 let customVerbs = [];
 let progressState = {};
 const CORRECT_ANSWER_AUDIO_URLS = Array.from(
     { length: 11 },
-    (_, index) => `/static/audio/game_feedback/correct_answer-${String(index + 1).padStart(2, "0")}.mp3`
+    (_, index) => publicAssetUrl(`/static/audio/game_feedback/correct_answer-${String(index + 1).padStart(2, "0")}.mp3`)
 );
 let correctAnswersSinceFeedback = 0;
 let nextCorrectFeedbackAt = 3 + Math.floor(Math.random() * 2);
@@ -269,10 +278,25 @@ function renderSetList() {
         const button = document.createElement("button");
         button.type = "button";
         button.className = `set-card${index === selectedGroupIndex ? " active" : ""}`;
-        button.innerHTML = `<strong>${group.name}</strong><span>${group.series.length} series</span>`;
+        const name = document.createElement("strong");
+        name.textContent = group.name;
+        const summary = document.createElement("span");
+        summary.textContent = `${group.series.length} series`;
+        button.append(name, summary);
         button.addEventListener("click", () => selectGroup(index));
         list.appendChild(button);
     });
+    const idSetButton = document.createElement("button");
+    idSetButton.type = "button";
+    idSetButton.className = "set-card";
+    const idSetName = document.createElement("strong");
+    idSetName.textContent = "Build a set by ID";
+    const idSetSummary = document.createElement("span");
+    idSetSummary.textContent = "Choose specific verbs";
+    idSetButton.append(idSetName, idSetSummary);
+    idSetButton.addEventListener("click", openIdSetEntry);
+    list.appendChild(idSetButton);
+
     if (adminMode) {
         const customButton = document.createElement("button");
         customButton.type = "button";
@@ -281,6 +305,83 @@ function renderSetList() {
         customButton.addEventListener("click", openCustomEntry);
         list.appendChild(customButton);
     }
+}
+
+function openIdSetEntry() {
+    const form = document.getElementById("id-verb-form");
+    form.reset();
+    document.getElementById("id-entry-message").textContent = "";
+    document.getElementById("id-entry").hidden = false;
+    document.getElementById("verb-ids").focus();
+}
+
+function normalizedHeaderName(header) {
+    return String(header).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function findVerbIdField(verbs) {
+    const idHeaderNames = ["verbid", "wordid", "verbidentifier", "wordidentifier", "id"];
+    for (const expectedName of idHeaderNames) {
+        const matchingHeader = verbs.flatMap(verb => Object.keys(verb)).find(
+            header => normalizedHeaderName(header) === expectedName
+        );
+        if (matchingHeader) return matchingHeader;
+    }
+    return null;
+}
+
+function startIdVerbSet(event) {
+    event.preventDefault();
+    const requestedIds = [...new Set(
+        document.getElementById("verb-ids").value
+            .split(/[\s,;]+/)
+            .map(id => id.trim().toUpperCase())
+            .filter(Boolean)
+    )];
+    const allVerbs = groups.flatMap(group =>
+        group.series.flatMap(series => series.verbs || [])
+    );
+    const idField = findVerbIdField(allVerbs);
+    const message = document.getElementById("id-entry-message");
+    if (!idField) {
+        message.textContent = "The verb data has no ID column. Add a Word ID column to the master verb table.";
+        return;
+    }
+    const verbsById = new Map();
+    allVerbs.forEach(verb => {
+        const id = String(verb[idField] ?? "").trim().toUpperCase();
+        if (id && !verbsById.has(id)) verbsById.set(id, verb);
+    });
+    const missingIds = requestedIds.filter(id => !verbsById.has(id));
+
+    if (!requestedIds.length) {
+        message.textContent = "Enter at least one verb ID.";
+        return;
+    }
+    if (missingIds.length) {
+        message.textContent = `Could not find these IDs: ${missingIds.join(", ")}. Check the IDs and try again.`;
+        return;
+    }
+
+    const requestedVerbs = requestedIds.map(id => verbsById.get(id));
+    const groupName = `Verb IDs: ${requestedIds.join(", ")}`;
+    let groupIndex = groups.findIndex(
+        group => group.isIdSet && group.name === groupName
+    );
+    if (groupIndex === -1) {
+        groups.push({
+            name: groupName,
+            isCustom: true,
+            isIdSet: true,
+            series: [{ title: "Selected verbs", verbs: requestedVerbs }]
+        });
+        groupIndex = groups.length - 1;
+    } else {
+        groups[groupIndex].series[0].verbs = requestedVerbs;
+    }
+    document.getElementById("id-entry").hidden = true;
+    selectGroup(groupIndex);
+    startSeries();
 }
 
 function openCustomEntry() {
@@ -367,14 +468,15 @@ async function resolveAudioValue(form, text) {
 async function addAudioLink(area, form, text) {
     const value = await resolveAudioValue(form, text);
     if (!value) return;
-    const exists = await audioUrlExists(value);
+    const publicUrl = publicAssetUrl(value);
+    const exists = await audioUrlExists(publicUrl);
     if (!exists) return;
     const button = document.createElement("button");
     button.className = "audio-link";
     button.type = "button";
     button.textContent = "Play verb audio";
     button.addEventListener("click", () => {
-        const audio = new Audio(value);
+        const audio = new Audio(publicUrl);
         audio.play().catch(() => {});
     });
     area.appendChild(button);
@@ -384,9 +486,10 @@ async function playHelpAudio(areaIndex) {
     const form = FORM_DEFINITIONS[areaIndex];
     const audioUrl = await resolveAudioValue(form, currentVerb?.[form.key] || currentVerb?.verb || "");
     if (!audioUrl) return;
-    const exists = await audioUrlExists(audioUrl);
+    const publicAudioUrl = publicAssetUrl(audioUrl);
+    const exists = await audioUrlExists(publicAudioUrl);
     if (!exists) return;
-    const audio = new Audio(audioUrl);
+    const audio = new Audio(publicAudioUrl);
     audio.play().catch(() => {});
 }
 
@@ -435,11 +538,11 @@ function buildVerbAudioUrl(text, formKey = "") {
         });
     });
 
-    const audioRoot = "/static/audio/pronunciation%20audio/";
+    const audioRoot = "/static/audio/verb_conjugation/";
     for (const candidate of queue) {
         for (const extension of [".mp3", ".wav"]) {
             const fileName = `${candidate}${extension}`;
-            return `${audioRoot}${encodeURIComponent(fileName).replace(/%20/g, " ")}`;
+            return publicAssetUrl(`${audioRoot}${encodeURIComponent(fileName).replace(/%20/g, " ")}`);
         }
     }
     return "";
@@ -500,6 +603,10 @@ function fireConfetti() {
 
 document.getElementById("start-button").addEventListener("click", startSeries);
 document.getElementById("next-button").addEventListener("click", nextSeries);
+document.getElementById("id-verb-form").addEventListener("submit", startIdVerbSet);
+document.getElementById("id-entry-cancel").addEventListener("click", () => {
+    document.getElementById("id-entry").hidden = true;
+});
 if (adminMode) {
     document.getElementById("custom-verb-form").addEventListener("submit", addCustomVerb);
     document.getElementById("custom-done").addEventListener("click", startCustomVerbSet);

@@ -1,9 +1,19 @@
 """Private server-side Feliponetica conversion feature."""
+import hmac
 import os
 import re
 
 import nltk
-from flask import Blueprint, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    current_app,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from g2p_en import G2p
 
 feliponetica_bp = Blueprint("feliponetica", __name__)
@@ -32,10 +42,11 @@ CMU_TO_FELIPONETICA_POLLITO = {
     "OY":"oi", "UH":"u", "UW":"uu", "P":"p", "B":"b", "T":"t",
     "D":"d", "K":"k", "G":"g", "F":"f", "V":"v", "TH":"t", "DH":"d",
     "S":"s", "Z":"z", "SH":"sh", "ZH":"(shᶻ)", "HH":"j", "CH":"ch",
-    "JH":"ch", "M":"m", "N":"n", "NG":"ng", "L":"l", "R":"r", "W":"w", "Y":"ll",
+    "JH":"ch", "M":"m", "N":"n", "NG":"ng", "L":"l", "R":"r", "W":"w", "Y":"y",
 }
 _g2p = None
 _PHONEME_PATTERN = re.compile(r"^[A-Z]+[0-2]?$")
+_WORD_PATTERN = re.compile(r"[^\W\d_]+", re.UNICODE)
 _VOWEL_PHONEMES = {"AA", "AE", "AH", "AO", "AW", "AY", "EH", "ER", "EY", "IH", "IY", "OW", "OY", "UH", "UW"}
 _VALID_ONSETS = {
     "B", "CH", "D", "DH", "F", "G", "HH", "JH", "K", "L", "M", "N", "P", "R", "S", "SH", "T", "TH", "V", "W", "Y", "Z",
@@ -73,8 +84,8 @@ def _syllable_starts(phonemes):
     mark_word(len(phonemes))
     return starts
 
-def convert_to_feliponetica(text, phoneme_map=CMU_TO_FELIPONETICA):
-    phonemes = _converter()(text)
+def _convert_word_to_feliponetica(word, phoneme_map):
+    phonemes = _converter()(word)
     syllable_starts = _syllable_starts(phonemes)
     for index, phone in enumerate(phonemes):
         if re.sub(r"\d", "", phone) == "DH":
@@ -111,6 +122,24 @@ def convert_to_feliponetica(text, phoneme_map=CMU_TO_FELIPONETICA):
         index += 1
     return "".join(converted)
 
+def convert_to_feliponetica(text, phoneme_map=CMU_TO_FELIPONETICA):
+    converted, position = [], 0
+    for match in _WORD_PATTERN.finditer(text):
+        converted.append(text[position:match.start()])
+        word = match.group()
+        if word.casefold() == "and":
+            if word.isupper():
+                converted.append("END")
+            elif word[0].isupper():
+                converted.append("End")
+            else:
+                converted.append("end")
+        else:
+            converted.append(_convert_word_to_feliponetica(word, phoneme_map))
+        position = match.end()
+    converted.append(text[position:])
+    return "".join(converted)
+
 def convert_to_feliponetica_pollito(text):
     return convert_to_feliponetica(text, CMU_TO_FELIPONETICA_POLLITO)
 
@@ -127,17 +156,25 @@ def _require_admin():
         return {"error": "Admin access required"}, 403
     return None
 
-def _transcribe_payload(require_admin=False):
-    access_error = _require_admin() if require_admin else _require_login()
-    if access_error:
-        return None, access_error
-    payload = request.get_json(silent=True) or {}
-    text = str(payload.get("text", "")).strip()
-    dialect = str(payload.get("dialect", "pollito")).lower()
-    if not text:
+def _transcribe_payload(require_admin=False, require_login=True, preserve_whitespace=False):
+    if require_login:
+        access_error = _require_admin() if require_admin else _require_login()
+        if access_error:
+            return None, access_error
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return None, (
+            jsonify({"error": "Submit transcription details as a JSON object."}),
+            400,
+        )
+    text = payload.get("text", "")
+    dialect = payload.get("dialect", "pollito")
+    if not isinstance(text, str) or not text.strip():
         return None, ({"error": "text is required"}, 400)
-    if dialect not in {"pollito", "gallo"}:
+    if not isinstance(dialect, str) or dialect.lower() not in {"pollito", "gallo"}:
         return None, ({"error": "dialect must be pollito or gallo"}, 400)
+    text = text if preserve_whitespace else text.strip()
+    dialect = dialect.lower()
     converter = convert_to_feliponetica_pollito if dialect == "pollito" else convert_to_feliponetica
     return {"dialect": dialect, "text": text, "result": converter(text)}, None
 
@@ -162,6 +199,41 @@ def feliponetica_ingles():
 def feliponetica_transcribe_api():
     result, error = _transcribe_payload(require_admin=True)
     return error or result
+
+@feliponetica_bp.post("/api/feliponetica/word")
+def feliponetica_word_api():
+    configured_api_key = (
+        current_app.config.get("FELIPONETICA_WORD_API_KEY")
+        or os.environ.get("FELIPONETICA_WORD_API_KEY")
+    )
+    if not isinstance(configured_api_key, str) or not configured_api_key:
+        return jsonify({"error": "The Word transcription API is not configured."}), 503
+
+    scheme, separator, provided_api_key = request.headers.get(
+        "Authorization", ""
+    ).partition(" ")
+    if (
+        not separator
+        or scheme.lower() != "bearer"
+        or not provided_api_key.isascii()
+        or not configured_api_key.isascii()
+        or not hmac.compare_digest(provided_api_key, configured_api_key)
+    ):
+        response = jsonify({"error": "A valid bearer token is required."})
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response, 401
+
+    result, error = _transcribe_payload(
+        require_login=False,
+        preserve_whitespace=True,
+    )
+    if error:
+        return error
+    line_break = "" if result["text"].endswith(("\r", "\n")) else "\r\n"
+    result["formatted_text"] = (
+        f"{result['text']}{line_break}{result['result']}"
+    )
+    return result
 
 @feliponetica_bp.post("/api/feliponetica/transcribe-page")
 def feliponetica_transcribe_page():

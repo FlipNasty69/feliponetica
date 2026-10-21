@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Along With | Vocabulary Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #f7f9fa;
+      --card-bg: #fff;
+      --text-main: #4b4b4b;
+      --green-main: #58cc02;
+      --green-shadow: #46a302;
+      --blue-main: #1cb0f6;
+      --red-main: #ff4b4b;
+      --gray-light: #e5e5e5;
+      --gray-shadow: #afafaf;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      display: grid;
+      place-items: center;
+      background: var(--bg-color);
+      color: var(--text-main);
+      font-family: "Nunito", sans-serif;
+    }
+    button, a { font: inherit; }
+    .game-container {
+      width: min(1240px, 100%);
+      padding: 24px;
+      border: 2px solid var(--gray-light);
+      border-bottom-width: 5px;
+      border-radius: 20px;
+      background: var(--card-bg);
+    }
+    .header-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .stage-badge { color: var(--blue-main); font-size: 14px; font-weight: 900; text-transform: uppercase; white-space: nowrap; }
+    .progress-outer { flex: 1; height: 16px; overflow: hidden; border-radius: 10px; background: var(--gray-light); }
+    .progress-inner { width: 0; height: 100%; border-radius: inherit; background: var(--green-main); transition: width .25s ease; }
+    h1, h2, p { margin-top: 0; }
+    h1 { margin-bottom: 8px; font-size: clamp(26px, 4vw, 36px); text-align: center; }
+    .instructions { margin-bottom: 22px; color: #666; text-align: center; }
+    .activity-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(250px, 290px);
+      align-items: start;
+      gap: 22px;
+    }
+    .prompt-area { min-width: 0; }
+    .question-list { display: grid; gap: 12px; }
+    .question-card {
+      padding: 16px;
+      border: 2px solid var(--gray-light);
+      border-bottom-width: 5px;
+      border-radius: 16px;
+    }
+    .question-text { margin: 0; font-size: clamp(16px, 1.5vw, 19px); line-height: 2.5; }
+    .blank-slot {
+      min-width: min(130px, 34vw);
+      min-height: 42px;
+      margin: 4px;
+      padding: 5px 8px;
+      border: 2px dashed var(--blue-main);
+      border-radius: 10px;
+      background: #f0faff;
+      color: var(--blue-main);
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .blank-slot.is-selected { outline: 3px solid #17305f; outline-offset: 2px; }
+    .blank-slot.is-correct { border-style: solid; border-color: var(--green-main); background: #e9f9dc; color: #347900; }
+    .blank-slot.is-wrong, .blank-slot.needs-answer { border-style: solid; border-color: var(--red-main); background: #fff0f0; color: #b42318; }
+    .blank-slot:focus-visible, .word-choice:focus-visible, .duo-btn:focus-visible {
+      outline: 3px solid #17305f;
+      outline-offset: 3px;
+    }
+    .word-bank {
+      position: sticky;
+      top: 16px;
+      min-width: 0;
+      padding: 16px;
+      border: 2px solid var(--gray-light);
+      border-bottom-width: 5px;
+      border-radius: 16px;
+      background: #fbfdff;
+    }
+    .word-bank h2 { margin-bottom: 12px; font-size: 20px; text-align: center; }
+    .word-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .word-choice {
+      min-width: 0;
+      min-height: 52px;
+      padding: 8px 6px;
+      border: 2px solid var(--gray-light);
+      border-bottom-width: 5px;
+      border-radius: 14px;
+      background: #fff;
+      color: var(--text-main);
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .word-choice:hover { border-color: var(--blue-main); background: #ddf4ff; }
+    .actions { margin-top: 22px; text-align: center; }
+    .duo-btn {
+      display: inline-flex;
+      min-height: 52px;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      border: 0;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 900;
+      text-decoration: none;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .btn-green { background: var(--green-main); box-shadow: 0 4px 0 var(--green-shadow); color: #fff; }
+    .btn-green:active { transform: translateY(3px); box-shadow: none; }
+    .feedback { min-height: 28px; margin: 18px 0 0; font-weight: 900; text-align: center; }
+    .feedback.is-error { color: #c62828; }
+    .feedback.is-success { color: #347900; }
+    .finished { margin-top: 20px; padding: 28px 16px; border-radius: 18px; background: #e9f9dc; text-align: center; }
+    .finished h2 { margin-bottom: 8px; color: #347900; font-size: 28px; }
+    .hidden { display: none !important; }
+    @media (max-width: 760px) {
+      body { padding: 12px; place-items: start center; }
+      .game-container { padding: 16px; }
+      .activity-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+      .word-bank { position: static; grid-row: 1; }
+      .prompt-area { grid-row: 2; }
+      .word-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .question-card { padding: 12px; }
+      .question-text { font-size: 16px; line-height: 2.2; }
+      .blank-slot { min-width: min(118px, 34vw); min-height: 44px; margin: 3px 2px; }
+      .duo-btn { min-height: 48px; }
+    }
+    @media (max-width: 480px) {
+      body { padding: 8px; }
+      .game-container { padding: 12px; border-radius: 16px; }
+      .header-bar { gap: 8px; margin-bottom: 18px; }
+      .stage-badge { font-size: 12px; }
+      .instructions { margin-bottom: 16px; font-size: 14px; }
+      .word-bank { padding: 12px; }
+      .word-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .word-choice { min-height: 48px; font-size: 14px; overflow-wrap: anywhere; }
+      .question-list { gap: 10px; }
+      .question-card { padding: 10px; }
+      .question-text { font-size: 15px; line-height: 2.5; }
+      .blank-slot { min-width: min(108px, 32vw); min-height: 44px; padding: 5px; font-size: 13px; }
+      .actions { margin-top: 16px; }
+      .actions .duo-btn { width: 100%; }
+      .feedback { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-container">
+    <header class="header-bar">
+      <span class="stage-badge" id="stageBadge">0 / {{ questions|length * 2 }} correct</span>
+      <div class="progress-outer" id="progressOuter" role="progressbar" aria-label="Correct blanks" aria-valuemin="0" aria-valuemax="{{ questions|length * 2 }}" aria-valuenow="0">
+        <div class="progress-inner" id="progressBar"></div>
+      </div>
+    </header>
+
+    <section aria-labelledby="pageTitle">
+      <h1 id="pageTitle">Along with</h1>
+      <p class="instructions" id="instructions">Click a blank, then choose a word from the word bank. Fill every blank and check your answers.</p>
+
+      <div class="activity-layout">
+        <section class="prompt-area" aria-label="Fill-in-the-blank sentences">
+          <div class="question-list" id="questionList">
+            {% for question in questions %}
+            <article class="question-card">
+              <p class="question-text">
+                <span>{{ question.parts[0] }}</span>
+                <button class="blank-slot" type="button" data-blank-index="{{ loop.index0 * 2 }}" aria-label="Choose the first word for sentence {{ loop.index }}" aria-pressed="false">Choose a word</button>
+                <span>{{ question.parts[1] }}</span>
+                <button class="blank-slot" type="button" data-blank-index="{{ loop.index0 * 2 + 1 }}" aria-label="Choose the second word for sentence {{ loop.index }}" aria-pressed="false">Choose a word</button>
+                <span>{{ question.parts[2] }}</span>
+              </p>
+            </article>
+            {% endfor %}
+          </div>
+
+          <div class="actions">
+            <button class="duo-btn btn-green" id="checkButton" type="button">Check answers</button>
+          </div>
+          <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+          <section class="finished hidden" id="finishedMessage" aria-labelledby="finishedTitle" role="status">
+            <h2 id="finishedTitle">Great work!</h2>
+            <p>You filled in every blank correctly.</p>
+            <a class="duo-btn btn-green" href="/games">Back to games</a>
+          </section>
+        </section>
+
+        <aside class="word-bank" aria-labelledby="wordBankTitle">
+          <h2 id="wordBankTitle">Word bank</h2>
+          <div class="word-grid" id="wordGrid">
+            {% for word in words %}
+            <button class="word-choice" type="button" data-word-id="{{ word.id }}">{{ word.english }}</button>
+            {% endfor %}
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const questions = {{ questions | tojson }};
+    const slots = Array.from(document.querySelectorAll(".blank-slot"));
+    const wordButtons = Array.from(document.querySelectorAll(".word-choice"));
+    const stageBadge = document.getElementById("stageBadge");
+    const progressOuter = document.getElementById("progressOuter");
+    const progressBar = document.getElementById("progressBar");
+    const feedback = document.getElementById("feedback");
+    const checkButton = document.getElementById("checkButton");
+    const finishedMessage = document.getElementById("finishedMessage");
+    let selectedBlankIndex = null;
+
+    function setFeedback(message, kind = "") {
+      feedback.textContent = message;
+      feedback.className = `feedback${kind ? ` is-${kind}` : ""}`;
+    }
+
+    function updateProgress(correctCount) {
+      const total = slots.length;
+      stageBadge.textContent = `${correctCount} / ${total} correct`;
+      progressOuter.setAttribute("aria-valuenow", correctCount);
+      progressBar.style.width = `${(correctCount / total) * 100}%`;
+    }
+
+    function clearCheckState() {
+      slots.forEach(slot => slot.classList.remove("is-correct", "is-wrong", "needs-answer"));
+      updateProgress(0);
+      setFeedback("");
+    }
+
+    slots.forEach(slot => {
+      slot.addEventListener("click", () => {
+        slots.forEach(candidate => {
+          candidate.classList.remove("is-selected");
+          candidate.setAttribute("aria-pressed", "false");
+        });
+        selectedBlankIndex = Number(slot.dataset.blankIndex);
+        slot.classList.add("is-selected");
+        slot.setAttribute("aria-pressed", "true");
+        setFeedback(`Choose a word for blank ${selectedBlankIndex + 1}.`);
+      });
+    });
+
+    wordButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        if (selectedBlankIndex === null) {
+          setFeedback("Choose a blank first, then choose a word.");
+          return;
+        }
+        const slot = slots[selectedBlankIndex];
+        const word = button.textContent.trim();
+        slot.dataset.wordId = button.dataset.wordId;
+        slot.textContent = word;
+        slot.setAttribute("aria-label", `Blank ${selectedBlankIndex + 1}: ${word}. Click to change.`);
+        slot.classList.remove("is-selected");
+        slot.setAttribute("aria-pressed", "false");
+        selectedBlankIndex = null;
+        clearCheckState();
+        setFeedback(`${word} added. Choose another blank.`);
+      });
+    });
+
+    checkButton.addEventListener("click", () => {
+      const missingSlots = slots.filter(slot => !slot.dataset.wordId);
+      slots.forEach(slot => slot.classList.remove("is-correct", "is-wrong", "needs-answer"));
+      if (missingSlots.length) {
+        missingSlots.forEach(slot => slot.classList.add("needs-answer"));
+        updateProgress(0);
+        setFeedback("Choose a word for every blank before checking.", "error");
+        return;
+      }
+
+      let correctCount = 0;
+      slots.forEach((slot, index) => {
+        const expectedId = questions[Math.floor(index / 2)].answers[index % 2];
+        const isCorrect = slot.dataset.wordId === expectedId;
+        slot.classList.add(isCorrect ? "is-correct" : "is-wrong");
+        if (isCorrect) correctCount++;
+      });
+      updateProgress(correctCount);
+
+      if (correctCount === slots.length) {
+        setFeedback("Every answer is correct!", "success");
+        finishedMessage.classList.remove("hidden");
+        checkButton.disabled = true;
+        slots.forEach(slot => { slot.disabled = true; });
+        wordButtons.forEach(button => { button.disabled = true; });
+        return;
+      }
+      setFeedback("Some answers need another look. Change the highlighted blanks and try again.", "error");
+    });
+  </script>
+</body>
+</html>

@@ -21,3 +21,9 @@ The imported content and game progress live in `instance/word_order.sqlite3`; th
 ## Gameplay
 
 The browser receives active shuffled tokens, never the complete answer list. The server normalizes and checks answers, accepts alternatives separated with `||`, and records a single attempt per challenge per session. Level 1 is initially available; a level with at least 80% correct unlocks the next level. Guests keep progress in their signed browser session; logged-in users use their account ID.
+
+## Along vocabulary sequence
+
+The optional named Excel table `along` on the `Challenges` worksheet contains the Along word-order sequence. Its columns are `exercise`, `slot 1` through `slot 9`, and `spanish prompt`. The importer stores each non-empty slot in its authored order in `along_exercises`; if the optional table is absent, the standard workbook import still works. Rows removed from a present table are deactivated, while existing sessions can still finish using their captured exercise IDs.
+
+The Along picture-match set at `/vocab/picture-match/along` links directly to `/games/word-order/along`. It uses the same word-tile interaction and server-side answer checking as regular levels, but Along sessions and scores are kept separate from the level catalog and level progress. Finishing the final exercise displays the celebration on the game page.
