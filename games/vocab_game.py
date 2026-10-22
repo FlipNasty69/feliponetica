@@ -253,16 +253,27 @@ def _workbook_rows():
 
     workbook = load_workbook(VOCAB_WORKBOOK, read_only=True, data_only=True)
     try:
-        required_sheets = {"sets", "Audio Reference", "Video Reference"}
-        if not required_sheets.issubset(workbook.sheetnames):
+        image_reference_sheet = next(
+            (
+                sheet_name
+                for sheet_name in ("Image Reference", "Video Reference")
+                if sheet_name in workbook.sheetnames
+            ),
+            None,
+        )
+        if (
+            "sets" not in workbook.sheetnames
+            or "Audio Reference" not in workbook.sheetnames
+            or image_reference_sheet is None
+        ):
             raise ValueError(
                 "Vocabulary workbook must contain 'sets', 'Audio Reference', "
-                "and 'Video Reference' sheets."
+                "and either 'Image Reference' or 'Video Reference' sheets."
             )
 
         set_rows = list(workbook["sets"].iter_rows(values_only=True))
         audio_references = _reference_rows(workbook["Audio Reference"])
-        image_references = _reference_rows(workbook["Video Reference"])
+        image_references = _reference_rows(workbook[image_reference_sheet])
     finally:
         workbook.close()
 

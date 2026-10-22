@@ -1,10 +1,13 @@
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 from urllib.parse import unquote, urlsplit
 
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 
 from app import app
+import games.vocab_game as vocab_game
 from games.vocab_game import (
     _build_word,
     _labels_match,
@@ -122,12 +125,14 @@ class VocabularyGameTestCase(unittest.TestCase):
     def test_sink_phrases_use_their_workbook_images_and_audio(self):
         bathroom_sink = next(
             item
-            for item in vocabulary_sets()["3.3"]["words"]
+            for vocabulary_set in vocabulary_sets().values()
+            for item in vocabulary_set["words"]
             if item["english"].casefold() == "bathroom sink"
         )
         kitchen_sink = next(
             item
-            for item in vocabulary_sets()["3.2"]["words"]
+            for vocabulary_set in vocabulary_sets().values()
+            for item in vocabulary_set["words"]
             if item["english"].casefold() == "kitchen sink"
         )
 
@@ -167,8 +172,44 @@ class VocabularyGameTestCase(unittest.TestCase):
         self.assertIn("cook", profession_set_words)
         self.assertIn("doctor", profession_set_words)
 
+    def test_workbook_accepts_image_reference_sheet_name(self):
+        workbook = Workbook()
+        sets_sheet = workbook.active
+        sets_sheet.title = "sets"
+        sets_sheet.append(("set 1", "1.2"))
+        sets_sheet.append(("word1", "sink"))
+
+        audio_sheet = workbook.create_sheet("Audio Reference")
+        audio_sheet.append(("word", "audio URL"))
+        audio_sheet.append(
+            ("sink", "https://cdn.example.test/audio/vocab_game/sink.opus")
+        )
+
+        image_sheet = workbook.create_sheet("Image Reference")
+        image_sheet.append(("word", "image URL"))
+        image_sheet.append(
+            ("sink", "https://cdn.example.test/images/vocab_game/sink.webp")
+        )
+
+        with TemporaryDirectory() as directory:
+            workbook_path = Path(directory) / "vocabulary.xlsx"
+            workbook.save(workbook_path)
+            workbook.close()
+
+            with patch.object(vocab_game, "VOCAB_WORKBOOK", workbook_path):
+                vocabulary_sets.cache_clear()
+                try:
+                    result = vocabulary_sets()
+                finally:
+                    vocabulary_sets.cache_clear()
+
+        sink = result["1.2"]["words"][0]
+        self.assertEqual(sink["english"], "sink")
+        self.assertEqual(len(sink["images"]), 1)
+        self.assertTrue(sink["audio"].endswith("/sink.opus"))
+
     def test_selected_set_api_returns_playable_linked_media(self):
-        response = self.client.get("/vocab/api/get-set-details?id=3.2")
+        response = self.client.get("/vocab/api/get-set-details?id=3.2-kitchen")
 
         self.assertEqual(response.status_code, 200)
         words = response.get_json()
