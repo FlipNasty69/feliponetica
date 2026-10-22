@@ -5,7 +5,13 @@ from urllib.parse import unquote, urlsplit
 from openpyxl import load_workbook
 
 from app import app
-from games.vocab_game import _labels_match, vocabulary_sets
+from games.vocab_game import (
+    _build_word,
+    _labels_match,
+    _matching_image_references,
+    _reference_index,
+    vocabulary_sets,
+)
 
 
 WORKBOOK_PATH = Path(__file__).resolve().parents[1] / "static" / "data" / "Vocab_Game.xlsx"
@@ -62,7 +68,43 @@ class VocabularyGameTestCase(unittest.TestCase):
                 self.assertEqual(len({item["id"] for item in words}), len(words))
                 for item in words:
                     self.assertTrue(item["audio"])
-                    self.assertGreater(len(item["images"]), 0)
+                    self.assertEqual(len(item["images"]), 1)
+
+    def test_one_vocabulary_word_uses_one_image_when_multiple_images_match(self):
+        image_references = [
+            {"label": "bathroom sink", "order": 0},
+            {"label": "kitchen sink", "order": 1},
+        ]
+
+        matches = _matching_image_references(
+            "sink",
+            image_references,
+            _reference_index(image_references, include_suffix=True),
+        )
+
+        self.assertEqual(len(matches), 1)
+
+    def test_word_builder_does_not_combine_images_from_multiple_rows(self):
+        item = _build_word(
+            "1.2",
+            "sink",
+            [
+                {
+                    "audio": "/static/audio/vocab_game/sink.opus",
+                    "images": ["/static/images/vocab_game/bathroom_sink.webp"],
+                },
+                {
+                    "audio": "/static/audio/vocab_game/sink.opus",
+                    "images": ["/static/images/vocab_game/kitchen_sink.webp"],
+                },
+            ],
+            0,
+        )
+
+        self.assertEqual(
+            item["images"],
+            ["/static/images/vocab_game/bathroom_sink.webp"],
+        )
 
     def test_sets_api_returns_all_numbered_sets_and_playable_word_counts(self):
         response = self.client.get("/vocab/api/get-vocab-sets")
@@ -98,6 +140,7 @@ class VocabularyGameTestCase(unittest.TestCase):
             {urlsplit(image).path.rsplit("/", 1)[-1] for image in bathroom_sink["images"]},
             {"bathroom_sink.webp"},
         )
+        self.assertEqual(len(bathroom_sink["images"]), 1)
         self.assertTrue(
             unquote(urlsplit(kitchen_sink["audio"]).path).endswith(
                 "/kitchen sink.opus"
@@ -107,6 +150,7 @@ class VocabularyGameTestCase(unittest.TestCase):
             {urlsplit(image).path.rsplit("/", 1)[-1] for image in kitchen_sink["images"]},
             {"kitchen_sink.webp"},
         )
+        self.assertEqual(len(kitchen_sink["images"]), 1)
         self.assertTrue(_labels_match("sing", "sink"))
 
     def test_numbered_sets_use_their_workbook_sections(self):

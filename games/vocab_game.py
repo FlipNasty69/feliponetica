@@ -179,7 +179,17 @@ def _matching_image_references(word, image_references, image_index):
             for reference in image_references
             if _labels_match(reference["label"], word)
         }
-    return sorted(matches.values(), key=lambda reference: reference["order"])
+    if not matches:
+        return []
+
+    selected_reference = min(
+        matches.values(),
+        key=lambda reference: (
+            _normalized_label(reference["label"]) not in _label_aliases(word),
+            reference["order"],
+        ),
+    )
+    return [selected_reference]
 
 
 def _media_row_assets(row, image_paths):
@@ -361,7 +371,7 @@ def _build_word(set_id, word, media_rows, item_index):
         ),
     )
     audio = ordered_rows[0]["audio"]
-    images = list(dict.fromkeys(image for row in ordered_rows for image in row["images"]))
+    images = ordered_rows[0]["images"][:1]
     if not images:
         return None
 
@@ -415,9 +425,6 @@ def vocabulary_sets():
                 None,
             )
             if matching_existing:
-                matching_existing["images"] = list(
-                    dict.fromkeys(matching_existing["images"] + row["images"])
-                )
                 continue
             item = _build_word(set_id, word, [row], len(set_items[set_id]))
             if item:
