@@ -266,6 +266,96 @@ class FinalEnglishTestRoutes(unittest.TestCase):
             take.data,
         )
 
+    def test_question_audio_and_images_are_exposed_to_quiz_page(self):
+        workbook = load_workbook(self.workbook_path)
+        sheet = workbook.create_sheet("Media Quiz")
+        sheet.append([
+            "Question ID", "Category", "Question", "Option A", "Option B",
+            "Correct Answer", "audio", "image", "special instructions",
+        ])
+        sheet.append([
+            "M1", "Vocabulary", "Choose the pictured word.", "North", "South",
+            "A", "https://cdn.example.test/north.opus",
+            "https://cdn.example.test/map.webp",
+            "play audio after the answer is submitted",
+        ])
+        sheet.add_table(Table(displayName="MediaQuestions", ref="A1:I2"))
+        workbook.save(self.workbook_path)
+
+        test = next(
+            item for item in load_workbook_tests()
+            if item["id"] == "media-quiz-mediaquestions"
+        )
+        question = test["questions"][0]
+        self.assertEqual(question["audio"], "https://cdn.example.test/north.opus")
+        self.assertEqual(question["image"], "https://cdn.example.test/map.webp")
+        self.assertEqual(
+            question["special_instructions"],
+            "play audio after the answer is submitted",
+        )
+
+        take = self.client.get(f"/tests/{test['id']}/take")
+        self.assertEqual(take.status_code, 200)
+        self.assertIn(b"https://cdn.example.test/north.opus", take.data)
+        self.assertIn(b"https://cdn.example.test/map.webp", take.data)
+        self.assertIn(b'id="question-audio" preload="none" hidden', take.data)
+        self.assertNotIn(b'id="question-audio" controls', take.data)
+
+    def test_timed_panel_is_kept_in_quiz_sequence(self):
+        workbook = load_workbook(self.workbook_path)
+        sheet = workbook.create_sheet("Panel Quiz")
+        sheet.append([
+            "Pannel", "Question #", "Question Type", "Category", "Question",
+            "Answer A", "Answer B", "Correct Answer", "audio", "image",
+            "time in seconds",
+        ])
+        sheet.append([
+            1, None, None, None, None, None, None, None,
+            "https://cdn.example.test/intro.opus",
+            "https://cdn.example.test/intro.webp",
+            3,
+        ])
+        sheet.append([
+            2, 1, "multiple choice", "Directions", "Which way?",
+            "left", "right", "A", None, None, None,
+        ])
+        sheet.append([
+            3, None, None, None, None, None, None, None,
+            None,
+            "https://cdn.example.test/closing.webp",
+            3,
+        ])
+        sheet.add_table(Table(displayName="PanelQuestions", ref="A1:K4"))
+        workbook.save(self.workbook_path)
+
+        test = next(
+            item for item in load_workbook_tests()
+            if item["id"] == "panel-quiz-panelquestions"
+        )
+        self.assertEqual(test["sequence"][0], {
+            "type": "panel",
+            "id": "1",
+            "images": ["https://cdn.example.test/intro.webp"],
+            "audio": "https://cdn.example.test/intro.opus",
+            "duration": 3.0,
+        })
+        self.assertEqual(test["sequence"][1], {
+            "type": "question",
+            "id": "1",
+        })
+        self.assertEqual(test["sequence"][2], {
+            "type": "panel",
+            "id": "3",
+            "images": ["https://cdn.example.test/closing.webp"],
+            "audio": None,
+            "duration": 3.0,
+        })
+
+        take = self.client.get(f"/tests/{test['id']}/take")
+        self.assertEqual(take.status_code, 200)
+        self.assertIn(b'duration&#34;: 3.0', take.data)
+        self.assertIn(b"https://cdn.example.test/intro.opus", take.data)
+
     def test_anyone_can_submit_and_results_are_saved_without_sign_in(self):
         home = self.client.get("/")
         self.assertIn(b"Test Center", home.data)

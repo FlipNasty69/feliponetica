@@ -11,8 +11,10 @@ import games.vocab_game as vocab_game
 from games.vocab_game import (
     _build_word,
     _labels_match,
+    _lesson_table_test_id,
     _matching_image_references,
     _reference_index,
+    lesson_sets,
     vocabulary_sets,
 )
 
@@ -107,6 +109,92 @@ class VocabularyGameTestCase(unittest.TestCase):
         self.assertEqual(
             item["images"],
             ["/static/images/vocab_game/bathroom_sink.webp"],
+        )
+
+    def test_lesson_tables_are_discovered_and_include_quiz_links(self):
+        lessons = lesson_sets()
+        directions = next(
+            (lesson for lesson in lessons if lesson["id"].endswith("1-8")),
+            None,
+        )
+
+        self.assertIsNotNone(directions)
+        self.assertEqual(directions["word_count"], 8)
+        self.assertEqual(
+            [word["english"] for word in directions["words"]],
+            ["north", "south", "east", "west", "sunrise", "sunset", "coast", "compass"],
+        )
+        self.assertTrue(
+            all(word["audio"] and word["images"] for word in directions["words"])
+        )
+        self.assertTrue(directions["test_id"])
+        self.assertEqual(
+            [
+                (lesson["title"].rsplit(" · ", 1)[-1], lesson["word_count"])
+                for lesson in lessons
+            ],
+            [("1--8", 8), ("9--12", 4), ("13--17", 5)],
+        )
+        self.assertEqual(
+            [lesson["test_id"] for lesson in lessons],
+            [
+                "directions-n-s-e-w",
+                "directions-ne-nw-se-sw",
+                "directions-left-right-forward-back",
+            ],
+        )
+
+    def test_lesson_quiz_table_reference_resolves_exactly(self):
+        self.assertEqual(
+            _lesson_table_test_id("NE_NW_SE_SW"),
+            "directions-ne-nw-se-sw",
+        )
+
+    def test_lesson_matching_uses_one_audio_only_board_for_the_full_range(self):
+        response = self.client.get("/vocab/game")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"if (activeLesson.enabled) return vocabItems;", response.data)
+        self.assertIn(b"activeLesson.enabled || phaseIndex === 1", response.data)
+        self.assertIn(b"Match the audio to the picture", response.data)
+        self.assertIn(b"if (phaseIndex === 0 && !activeLesson.enabled)", response.data)
+
+    def test_lesson_quizzes_continue_to_the_next_range_until_the_last_quiz(self):
+        lessons = lesson_sets()
+        first_lesson = lessons[0]
+        next_lesson = lessons[1]
+        game_page = self.client.get("/vocab/game")
+        self.assertEqual(game_page.status_code, 200)
+        self.assertIn(
+            f"next_lesson_id={next_lesson['id']}".encode(),
+            game_page.data,
+        )
+
+        quiz_page = self.client.get(
+            f"/tests/{first_lesson['test_id']}/take"
+            f"?next_lesson_id={next_lesson['id']}"
+        )
+        self.assertEqual(quiz_page.status_code, 200)
+        self.assertIn(
+            f'data-next-url="/vocab/game?lesson={next_lesson["id"]}"'.encode(),
+            quiz_page.data,
+        )
+        next_game_page = self.client.get(f"/vocab/game?lesson={next_lesson['id']}")
+        self.assertEqual(next_game_page.status_code, 200)
+        self.assertIn(
+            f'const initialLessonId = "{next_lesson["id"]}"'.encode(),
+            next_game_page.data,
+        )
+
+        last_lesson = lessons[-1]
+        last_quiz_page = self.client.get(
+            f"/tests/{last_lesson['test_id']}/take"
+        )
+        self.assertEqual(last_quiz_page.status_code, 200)
+        self.assertIn(b'data-next-url=""', last_quiz_page.data)
+        self.assertEqual(
+            self.client.get("/vocab/game?lesson=unknown-lesson").status_code,
+            404,
         )
 
     def test_sets_api_returns_all_numbered_sets_and_playable_word_counts(self):

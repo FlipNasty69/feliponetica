@@ -112,6 +112,13 @@
         {% endfor %}
       </optgroup>
       {% endfor %}
+      {% if lesson_options %}
+      <optgroup label="Lesson Sets">
+        {% for lesson in lesson_options %}
+        <option value="{{ lesson.id }}" data-lesson="true" data-quiz-url="{{ lesson.quiz_url }}"{% if not lesson.word_count %} disabled{% endif %}>{{ lesson.title }} · {% if lesson.word_count %}{{ lesson.word_count }} words{% else %}no playable media{% endif %}</option>
+        {% endfor %}
+      </optgroup>
+      {% endif %}
       </select>
       <button class="primary" id="startButton" type="button">Start set</button>
       {% else %}
@@ -177,6 +184,8 @@
     const setSelect = document.getElementById("setSelect");
     const startButton = document.getElementById("startButton");
     const setError = document.getElementById("setError");
+    const initialLessonId = {{ initial_lesson_id|tojson }};
+    let activeLesson = { enabled: false, quizUrl: "" };
     const learningScreen = document.getElementById("learningScreen");
     const matchingScreen = document.getElementById("matchingScreen");
     const learnInstructions = document.getElementById("learnInstructions");
@@ -204,10 +213,12 @@
     let selectedPictureId = null;
 
     function itemsInCurrentRound() {
+      if (activeLesson.enabled) return vocabItems;
       return vocabItems.slice(0, Math.min((batchIndex + 1) * batchSize, vocabItems.length));
     }
 
     function currentBatchSize() {
+      if (activeLesson.enabled) return vocabItems.length;
       return Math.min(batchSize, vocabItems.length - batchIndex * batchSize);
     }
 
@@ -232,13 +243,19 @@
     }
 
     function currentPhaseLabel() {
+      if (activeLesson.enabled) {
+        return phaseIndex === 0 ? "Vocabulary drill · Words + audio" : "Audio matching";
+      }
       return phaseIndex === 0 ? "Phase 1 · Words + audio" : "Phase 2 · Audio only";
     }
 
     function showLearningItem() {
-      const firstIndex = batchIndex * batchSize;
+      const firstIndex = activeLesson.enabled ? 0 : batchIndex * batchSize;
       const item = vocabItems[firstIndex + learnIndex];
-      const isAudioOnly = phaseIndex === 1;
+      const itemCount = activeLesson.enabled
+        ? vocabItems.length
+        : Math.min(batchSize, vocabItems.length - firstIndex);
+      const isAudioOnly = !activeLesson.enabled && phaseIndex === 1;
       const completedBefore = phaseIndex * phaseTotalProgress
         + batchIndex * batchSize
         + matchingProgressBeforeRound()
@@ -262,10 +279,10 @@
       learnWord.hidden = isAudioOnly;
       learnAudioButton.setAttribute("aria-label", "Play English audio");
       learnAudioButton.onclick = () => playAudio(item.audio);
-      nextButton.textContent = learnIndex === Math.min(batchSize, vocabItems.length - firstIndex) - 1
+      nextButton.textContent = learnIndex === itemCount - 1
         ? "Start matching"
         : "Next";
-      updateProgress(completedBefore, `${currentPhaseLabel()} · Learn ${learnIndex + 1} / ${Math.min(batchSize, vocabItems.length - firstIndex)}`);
+      updateProgress(completedBefore, `${currentPhaseLabel()} · Learn ${learnIndex + 1} / ${itemCount}`);
     }
 
     function shuffled(items) {
@@ -285,7 +302,7 @@
       selectedChoiceId = choiceId;
       document.querySelectorAll(".match-tile").forEach(tile => tile.classList.remove("is-selected"));
       element.classList.add("is-selected");
-      matchMessage.textContent = phaseIndex === 0
+      matchMessage.textContent = phaseIndex === 0 && !activeLesson.enabled
         ? "English word selected. Choose its picture."
         : "Audio selected. Choose its picture.";
       matchMessage.className = "match-message";
@@ -319,8 +336,10 @@
 
       target.classList.add("is-correct");
       target.classList.remove("is-selected");
-      target.setAttribute("aria-label", phaseIndex === 0 ? `${picture.english}, matched` : "Picture matched");
-      if (phaseIndex === 0) {
+      target.setAttribute("aria-label", phaseIndex === 0 && !activeLesson.enabled
+        ? `${picture.english}, matched`
+        : "Picture matched");
+      if (phaseIndex === 0 && !activeLesson.enabled) {
         const matchedWord = document.createElement("span");
         matchedWord.className = "matched-word";
         matchedWord.textContent = picture.english;
@@ -330,7 +349,9 @@
       selectedChoiceId = null;
       selectedPictureId = null;
       matchedCount++;
-      matchMessage.textContent = phaseIndex === 0 ? `Correct: ${picture.english}!` : "Correct match!";
+      matchMessage.textContent = phaseIndex === 0 && !activeLesson.enabled
+        ? `Correct: ${picture.english}!`
+        : "Correct match!";
       matchMessage.className = "match-message is-success";
       updateProgress(
         phaseIndex * phaseTotalProgress + batchIndex * batchSize
@@ -341,6 +362,16 @@
       if (matchedCount === itemsInCurrentRound().length) {
         matchMessage.classList.add("hidden");
         finishedPanel.classList.remove("hidden");
+        if (activeLesson.enabled) {
+          finishedTitle.textContent = "Range complete!";
+          finishedText.textContent = "You matched every audio clip to its picture.";
+          continueButton.textContent = activeLesson.quizUrl ? "Take this range quiz" : "Continue";
+          updateProgress(
+            phaseTotalProgress * 2,
+            "Range complete"
+          );
+          return;
+        }
         const isLastBatch = (batchIndex + 1) * batchSize >= vocabItems.length;
         const isGameComplete = phaseIndex === 1 && isLastBatch;
         finishedTitle.textContent = isGameComplete ? "Both phases complete!" : "Great work!";
@@ -361,7 +392,7 @@
     }
 
     function renderMatchItems() {
-      const isAudioOnly = phaseIndex === 1;
+      const isAudioOnly = activeLesson.enabled || phaseIndex === 1;
       const roundItems = itemsInCurrentRound();
       pictureGrid.replaceChildren();
       choiceGrid.replaceChildren();
@@ -370,7 +401,11 @@
       matchedCount = 0;
       selectedChoiceId = null;
       selectedPictureId = null;
-      matchingTitle.textContent = isAudioOnly ? "Match the audio" : "Match the English word";
+      matchingTitle.textContent = activeLesson.enabled
+        ? "Match the audio to the picture"
+        : isAudioOnly
+          ? "Match the audio"
+          : "Match the English word";
       matchInstructions.textContent = isAudioOnly
         ? "Drag an audio tile onto its picture, or tap an audio tile and then a picture."
         : "Drag an English word onto its picture, or tap a word and then a picture.";
@@ -438,7 +473,9 @@
     }
 
     nextButton.addEventListener("click", () => {
-      const lastNewItem = Math.min(batchSize, vocabItems.length - batchIndex * batchSize) - 1;
+      const lastNewItem = activeLesson.enabled
+        ? vocabItems.length - 1
+        : Math.min(batchSize, vocabItems.length - batchIndex * batchSize) - 1;
       if (learnIndex === lastNewItem) {
         renderMatchItems();
         return;
@@ -448,6 +485,10 @@
     });
 
     continueButton.addEventListener("click", () => {
+      if (activeLesson.enabled && activeLesson.quizUrl) {
+        window.location.assign(activeLesson.quizUrl);
+        return;
+      }
       if (phaseIndex === 1 && (batchIndex + 1) * batchSize >= vocabItems.length) {
         window.location.reload();
         return;
@@ -463,15 +504,21 @@
       showLearningItem();
     });
 
-    if (startButton) {
-      startButton.addEventListener("click", async () => {
+    async function startSelectedSet() {
         if (!setSelect.value) return;
+        const selectedOption = setSelect.options[setSelect.selectedIndex];
+        const isLesson = selectedOption && selectedOption.dataset.lesson === "true";
+        activeLesson = {
+          enabled: isLesson,
+          quizUrl: selectedOption && selectedOption.dataset.quizUrl ? selectedOption.dataset.quizUrl : "",
+        };
         startButton.disabled = true;
         setError.textContent = "";
         try {
-          const response = await fetch(
-            `/vocab/api/get-set-details?id=${encodeURIComponent(setSelect.value)}`
-          );
+          const endpoint = isLesson
+            ? `/vocab/api/get-lesson-details?id=${encodeURIComponent(setSelect.value)}`
+            : `/vocab/api/get-set-details?id=${encodeURIComponent(setSelect.value)}`;
+          const response = await fetch(endpoint);
           if (!response.ok) {
             throw new Error(`Unable to load this vocabulary set (HTTP ${response.status}).`);
           }
@@ -497,7 +544,14 @@
         } finally {
           startButton.disabled = false;
         }
-      });
+    }
+
+    if (startButton) {
+      startButton.addEventListener("click", startSelectedSet);
+      if (initialLessonId) {
+        setSelect.value = initialLessonId;
+        startSelectedSet();
+      }
     }
   </script>
 </body>

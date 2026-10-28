@@ -308,6 +308,8 @@ def _workbook_rows():
             if set_value is None or not str(set_value).strip():
                 continue
             set_id = str(set_value).strip()
+            if not re.fullmatch(r"\d+(?:[./-][A-Za-z0-9]+)*", set_id):
+                continue
             column_sets[column_index] = set_id
             sets.setdefault(set_id, [])
             table_ids.setdefault(set_id, table_id)
@@ -394,6 +396,155 @@ def _build_word(set_id, word, media_rows, item_index):
         "images": images,
         "audio": audio,
     }
+
+
+@lru_cache(maxsize=1)
+def _slugify(value):
+    text = re.sub(r"[^a-z0-9]+", "-", str(value or "").casefold()).strip("-")
+    return text or "lesson"
+
+
+def _lesson_reference_label(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text or text.lower() in {"none", "n/a"}:
+        return None
+    return text
+
+
+def _lesson_table_test_id(reference_value):
+    if not reference_value:
+        return None
+    reference = str(reference_value).strip().lower()
+    if not reference:
+        return None
+    tests = []
+    from app import load_workbook_tests
+
+    tests = load_workbook_tests()
+
+    if not tests:
+        return None
+
+    normalized_reference = re.sub(r"[^a-z0-9]+", "-", reference).strip("-")
+    if not normalized_reference:
+        return None
+
+    matching_tests = [
+        test
+        for test in tests
+        if _slugify(test.get("id", "")).endswith(f"-{normalized_reference}")
+        or _slugify(test.get("name", "")).endswith(f"-{normalized_reference}")
+    ]
+    if len(matching_tests) > 1:
+        raise ValueError(
+            f"Lesson quiz reference '{reference_value}' matches multiple test tables."
+        )
+    return matching_tests[0]["id"] if matching_tests else None
+
+
+@lru_cache(maxsize=1)
+def lesson_sets():
+    lesson_sets_data = []
+    if not VOCAB_WORKBOOK.is_file():
+        return lesson_sets_data
+
+    workbook = load_workbook(VOCAB_WORKBOOK, read_only=False, data_only=True)
+    try:
+        for worksheet in workbook.worksheets:
+            tables = getattr(worksheet, "tables", {}) or {}
+            for table in tables.values():
+                lesson_name = (table.displayName or table.name or "").strip()
+                if not re.fullmatch(r"L[_-]?[A-Za-z0-9]+", lesson_name):
+                    continue
+                rows = [
+                    [cell.value for cell in row]
+                    for row in worksheet[table.ref]
+                ]
+                if not rows:
+                    continue
+
+                word_rows = []
+                range_definitions = []
+                for row in rows[1:]:
+                    if not row or len(row) < 6:
+                        continue
+                    word_id = str(row[0] or "").strip()
+                    english_word = row[1] if len(row) > 1 else None
+                    range_value = row[5] if len(row) > 5 else None
+                    word_match = re.fullmatch(r"word\s*(\d+)", word_id, re.I)
+                    if word_match and english_word:
+                        word_rows.append({
+                            "number": int(word_match.group(1)),
+                            "english": str(english_word).strip(),
+                            "image": row[3] if len(row) > 3 else None,
+                            "audio": row[4] if len(row) > 4 else None,
+                        })
+                    range_label = _lesson_reference_label(range_value)
+                    range_match = re.fullmatch(
+                        r"\s*(\d+)\s*[-–—]+\s*(\d+)\s*",
+                        range_label or "",
+                    )
+                    if range_match:
+                        range_definitions.append({
+                            "start": int(range_match.group(1)),
+                            "end": int(range_match.group(2)),
+                            "label": range_label,
+                            "quiz_reference": row[6] if len(row) > 6 else None,
+                        })
+
+                if not range_definitions:
+                    continue
+
+                for range_definition in sorted(
+                    range_definitions, key=lambda item: item["start"]
+                ):
+                    group_rows = [
+                        row
+                        for row in word_rows
+                        if range_definition["start"] <= row["number"] <= range_definition["end"]
+                    ]
+                    words = []
+                    for row in group_rows:
+                        english = str(row["english"]).strip()
+                        if not english:
+                            continue
+                        image = row.get("image")
+                        audio = row.get("audio")
+                        if image and not str(image).startswith("http"):
+                            image = None
+                        if audio and not str(audio).startswith("http"):
+                            audio = None
+                        words.append({
+                            "id": f"lesson-{_slugify(lesson_name)}-{_slugify(range_label)}-{len(words)}",
+                            "english": english,
+                            "image": image or "",
+                            "images": [image] if image else [],
+                            "audio": audio or "",
+                        })
+                    if not words:
+                        continue
+                    range_label = range_definition["label"]
+                    lesson_id = f"lesson-{_slugify(lesson_name)}-{_slugify(range_label)}"
+                    quiz_reference = range_definition["quiz_reference"]
+                    test_id = _lesson_table_test_id(quiz_reference)
+                    if quiz_reference and not test_id:
+                        raise ValueError(
+                            f"Lesson table '{lesson_name}' references unknown quiz "
+                            f"table '{quiz_reference}'."
+                        )
+                    lesson_sets_data.append({
+                        "id": lesson_id,
+                        "title": f"{lesson_name.replace('_', ' ').replace('-', ' ').title()} · {range_label}",
+                        "word_count": len(words),
+                        "words": words,
+                        "test_id": test_id,
+                    })
+    finally:
+        workbook.close()
+
+    return lesson_sets_data
 
 
 @lru_cache(maxsize=1)
@@ -510,9 +661,36 @@ def game_page():
                 "word_count": len(details["words"]),
             }
         )
+    lessons = lesson_sets()
+    lesson_options = []
+    for index, lesson in enumerate(lessons):
+        next_lesson = lessons[index + 1] if index + 1 < len(lessons) else None
+        quiz_url = url_for("final_english_take", test_id=lesson["test_id"])
+        if next_lesson:
+            quiz_url = url_for(
+                "final_english_take",
+                test_id=lesson["test_id"],
+                next_lesson_id=next_lesson["id"],
+            )
+        lesson_options.append(
+            {
+                "id": lesson["id"],
+                "title": lesson["title"],
+                "word_count": lesson["word_count"],
+                "test_id": lesson["test_id"],
+                "quiz_url": quiz_url,
+            }
+        )
+    initial_lesson_id = request.args.get("lesson", "")
+    if initial_lesson_id and not any(
+        lesson["id"] == initial_lesson_id for lesson in lessons
+    ):
+        return jsonify({"error": "Lesson not found"}), 404
     return render_template(
         "games/vocab_game.html",
         set_groups=set_groups,
+        lesson_options=lesson_options,
+        initial_lesson_id=initial_lesson_id,
         set_title="Vocabulary Practice",
     )
 
@@ -552,3 +730,21 @@ def get_set_details():
     session["current_round"] = 1
     session["word_index"] = 0
     return jsonify(thumbnail_words(selected_set["words"]))
+
+
+@vocab_bp.route("/api/get-lesson-details", methods=["GET"])
+def get_lesson_details():
+    lesson_id = request.args.get("id", "").strip()
+    selected_lesson = next(
+        (lesson for lesson in lesson_sets() if lesson["id"] == lesson_id),
+        None,
+    )
+    if selected_lesson is None:
+        return jsonify({"error": "Lesson not found"}), 404
+    if not selected_lesson["words"]:
+        return jsonify({"error": "This lesson does not have playable image/audio pairs yet."}), 422
+
+    session["active_lesson_id"] = lesson_id
+    session["current_round"] = 1
+    session["word_index"] = 0
+    return jsonify(thumbnail_words(selected_lesson["words"]))

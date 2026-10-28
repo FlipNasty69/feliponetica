@@ -1,4 +1,5 @@
 import sqlite3
+import math
 import os
 import smtplib
 import json
@@ -355,6 +356,14 @@ def _test_header_indexes(header):
         "choice_b": {"b", "choiceb", "optionb", "answerb"},
         "choice_c": {"c", "choicec", "optionc", "answerc"},
         "choice_d": {"d", "choiced", "optiond", "answerd"},
+        "audio": {"audio", "audiourl", "sound", "soundurl"},
+        "image": {"image", "imageurl", "picture", "pictureurl"},
+        "special_instructions": {
+            "instruction",
+            "instructions",
+            "specialinstruction",
+            "specialinstructions",
+        },
         "correct_answer": {
             "correct",
             "correctanswer",
@@ -407,6 +416,9 @@ def _parse_test_questions(rows, source_name, header=None, allow_legacy_layout=Tr
             question_type = value("type", "Multiple Choice")
             category = value("category", "")
             correct_answer_value = value("correct_answer", "")
+            audio_url = value("audio", None)
+            image_url = value("image", None)
+            special_instructions = value("special_instructions", "")
         else:
             if len(row) < 11:
                 continue
@@ -422,8 +434,11 @@ def _parse_test_questions(rows, source_name, header=None, allow_legacy_layout=Tr
                 if row[column] is not None and str(row[column]).strip()
             }
             correct_answer_value = row[10] or ""
+            audio_url = None
+            image_url = None
+            special_instructions = ""
 
-        if len(row) >= 11 and row[5]:
+        if not uses_headers and len(row) >= 11 and row[5]:
             question_text = row[5]
 
         if not question_text:
@@ -452,8 +467,106 @@ def _parse_test_questions(rows, source_name, header=None, allow_legacy_layout=Tr
             "question": str(question_text).strip(),
             "choices": choices,
             "correct_answer": correct_answer,
+            "audio": str(audio_url).strip() if audio_url else None,
+            "image": str(image_url).strip() if image_url else None,
+            "special_instructions": str(special_instructions or "").strip(),
         })
     return questions
+
+
+def _test_sequence(rows, header, questions):
+    indexes = _test_header_indexes(header or ())
+    normalized_headers = [
+        _normalize_test_header(value) for value in (header or ())
+    ]
+    panel_index = next(
+        (
+            index for index, value in enumerate(normalized_headers)
+            if value in {"panel", "pannel"}
+        ),
+        None,
+    )
+    if panel_index is None:
+        return [{"type": "question", "id": question["id"]} for question in questions]
+
+    duration_index = next(
+        (
+            index for index, value in enumerate(normalized_headers)
+            if value in {"time", "timeinseconds", "duration", "durationseconds", "seconds"}
+        ),
+        None,
+    )
+    image2_index = next(
+        (
+            index for index, value in enumerate(normalized_headers)
+            if value in {"image2", "imageurl2", "picture2", "pictureurl2"}
+        ),
+        None,
+    )
+    question_index = indexes.get("question")
+    id_index = indexes.get("id")
+    audio_index = indexes.get("audio")
+    image_index = indexes.get("image")
+    sequence = []
+    parsed_question_count = 0
+
+    for row in rows:
+        question_text = (
+            row[question_index]
+            if question_index is not None and question_index < len(row)
+            else None
+        )
+        if question_text:
+            parsed_question_count += 1
+            question_id = (
+                row[id_index]
+                if id_index is not None and id_index < len(row)
+                else None
+            )
+            if question_id is None or not str(question_id).strip():
+                question_id = parsed_question_count
+            sequence.append({"type": "question", "id": str(question_id).strip()})
+            continue
+
+        panel_number = row[panel_index] if panel_index < len(row) else None
+        if panel_number is None or not str(panel_number).strip():
+            continue
+
+        audio_url = row[audio_index] if audio_index is not None and audio_index < len(row) else None
+        image_url = row[image_index] if image_index is not None and image_index < len(row) else None
+        image2_url = row[image2_index] if image2_index is not None and image2_index < len(row) else None
+        duration_value = (
+            row[duration_index]
+            if duration_index is not None and duration_index < len(row)
+            else None
+        )
+        try:
+            duration = float(duration_value)
+        except (TypeError, ValueError) as error:
+            raise ValueError(
+                f"Panel {panel_number} has an invalid duration: {duration_value!r}."
+            ) from error
+        if not math.isfinite(duration) or duration <= 0:
+            raise ValueError(f"Panel {panel_number} must have a positive duration.")
+
+        sequence.append({
+            "type": "panel",
+            "id": str(panel_number).strip(),
+            "images": [
+                str(image).strip()
+                for image in (image_url, image2_url)
+                if image and str(image).strip()
+            ],
+            "audio": str(audio_url).strip() if audio_url else None,
+            "duration": duration,
+        })
+
+    sequence_question_ids = [
+        item["id"] for item in sequence if item["type"] == "question"
+    ]
+    if sequence_question_ids != [question["id"] for question in questions]:
+        raise ValueError("The panel sequence does not match the table's questions.")
+    return sequence
 
 
 def _test_identifier(value):
@@ -486,6 +599,7 @@ def load_workbook_tests():
                 )
                 if not questions:
                     return
+                sequence = _test_sequence(rows, header, questions)
                 identifier = _test_identifier(source_name)
                 base_identifier = identifier
                 suffix = 2
@@ -497,6 +611,7 @@ def load_workbook_tests():
                     "id": identifier,
                     "name": display_name,
                     "questions": questions,
+                    "sequence": sequence,
                 })
 
             for worksheet in workbook.worksheets:
@@ -538,6 +653,9 @@ def load_workbook_tests():
                     header,
                 )
                 if questions:
+                    sequence = _test_sequence(
+                        worksheet_rows[1:], header, questions
+                    )
                     identifier = _test_identifier(source_name)
                     base_identifier = identifier
                     suffix = 2
@@ -549,6 +667,7 @@ def load_workbook_tests():
                         "id": identifier,
                         "name": display_name,
                         "questions": questions,
+                        "sequence": sequence,
                     })
             if not tests:
                 raise ValueError("The workbook does not contain any test questions.")
@@ -1196,6 +1315,16 @@ def final_english_take(test_id):
         abort(503, description="The tests are temporarily unavailable.")
     if test is None:
         abort(404)
+    next_lesson_url = None
+    next_lesson_id = request.args.get("next_lesson_id", "").strip()
+    if next_lesson_id:
+        from games.vocab_game import lesson_sets
+
+        if not any(lesson["id"] == next_lesson_id for lesson in lesson_sets()):
+            abort(404)
+        next_lesson_url = url_for(
+            "vocab_game.game_page", lesson=next_lesson_id
+        )
     questions = test["questions"]
     public_questions = [
         {
@@ -1203,14 +1332,34 @@ def final_english_take(test_id):
             "category": question["category"],
             "question": question["question"],
             "choices": question["choices"],
+            "audio": public_audio_url(question["audio"]) if question["audio"] else None,
+            "image": exercise_image_url(question["image"]) if question["image"] else None,
+            "play_audio_after_answer": "play audio after" in question[
+                "special_instructions"
+            ].casefold(),
         }
         for question in questions
+    ]
+    sequence = [
+        {
+            **item,
+            "images": [
+                exercise_image_url(image)
+                for image in item.get("images", [])
+            ],
+            "audio": public_audio_url(item["audio"]) if item.get("audio") else None,
+        }
+        if item["type"] == "panel"
+        else item
+        for item in test["sequence"]
     ]
     return render_template(
         "test_take.html",
         questions=public_questions,
+        sequence=sequence,
         test_id=test["id"],
         test_name=test["name"],
+        next_lesson_url=next_lesson_url,
     )
 
 

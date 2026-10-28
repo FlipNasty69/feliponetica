@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0A1A2F">
     <title>{{ test_name }} | English Course</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/test_center.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/test_center.css', v='16') }}">
 </head>
 <body class="test-page">
     <main class="test-shell quiz-shell" id="quiz" data-submit-url="{{ url_for('final_english_submit', test_id=test_id) }}"
           data-center-url="{{ url_for('test_center') }}"
+          data-next-url="{{ next_lesson_url or '' }}"
           data-test-name="{{ test_name }}"
-          data-questions='{{ questions|tojson|forceescape }}'>
+          data-questions='{{ questions|tojson|forceescape }}'
+          data-sequence='{{ sequence|tojson|forceescape }}'>
         <header class="test-header quiz-header">
             <a class="test-brand" href="{{ url_for('test_center') }}">English<span>Course</span></a>
             <div class="progress-block">
@@ -25,18 +27,24 @@
             <input id="participant-name" type="text" maxlength="120" autocomplete="name">
         </div>
         <section class="test-stage" id="test-stage" aria-live="polite">
-            <article class="question-panel">
+            <article class="question-panel" id="question-panel">
                 <p class="test-kicker" id="question-category"></p>
                 <h1 id="question-text"></h1>
+                <img class="question-image" id="question-image" alt="" hidden>
+            </article>
+            <article class="question-panel sequence-panel" id="sequence-panel" hidden>
+                <div class="panel-images" id="panel-images"></div>
             </article>
             <div class="answer-grid" id="answer-options" role="group" aria-label="Answer choices"></div>
         </section>
+        <audio class="question-audio" id="question-audio" preload="none" hidden></audio>
         <nav class="test-controls" aria-label="Question navigation">
             <button class="tactile-button secondary-button" id="previous-button" type="button">Previous</button>
             <button class="tactile-button primary-button" id="next-button" type="button" disabled>Next</button>
         </nav>
         <p class="test-error" id="test-error" role="alert" hidden></p>
+        <p class="test-error media-error" id="media-error" role="alert" hidden></p>
     </main>
-    <script src="{{ url_for('static', filename='scripts/test_center.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='scripts/test_center.js', v='9') }}" defer></script>
 </body>
 </html>

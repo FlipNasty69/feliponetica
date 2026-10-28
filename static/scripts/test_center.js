@@ -3,24 +3,115 @@
     if (!quiz) return;
 
     const questions = JSON.parse(quiz.dataset.questions);
+    const sequence = JSON.parse(quiz.dataset.sequence || "[]");
     const answers = new Map();
+    const lockedAnswers = new Set();
     const stage = document.getElementById("test-stage");
+    const questionPanel = document.getElementById("question-panel");
+    const sequencePanel = document.getElementById("sequence-panel");
+    const panelImages = document.getElementById("panel-images");
     const category = document.getElementById("question-category");
     const questionText = document.getElementById("question-text");
+    const questionImage = document.getElementById("question-image");
+    const questionAudio = document.getElementById("question-audio");
     const options = document.getElementById("answer-options");
     const counter = document.getElementById("question-counter");
     const progress = document.getElementById("question-progress");
     const previousButton = document.getElementById("previous-button");
     const nextButton = document.getElementById("next-button");
     const error = document.getElementById("test-error");
+    const mediaError = document.getElementById("media-error");
     const participantName = document.getElementById("participant-name");
+    const controls = document.querySelector(".test-controls");
+    const questionIndexes = new Map(
+        questions.map((question, index) => [String(question.id), index])
+    );
+    const sequenceItems = sequence.length
+        ? sequence
+        : questions.map((question) => ({ type: "question", id: question.id }));
     let currentIndex = 0;
+    let sequenceIndex = -1;
     let transitioning = false;
+    let waitingForAudio = false;
+    let awaitingSubmissionRetry = false;
+    let activeAudioKey = null;
+    let audioStatus = "idle";
+    let audioPlayback = Promise.resolve();
+    let cleanupAudioListeners = null;
 
-    function renderQuestion() {
+    function startAudio(key, url, replayEnded = false) {
+        if (!url) return Promise.resolve();
+        if (activeAudioKey === key && audioStatus === "playing") {
+            return audioPlayback;
+        }
+        if (activeAudioKey === key && audioStatus === "ended" && !replayEnded) {
+            return Promise.resolve();
+        }
+
+        if (cleanupAudioListeners) cleanupAudioListeners();
+        questionAudio.pause();
+        questionAudio.removeAttribute("src");
+        questionAudio.load();
+        activeAudioKey = key;
+        audioStatus = "playing";
+        mediaError.hidden = true;
+
+        let resolvePlayback;
+        let rejectPlayback;
+        audioPlayback = new Promise((resolve, reject) => {
+            resolvePlayback = resolve;
+            rejectPlayback = reject;
+        });
+        audioPlayback.catch(() => {});
+
+        let settled = false;
+        const cleanup = () => {
+            questionAudio.removeEventListener("ended", onEnded);
+            questionAudio.removeEventListener("error", onError);
+            cleanupAudioListeners = null;
+        };
+        const onEnded = () => {
+            if (settled || activeAudioKey !== key) return;
+            settled = true;
+            audioStatus = "ended";
+            cleanup();
+            resolvePlayback();
+        };
+        const onError = () => {
+            if (settled || activeAudioKey !== key) return;
+            settled = true;
+            audioStatus = "failed";
+            cleanup();
+            mediaError.textContent = "Question audio could not be played. Press Next to retry.";
+            mediaError.hidden = false;
+            rejectPlayback(new Error(mediaError.textContent));
+        };
+        cleanupAudioListeners = cleanup;
+        questionAudio.addEventListener("ended", onEnded);
+        questionAudio.addEventListener("error", onError);
+        questionAudio.src = url;
+        if (questionAudio.readyState > 0) questionAudio.currentTime = 0;
+        questionAudio.play().catch(onError);
+        return audioPlayback;
+    }
+
+    function renderQuestion(questionIndex) {
+        currentIndex = questionIndex;
         const question = questions[currentIndex];
+        questionPanel.hidden = false;
+        sequencePanel.hidden = true;
+        options.hidden = false;
+        controls.hidden = false;
+        stage.classList.remove("is-panel");
         category.textContent = question.category || "QUESTION";
         questionText.textContent = question.question;
+        questionImage.hidden = !question.image;
+        questionImage.removeAttribute("src");
+        if (question.image) {
+            questionImage.src = question.image;
+            questionImage.alt = question.question;
+        }
+        mediaError.hidden = true;
         counter.textContent = `${currentIndex + 1} / ${questions.length}`;
         progress.value = currentIndex + 1;
         previousButton.disabled = currentIndex === 0;
@@ -34,25 +125,83 @@
             button.className = "tactile-button answer-button";
             button.setAttribute("aria-pressed", String(answers.get(question.id) === letter));
             button.classList.toggle("is-selected", answers.get(question.id) === letter);
+            button.disabled = lockedAnswers.has(question.id);
             button.innerHTML = `<span class="answer-letter">${letter}</span><span class="answer-text"></span>`;
             button.querySelector(".answer-text").textContent = text;
             button.addEventListener("click", () => {
+                if (lockedAnswers.has(question.id)) return;
                 answers.set(question.id, letter);
                 error.hidden = true;
-                renderQuestion();
-                options.querySelector(".is-selected")?.focus();
+                options.querySelectorAll(".answer-button").forEach((choice) => {
+                    const selected = choice === button;
+                    choice.classList.toggle("is-selected", selected);
+                    choice.setAttribute("aria-pressed", String(selected));
+                });
+                nextButton.disabled = false;
+                if (question.audio && audioStatus === "failed") {
+                    startAudio(`question:${question.id}`, question.audio).catch(() => {});
+                }
             });
             options.append(button);
         });
+
+        if (question.audio) {
+            startAudio(`question:${question.id}`, question.audio, true).catch(() => {});
+        }
     }
 
-    function transitionToQuestion(nextIndex) {
+    function showPanel(panel) {
+        questionPanel.hidden = true;
+        sequencePanel.hidden = false;
+        options.hidden = true;
+        controls.hidden = true;
+        stage.classList.add("is-panel");
+        panelImages.replaceChildren();
+        panel.images.forEach((imageUrl) => {
+            const image = document.createElement("img");
+            image.src = imageUrl;
+            image.alt = "";
+            panelImages.append(image);
+        });
+        counter.textContent = "Introduction";
+        progress.value = currentIndex;
+        mediaError.hidden = true;
+        if (panel.audio) {
+            startAudio(`panel:${sequenceIndex}`, panel.audio).catch(() => {});
+        }
+        window.setTimeout(() => {
+            if (sequenceItems[sequenceIndex] === panel) {
+                transitionToSequence(sequenceIndex + 1);
+            }
+        }, panel.duration * 1000);
+    }
+
+    function showSequenceItem(nextIndex) {
+        sequenceIndex = nextIndex;
+        if (sequenceIndex >= sequenceItems.length) {
+            submitTest();
+            return;
+        }
+
+        const item = sequenceItems[sequenceIndex];
+        if (item.type === "panel") {
+            showPanel(item);
+            return;
+        }
+
+        const questionIndex = questionIndexes.get(String(item.id));
+        if (questionIndex === undefined) {
+            throw new Error(`Quiz sequence references missing question ${item.id}.`);
+        }
+        renderQuestion(questionIndex);
+    }
+
+    function transitionToSequence(nextIndex) {
         if (transitioning) return;
         transitioning = true;
         stage.classList.add("is-leaving");
         window.setTimeout(() => {
-            currentIndex = nextIndex;
-            renderQuestion();
+            showSequenceItem(nextIndex);
             stage.classList.remove("is-leaving");
             stage.classList.add("is-entering");
             requestAnimationFrame(() => {
@@ -112,8 +261,10 @@
 
         const returnLink = document.createElement("a");
         returnLink.className = "tactile-button primary-button";
-        returnLink.href = quiz.dataset.centerUrl;
-        returnLink.textContent = "Return to test center";
+        returnLink.href = quiz.dataset.nextUrl || quiz.dataset.centerUrl;
+        returnLink.textContent = quiz.dataset.nextUrl
+            ? "Continue to next vocabulary range"
+            : "Return to test center";
         card.append(returnLink);
 
         completion.append(card);
@@ -121,6 +272,7 @@
     }
 
     async function submitTest() {
+        awaitingSubmissionRetry = false;
         nextButton.disabled = true;
         previousButton.disabled = true;
         nextButton.textContent = "Submitting…";
@@ -152,28 +304,64 @@
         } catch (submissionError) {
             error.textContent = submissionError.message;
             error.hidden = false;
+            awaitingSubmissionRetry = true;
+            controls.hidden = false;
             nextButton.disabled = false;
-            previousButton.disabled = false;
+            previousButton.disabled = true;
             nextButton.textContent = "Retry submission";
         }
     }
 
     previousButton.addEventListener("click", () => {
-        if (currentIndex > 0) transitionToQuestion(currentIndex - 1);
+        if (currentIndex === 0 || waitingForAudio || transitioning) return;
+        for (let index = sequenceIndex - 1; index >= 0; index -= 1) {
+            if (sequenceItems[index].type === "question") {
+                transitionToSequence(index);
+                return;
+            }
+        }
     });
 
-    nextButton.addEventListener("click", () => {
+    nextButton.addEventListener("click", async () => {
+        if (waitingForAudio || transitioning) return;
+        if (awaitingSubmissionRetry) {
+            await submitTest();
+            return;
+        }
         if (!answers.has(questions[currentIndex].id)) {
             error.textContent = "Choose an answer before continuing.";
             error.hidden = false;
             return;
         }
-        if (currentIndex === questions.length - 1) {
-            submitTest();
-        } else {
-            transitionToQuestion(currentIndex + 1);
+
+        const question = questions[currentIndex];
+        lockedAnswers.add(question.id);
+        options.querySelectorAll(".answer-button").forEach((button) => {
+            button.disabled = true;
+        });
+        if (question.audio) {
+            waitingForAudio = true;
+            nextButton.disabled = true;
+            previousButton.disabled = true;
+            nextButton.textContent = "Playing audio…";
+            error.hidden = true;
+            mediaError.hidden = true;
+            try {
+                await startAudio(`question:${question.id}`, question.audio);
+            } catch (audioError) {
+                mediaError.textContent = audioError.message;
+                mediaError.hidden = false;
+                waitingForAudio = false;
+                nextButton.disabled = false;
+                previousButton.disabled = currentIndex === 0;
+                nextButton.textContent = "Retry audio";
+                return;
+            }
+            waitingForAudio = false;
         }
+
+        transitionToSequence(sequenceIndex + 1);
     });
 
-    renderQuestion();
+    showSequenceItem(0);
 })();
