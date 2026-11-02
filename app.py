@@ -65,11 +65,13 @@ USERS = {
 from games.vocab_game import vocab_bp
 from games.phantom_pronouns import phantom_pronouns_bp
 from games.adverb_game import adverb_game_bp
+from games.adjectives_adverbs_game import adjectives_adverbs_game_bp
 from games.question_game import question_game_bp
 from word_order import word_order_bp
 from word_order.cli import register_cli
 GAME_BLUEPRINTS = [
-    vocab_bp, phantom_pronouns_bp, adverb_game_bp, question_game_bp, word_order_bp
+    vocab_bp, phantom_pronouns_bp, adverb_game_bp, adjectives_adverbs_game_bp,
+    question_game_bp, word_order_bp
 ]
 
 def register_game_blueprints():

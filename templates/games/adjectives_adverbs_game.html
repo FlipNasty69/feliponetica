@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Adjective Adventure | English Course</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/adjectives_adverbs_game.css') }}">
+</head>
+<body>
+    <main class="game-shell">
+        <header class="page-header">
+            <a class="back-link" href="{{ url_for('games_dashboard') }}">Games</a>
+            <p class="eyebrow">Listen · Match · Learn</p>
+            <h1>Adjective Adventure</h1>
+            <p class="intro">Listen to each word, then match it to the right panel.</p>
+        </header>
+
+        <section class="screen" id="type-screen" aria-labelledby="type-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Choose a challenge</p>
+                    <h2 id="type-heading">Adjective types</h2>
+                </div>
+                <span class="step-badge">1 / 3</span>
+            </div>
+            <div class="card-grid" id="type-cards"></div>
+        </section>
+
+        <section class="screen hidden" id="group-screen" aria-labelledby="group-heading">
+            <button class="text-button" id="type-back-button" type="button">Back to adjective types</button>
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow" id="selected-type-label"></p>
+                    <h2 id="group-heading">Choose a group</h2>
+                </div>
+                <span class="step-badge">2 / 3</span>
+            </div>
+            <div class="card-grid" id="group-cards"></div>
+        </section>
+
+        <section class="screen hidden" id="exercise-screen" aria-labelledby="exercise-heading">
+            <div class="exercise-topbar">
+                <button class="text-button" id="group-back-button" type="button">Back to groups</button>
+                <p class="eyebrow" id="exercise-progress"></p>
+            </div>
+            <div class="exercise-heading">
+                <p class="eyebrow" id="exercise-type-label"></p>
+                <h2 id="exercise-heading">Match the adjective to its panel</h2>
+                <p id="exercise-instructions">Drag an audio card to a corner, or select a card and tap a corner.</p>
+            </div>
+
+            <div class="exercise-stage" id="exercise-stage">
+                <button class="drop-zone top-left" type="button" data-position="top_left" aria-label="Top left panel">
+                    <span class="zone-position">Top left</span>
+                    <span class="zone-cue">Drop audio here</span>
+                </button>
+                <button class="drop-zone top-right" type="button" data-position="top_right" aria-label="Top right panel">
+                    <span class="zone-position">Top right</span>
+                    <span class="zone-cue">Drop audio here</span>
+                </button>
+                <button class="drop-zone bottom-left" type="button" data-position="bottom_left" aria-label="Bottom left panel">
+                    <span class="zone-position">Bottom left</span>
+                    <span class="zone-cue">Drop audio here</span>
+                </button>
+                <button class="drop-zone bottom-right" type="button" data-position="bottom_right" aria-label="Bottom right panel">
+                    <span class="zone-position">Bottom right</span>
+                    <span class="zone-cue">Drop audio here</span>
+                </button>
+                <figure class="image-frame">
+                    <img id="exercise-image" alt="">
+                    <figcaption id="image-caption"></figcaption>
+                    <button class="noun-audio-button" id="noun-audio-button" type="button" aria-label="Play noun audio">
+                        <span class="audio-icon" aria-hidden="true">▶</span>
+                    </button>
+                </figure>
+            </div>
+
+            <p class="status-message" id="exercise-status" role="status" aria-live="polite"></p>
+            <div class="audio-area">
+                <h3>Listen to an adjective</h3>
+                <div class="audio-choices" id="audio-choices"></div>
+            </div>
+            <button class="primary-button hidden" id="continue-button" type="button">Continue</button>
+        </section>
+
+        <section class="screen hidden results-screen" id="results-screen" aria-labelledby="results-heading">
+            <p class="eyebrow">Exercise complete</p>
+            <h2 id="results-heading">Great listening!</h2>
+            <p class="result-score" id="result-score"></p>
+            <p id="result-summary"></p>
+            <div class="missed-words">
+                <h3>Adjectives to practice</h3>
+                <ul id="missed-list"></ul>
+                <p id="no-misses" class="hidden">No missed matches. Perfect round!</p>
+            </div>
+            <button class="primary-button" id="return-button" type="button">Choose another adjective type</button>
+        </section>
+        <script>
+            const gameData = {{ game_data|tojson }};
+
+            (() => {
+                const positions = ["top_left", "top_right", "bottom_left", "bottom_right"];
+                const screens = {
+                    types: document.getElementById("type-screen"),
+                    groups: document.getElementById("group-screen"),
+                    exercise: document.getElementById("exercise-screen"),
+                    results: document.getElementById("results-screen"),
+                };
+                const typeCards = document.getElementById("type-cards");
+                const groupCards = document.getElementById("group-cards");
+                const status = document.getElementById("exercise-status");
+                const audioChoices = document.getElementById("audio-choices");
+                const exerciseImage = document.getElementById("exercise-image");
+                const nounAudioButton = document.getElementById("noun-audio-button");
+                const continueButton = document.getElementById("continue-button");
+                const zones = [...document.querySelectorAll(".drop-zone")];
+                const audioCache = new Map();
+                const activeAudioFinishes = new WeakMap();
+                exerciseImage.addEventListener("error", () => {
+                    announce("The image could not be loaded. Check your connection and try again.");
+                });
+                nounAudioButton.addEventListener("click", () => {
+                    const exercise = currentExercise();
+                    announce(`Playing ${exercise.noun}.`);
+                    void playAudio(exercise.noun_audio_url);
+                });
+
+                let selectedType = null;
+                let selectedGroup = null;
+                let exerciseIndex = 0;
+                let matchedPositions = new Set();
+                let misses = new Map();
+                let missesByPosition = new Map();
+                let firstTryMatches = 0;
+                let selectedAdjectiveId = null;
+
+                function showScreen(name) {
+                    Object.entries(screens).forEach(([key, screen]) => {
+                        screen.classList.toggle("hidden", key !== name);
+                    });
+                }
+
+                function announce(message) {
+                    status.textContent = message;
+                }
+
+                function preloadAudio(url) {
+                    if (!audioCache.has(url)) {
+                        const audio = new Audio(url);
+                        audio.preload = "auto";
+                        audio.load();
+                        audioCache.set(url, audio);
+                    }
+                    return audioCache.get(url);
+                }
+
+                async function playAudio(url) {
+                    return new Promise((resolve) => {
+                        const audio = preloadAudio(url);
+                        const stopPreviousPlayback = activeAudioFinishes.get(audio);
+                        if (stopPreviousPlayback) {
+                            stopPreviousPlayback(false);
+                        }
+                        audio.pause();
+                        audio.currentTime = 0;
+                        let settled = false;
+                        const finish = (played) => {
+                            if (settled) {
+                                return;
+                            }
+                            settled = true;
+                            audio.removeEventListener("ended", onEnded);
+                            audio.removeEventListener("error", onError);
+                            activeAudioFinishes.delete(audio);
+                            resolve(played);
+                        };
+                        const onEnded = () => finish(true);
+                        const onError = () => {
+                            if (settled) {
+                                return;
+                            }
+                            announce("Audio could not be played. Check your connection and try again.");
+                            finish(false);
+                        };
+
+                        activeAudioFinishes.set(audio, finish);
+                        audio.addEventListener("ended", onEnded);
+                        audio.addEventListener("error", onError);
+                        audio.play().catch(onError);
+                    });
+                }
+
+                async function playCorrectPair(adjective) {
+                    const nounAudioUrl = currentExercise().noun_audio_url;
+                    if (!(await playAudio(adjective.audio_url))) {
+                        return false;
+                    }
+                    return playAudio(nounAudioUrl);
+                }
+
+                function currentExercise() {
+                    return selectedGroup.exercises[exerciseIndex];
+                }
+
+                function makeCard(title, detail, action, icon) {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "choice-card";
+                    const mark = document.createElement("span");
+                    mark.className = "card-mark";
+                    mark.textContent = icon;
+                    const heading = document.createElement("strong");
+                    heading.textContent = title;
+                    const description = document.createElement("span");
+                    description.className = "card-detail";
+                    description.textContent = detail;
+                    const prompt = document.createElement("span");
+                    prompt.className = "card-prompt";
+                    prompt.textContent = "Choose";
+                    button.append(mark, heading, description, prompt);
+                    button.addEventListener("click", action);
+                    return button;
+                }
+
+                function showTypes() {
+                    showScreen("types");
+                    typeCards.replaceChildren();
+                    gameData.types.forEach((type, index) => {
+                        typeCards.appendChild(makeCard(
+                            type.label,
+                            `${type.groups.length} group · ${type.groups.reduce((sum, group) => sum + group.exercises.length, 0)} images`,
+                            () => showGroups(type),
+                            String(index + 1).padStart(2, "0"),
+                        ));
+                    });
+                }
+
+                function showGroups(type) {
+                    selectedType = type;
+                    document.getElementById("selected-type-label").textContent = type.label;
+                    groupCards.replaceChildren();
+                    type.groups.forEach((group) => {
+                        const words = group.adjectives.map((item) => item.word).join(" · ");
+                        groupCards.appendChild(makeCard(
+                            group.label,
+                            `${words} · ${group.exercises.length} images`,
+                            () => startGroup(group),
+                            "Aa",
+                        ));
+                    });
+                    showScreen("groups");
+                }
+
+                function setSelectedAdjective(id) {
+                    selectedAdjectiveId = id;
+                    audioChoices.querySelectorAll(".audio-choice").forEach((button) => {
+                        const selected = button.dataset.adjectiveId === id;
+                        button.classList.toggle("selected", selected);
+                        button.setAttribute("aria-pressed", String(selected));
+                    });
+                }
+
+                function isAdjectiveFullyMatched(id) {
+                    const targetZones = zones.filter(
+                        (zone) => zone.dataset.adjectiveId === id,
+                    );
+                    return targetZones.length > 0 && targetZones.every(
+                        (zone) => zone.classList.contains("correct"),
+                    );
+                }
+
+                function startGroup(group) {
+                    selectedGroup = group;
+                    exerciseIndex = 0;
+                    misses = new Map();
+                    firstTryMatches = 0;
+                    renderExercise();
+                }
+
+                function renderExercise() {
+                    const exercise = currentExercise();
+                    matchedPositions = new Set();
+                    missesByPosition = new Map();
+                    selectedAdjectiveId = null;
+                    document.getElementById("exercise-type-label").textContent =
+                        `${selectedType.label} · ${selectedGroup.label}`;
+                    document.getElementById("exercise-progress").textContent =
+                        `Image ${exerciseIndex + 1} of ${selectedGroup.exercises.length}`;
+                    preloadAudio(exercise.noun_audio_url);
+                    selectedGroup.adjectives.forEach((adjective) => {
+                        preloadAudio(adjective.audio_url);
+                    });
+                    exerciseImage.src = exercise.image_url;
+                    exerciseImage.alt = `Four-panel image showing ${exercise.noun}`;
+                    document.getElementById("image-caption").textContent = exercise.noun;
+                    nounAudioButton.setAttribute("aria-label", `Play ${exercise.noun} audio`);
+                    continueButton.classList.add("hidden");
+                    continueButton.textContent =
+                        exerciseIndex + 1 === selectedGroup.exercises.length
+                            ? "See your score"
+                            : "Next image";
+                    announce("");
+
+                    zones.forEach((zone) => {
+                        const position = zone.dataset.position;
+                        zone.dataset.adjectiveId = exercise.panels[position].adjective_id;
+                        zone.classList.remove("correct", "wrong", "drag-over");
+                        zone.setAttribute("aria-label", `${position.replace("_", " ")} panel`);
+                        zone.querySelector(".zone-cue").textContent = "Drop audio here";
+                    });
+
+                    audioChoices.replaceChildren();
+                    selectedGroup.adjectives.forEach((adjective) => {
+                        const button = document.createElement("button");
+                        button.type = "button";
+                        button.className = "audio-choice";
+                        button.draggable = true;
+                        button.dataset.adjectiveId = adjective.id;
+                        button.setAttribute("aria-label", `Play ${adjective.word} audio`);
+                        button.setAttribute("aria-pressed", "false");
+                        const icon = document.createElement("span");
+                        icon.className = "audio-icon";
+                        icon.setAttribute("aria-hidden", "true");
+                        icon.textContent = "▶";
+                        button.append(icon);
+                        button.addEventListener("click", () => {
+                            if (!isAdjectiveFullyMatched(adjective.id)) {
+                                setSelectedAdjective(adjective.id);
+                                announce(`Playing ${adjective.word}. Select a corner to place it.`);
+                            }
+                            void playAudio(adjective.audio_url);
+                        });
+                        button.addEventListener("dragstart", (event) => {
+                            if (isAdjectiveFullyMatched(adjective.id)) {
+                                event.preventDefault();
+                                return;
+                            }
+                            event.dataTransfer.setData("text/plain", adjective.id);
+                            event.dataTransfer.effectAllowed = "move";
+                            setSelectedAdjective(adjective.id);
+                        });
+                        audioChoices.appendChild(button);
+                    });
+                    showScreen("exercise");
+                }
+
+                async function tryMatch(zone, adjectiveId) {
+                    if (!adjectiveId || zone.classList.contains("correct")) {
+                        return;
+                    }
+                    const adjective = selectedGroup.adjectives.find(
+                        (item) => item.id === adjectiveId,
+                    );
+                    if (!adjective || isAdjectiveFullyMatched(adjectiveId)) {
+                        return;
+                    }
+                    if (zone.dataset.adjectiveId !== adjectiveId) {
+                        const missedAdjectiveId = zone.dataset.adjectiveId;
+                        misses.set(
+                            missedAdjectiveId,
+                            (misses.get(missedAdjectiveId) || 0) + 1,
+                        );
+                        missesByPosition.set(
+                            zone.dataset.position,
+                            (missesByPosition.get(zone.dataset.position) || 0) + 1,
+                        );
+                        zone.classList.remove("wrong");
+                        void zone.offsetWidth;
+                        zone.classList.add("wrong");
+                        announce(`Not quite. Listen again and try another panel.`);
+                        return;
+                    }
+
+                    matchedPositions.add(zone.dataset.position);
+                    zone.classList.add("correct");
+                    zone.querySelector(".zone-cue").textContent = adjective.word;
+                    zone.setAttribute("aria-label",
+                        `${zone.dataset.position.replace("_", " ")} panel: ${adjective.word}, matched`);
+                    if (!missesByPosition.has(zone.dataset.position)) {
+                        firstTryMatches += 1;
+                    }
+                    audioChoices.querySelectorAll(".audio-choice").forEach((button) => {
+                        if (
+                            button.dataset.adjectiveId === adjectiveId
+                            && isAdjectiveFullyMatched(adjectiveId)
+                        ) {
+                            button.classList.add("matched");
+                            button.draggable = false;
+                        }
+                    });
+                    setSelectedAdjective(null);
+                    announce(`Correct: ${adjective.word} matched.`);
+                    const allMatched = matchedPositions.size === positions.length;
+                    if (allMatched) {
+                        continueButton.classList.remove("hidden");
+                        announce("All four matched. Continue when you are ready.");
+                    }
+                    await playCorrectPair(adjective);
+                }
+
+                function showResults() {
+                    showScreen("results");
+                    const total = selectedGroup.exercises.length * positions.length;
+                    const percentage = total
+                        ? Math.round((firstTryMatches / total) * 100)
+                        : 0;
+                    document.getElementById("result-score").textContent =
+                        `${firstTryMatches} / ${total} matched on the first try`;
+                    const totalMisses = [...misses.values()].reduce(
+                        (sum, count) => sum + count,
+                        0,
+                    );
+                    document.getElementById("result-summary").textContent =
+                        `${percentage}% first-try accuracy · ${totalMisses} incorrect ${totalMisses === 1 ? "attempt" : "attempts"}.`;
+                    const missedList = document.getElementById("missed-list");
+                    missedList.replaceChildren();
+                    selectedGroup.adjectives
+                        .filter((adjective) => misses.has(adjective.id))
+                        .forEach((adjective) => {
+                            const item = document.createElement("li");
+                            const word = document.createElement("strong");
+                            word.textContent = adjective.word;
+                            const count = document.createElement("span");
+                            const totalForWord = misses.get(adjective.id);
+                            count.textContent =
+                                `${totalForWord} ${totalForWord === 1 ? "miss" : "misses"}`;
+                            item.append(word, count);
+                            missedList.appendChild(item);
+                        });
+                    document.getElementById("no-misses").classList.toggle(
+                        "hidden",
+                        misses.size > 0,
+                    );
+                    document.getElementById("missed-list").classList.toggle(
+                        "hidden",
+                        misses.size === 0,
+                    );
+                }
+
+                document.getElementById("type-back-button").addEventListener("click", showTypes);
+                document.getElementById("group-back-button").addEventListener("click", () => {
+                    showGroups(selectedType);
+                });
+                document.getElementById("return-button").addEventListener("click", showTypes);
+                continueButton.addEventListener("click", () => {
+                    if (exerciseIndex + 1 < selectedGroup.exercises.length) {
+                        exerciseIndex += 1;
+                        renderExercise();
+                    } else {
+                        showResults();
+                    }
+                });
+                zones.forEach((zone) => {
+                    zone.addEventListener("click", () => {
+                        void tryMatch(zone, selectedAdjectiveId);
+                    });
+                    zone.addEventListener("dragover", (event) => {
+                        event.preventDefault();
+                        zone.classList.add("drag-over");
+                    });
+                    zone.addEventListener("dragleave", () => {
+                        zone.classList.remove("drag-over");
+                    });
+                    zone.addEventListener("drop", (event) => {
+                        event.preventDefault();
+                        zone.classList.remove("drag-over");
+                        void tryMatch(zone, event.dataTransfer.getData("text/plain"));
+                    });
+                });
+
+                showTypes();
+            })();
+        </script>
+    </main>
+</body>
+</html>
