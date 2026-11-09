@@ -408,6 +408,14 @@ summary:focus-visible {
     grid-template-rows: minmax(0, 1fr);
 }
 
+.test-stage.no-image {
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.test-stage.no-image .question-panel {
+    justify-content: center;
+}
+
 .test-stage.is-leaving {
     transform: translateY(12px);
     opacity: 0;
@@ -508,6 +516,18 @@ summary:focus-visible {
     min-height: 0;
     flex: 0 0 24px;
     margin: 0 auto;
+}
+
+.question-audio-button {
+    min-height: 34px;
+    align-self: center;
+    padding: 0 16px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.question-audio-button[hidden] {
+    display: none;
 }
 
 .media-error {
@@ -947,6 +967,12 @@ summary:focus-visible {
         width: min(25%, 100px);
         height: 22px;
         flex-basis: 22px;
+    }
+
+    .question-audio-button {
+        min-height: 26px;
+        padding: 0 12px;
+        font-size: 0.66rem;
     }
 
     .answer-grid {

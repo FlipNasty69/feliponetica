@@ -299,7 +299,39 @@ class FinalEnglishTestRoutes(unittest.TestCase):
         self.assertIn(b"https://cdn.example.test/north.opus", take.data)
         self.assertIn(b"https://cdn.example.test/map.webp", take.data)
         self.assertIn(b'id="question-audio" preload="none" hidden', take.data)
+        self.assertIn(b'id="question-audio-button"', take.data)
+        self.assertIn(b"Play audio", take.data)
         self.assertNotIn(b'id="question-audio" controls', take.data)
+
+    def test_test_five_question_audio_is_served_as_mp3(self):
+        workbook = load_workbook(self.workbook_path)
+        sheet = workbook.create_sheet("Direction Audio")
+        sheet.append([
+            "Question ID", "Category", "Question", "Option A", "Option B",
+            "Correct Answer", "audio",
+        ])
+        sheet.append([
+            "D5", "Directions", "Which way did he go?", "Left", "Right",
+            "A",
+            "https://pub-3f3b444e86564a91a7a48b63d6bdd1b5.r2.dev/"
+            "audio/vocab_game/direction/christopher_cop.opus",
+        ])
+        sheet.add_table(Table(displayName="DirectionAudio", ref="A1:G2"))
+        workbook.save(self.workbook_path)
+        test = next(
+            item for item in load_workbook_tests()
+            if item["id"] == "direction-audio-directionaudio"
+        )
+
+        take = self.client.get(f"/tests/{test['id']}/take")
+        self.assertIn(b"/static/audio/test_center/christopher_cop.mp3", take.data)
+
+        with closing(
+            self.client.get("/static/audio/test_center/christopher_cop.mp3")
+        ) as response:
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.mimetype, "audio/mpeg")
+            self.assertTrue(response.data.startswith(b"ID3"))
 
     def test_timed_panel_is_kept_in_quiz_sequence(self):
         workbook = load_workbook(self.workbook_path)

@@ -14,6 +14,7 @@
     const questionText = document.getElementById("question-text");
     const questionImage = document.getElementById("question-image");
     const questionAudio = document.getElementById("question-audio");
+    const questionAudioButton = document.getElementById("question-audio-button");
     const options = document.getElementById("answer-options");
     const counter = document.getElementById("question-counter");
     const progress = document.getElementById("question-progress");
@@ -74,6 +75,10 @@
             if (settled || activeAudioKey !== key) return;
             settled = true;
             audioStatus = "ended";
+            if (key === `question:${questions[currentIndex].id}`) {
+                questionAudioButton.textContent = "Replay audio";
+                questionAudioButton.disabled = false;
+            }
             cleanup();
             resolvePlayback();
         };
@@ -82,16 +87,31 @@
             settled = true;
             audioStatus = "failed";
             cleanup();
-            mediaError.textContent = "Question audio could not be played. Press Next to retry.";
+            if (key === `question:${questions[currentIndex].id}`) {
+                questionAudioButton.textContent = "Play audio";
+                questionAudioButton.disabled = false;
+            }
+            mediaError.textContent = "Question audio could not be played. Use Play audio to try again.";
             mediaError.hidden = false;
             rejectPlayback(new Error(mediaError.textContent));
         };
         cleanupAudioListeners = cleanup;
         questionAudio.addEventListener("ended", onEnded);
         questionAudio.addEventListener("error", onError);
+        if (key === `question:${questions[currentIndex].id}`) {
+            questionAudioButton.textContent = "Playing audio…";
+            questionAudioButton.disabled = true;
+        }
         questionAudio.src = url;
         if (questionAudio.readyState > 0) questionAudio.currentTime = 0;
-        questionAudio.play().catch(onError);
+        try {
+            const playbackAttempt = questionAudio.play();
+            if (playbackAttempt && typeof playbackAttempt.catch === "function") {
+                playbackAttempt.catch(onError);
+            }
+        } catch {
+            onError();
+        }
         return audioPlayback;
     }
 
@@ -103,8 +123,19 @@
         options.hidden = false;
         controls.hidden = false;
         stage.classList.remove("is-panel");
+        stage.classList.toggle("no-image", !question.image);
         category.textContent = question.category || "QUESTION";
         questionText.textContent = question.question;
+        questionAudioButton.hidden = !question.audio;
+        const isCurrentAudio = activeAudioKey === `question:${question.id}`;
+        questionAudioButton.disabled = false;
+        questionAudioButton.textContent = "Play audio";
+        if (isCurrentAudio && audioStatus === "playing") {
+            questionAudioButton.disabled = true;
+            questionAudioButton.textContent = "Playing audio…";
+        } else if (isCurrentAudio && audioStatus === "ended") {
+            questionAudioButton.textContent = "Replay audio";
+        }
         questionImage.hidden = !question.image;
         questionImage.removeAttribute("src");
         if (question.image) {
@@ -150,12 +181,20 @@
         }
     }
 
+    questionAudioButton.addEventListener("click", () => {
+        const question = questions[currentIndex];
+        if (question.audio) {
+            startAudio(`question:${question.id}`, question.audio, true).catch(() => {});
+        }
+    });
+
     function showPanel(panel) {
         questionPanel.hidden = true;
         sequencePanel.hidden = false;
         options.hidden = true;
         controls.hidden = true;
         stage.classList.add("is-panel");
+        stage.classList.remove("no-image");
         panelImages.replaceChildren();
         panel.images.forEach((imageUrl) => {
             const image = document.createElement("img");

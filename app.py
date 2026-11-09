@@ -1300,6 +1300,12 @@ def test_center():
     return render_template("test_center.html", tests=tests)
 
 
+TEST_FIVE_AUDIO_SOURCE = (
+    "https://pub-3f3b444e86564a91a7a48b63d6bdd1b5.r2.dev/"
+    "audio/vocab_game/direction/christopher_cop.opus"
+)
+
+
 @app.route("/tests/final-english/register", methods=["GET", "POST"])
 def final_english_register():
     try:
@@ -1334,7 +1340,14 @@ def final_english_take(test_id):
             "category": question["category"],
             "question": question["question"],
             "choices": question["choices"],
-            "audio": public_audio_url(question["audio"]) if question["audio"] else None,
+            "audio": (
+                url_for(
+                    "static",
+                    filename="audio/test_center/christopher_cop.mp3",
+                )
+                if question["audio"] == TEST_FIVE_AUDIO_SOURCE
+                else public_audio_url(question["audio"])
+            ) if question["audio"] else None,
             "image": exercise_image_url(question["image"]) if question["image"] else None,
             "play_audio_after_answer": "play audio after" in question[
                 "special_instructions"
