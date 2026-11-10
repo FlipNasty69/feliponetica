@@ -204,6 +204,13 @@ class FinalEnglishTestRoutes(unittest.TestCase):
         table_sheet.append(["T1", "Vocabulary", "Table question", "Right", "Wrong", "A"])
         table_sheet.append(["T2", "Vocabulary", "Second table question", "Right", "Wrong", "A"])
         table_sheet.add_table(Table(displayName="UnitTwoQuestions", ref="A1:F3"))
+        table_sheet.append([None] * 6)
+        table_sheet.append([
+            "Question ID", "Category", "Question",
+            "Option A", "Option B", "Correct Answer",
+        ])
+        table_sheet.append(["T3", "Vocabulary", "Review question", "Right", "Wrong", "A"])
+        table_sheet.add_table(Table(displayName="UnitTwoReview", ref="A5:F6"))
 
         sheet = workbook.create_sheet("Grammar Review")
         sheet.append([
@@ -216,7 +223,12 @@ class FinalEnglishTestRoutes(unittest.TestCase):
         tests = load_workbook_tests()
         self.assertEqual(
             [test["id"] for test in tests],
-            ["final-english", "unit-two-unittwoquestions", "grammar-review"],
+            [
+                "final-english",
+                "unit-two-unittwoquestions",
+                "unit-two-unittworeview",
+                "grammar-review",
+            ],
         )
         self.assertEqual(tests[1]["name"], "Unit Two — UnitTwoQuestions")
         self.assertEqual(len(tests[1]["questions"]), 2)
@@ -225,6 +237,15 @@ class FinalEnglishTestRoutes(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Unit Two", response.data)
         self.assertIn(b"Grammar Review", response.data)
+        self.assertIn(b"/test-center/sheets/Unit%20Two", response.data)
+        self.assertNotIn(b"UnitTwoQuestions", response.data)
+        self.assertIn(b"/tests/grammar-review/take", response.data)
+        group = self.client.get("/test-center/sheets/Unit%20Two")
+        self.assertEqual(group.status_code, 200)
+        self.assertIn(b"Unit Two \xe2\x80\x94 UnitTwoQuestions", group.data)
+        self.assertIn(b"Unit Two \xe2\x80\x94 UnitTwoReview", group.data)
+        self.assertIn(b"/tests/unit-two-unittwoquestions/take", group.data)
+        self.assertIn(b"/tests/unit-two-unittworeview/take", group.data)
         take = self.client.get("/tests/unit-two-unittwoquestions/take")
         self.assertEqual(take.status_code, 200)
         self.assertIn(b"Table question", take.data)

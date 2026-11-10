@@ -14,19 +14,30 @@
             <a class="quiet-link" href="{{ url_for('home') }}">Back to home</a>
         </header>
         <section class="landing-content" aria-labelledby="test-center-title">
-            <p class="test-kicker">ASSESSMENTS · {{ tests|length }}</p>
+            <p class="test-kicker">ASSESSMENTS · {{ assessment_count }}</p>
             <h1 id="test-center-title">Test Center</h1>
             <p class="landing-copy">Choose an assessment to begin. No account or sign-in is required. Your score appears when you finish.</p>
             <div class="test-selection">
-                {% for test in tests %}
-                <a class="test-option tactile-button" href="{{ url_for('final_english_take', test_id=test.id) }}">
+                {% for item in items %}
+                {% if item.sheet is defined %}
+                <a class="test-option tactile-button" href="{{ url_for('test_center_sheet', sheet_name=item.sheet) }}">
                     <span class="option-index">{{ "%02d"|format(loop.index) }}</span>
                     <span class="option-copy">
-                        <strong>{{ test.name }}</strong>
-                        <span>{{ test.questions|length }} questions · Multiple choice</span>
+                        <strong>{{ item.sheet }}</strong>
+                        <span>{{ item.tests|length }} tests · {{ item.question_count }} questions</span>
                     </span>
                     <span class="option-arrow" aria-hidden="true">→</span>
                 </a>
+                {% else %}
+                <a class="test-option tactile-button" href="{{ url_for('final_english_take', test_id=item.test.id) }}">
+                    <span class="option-index">{{ "%02d"|format(loop.index) }}</span>
+                    <span class="option-copy">
+                        <strong>{{ item.test.name }}</strong>
+                        <span>{{ item.test.questions|length }} questions · Multiple choice</span>
+                    </span>
+                    <span class="option-arrow" aria-hidden="true">→</span>
+                </a>
+                {% endif %}
                 {% endfor %}
             </div>
         </section>

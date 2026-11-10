@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0A1A2F">
+    <title>{{ sheet_name }} Tests | English Course</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/test_center.css') }}">
+</head>
+<body class="test-page">
+    <main class="test-shell landing-shell">
+        <header class="test-header">
+            <a class="test-brand" href="{{ url_for('home') }}">English<span>Course</span></a>
+            <a class="quiet-link" href="{{ url_for('test_center') }}">All tests</a>
+        </header>
+        <section class="landing-content" aria-labelledby="test-group-title">
+            <p class="test-kicker">ASSESSMENTS · {{ tests|length }}</p>
+            <h1 id="test-group-title">{{ sheet_name }}</h1>
+            <p class="landing-copy">Choose an assessment from this group to begin.</p>
+            <div class="test-selection">
+                {% for test in tests %}
+                <a class="test-option tactile-button" href="{{ url_for('final_english_take', test_id=test.id) }}">
+                    <span class="option-index">{{ "%02d"|format(loop.index) }}</span>
+                    <span class="option-copy">
+                        <strong>{{ test.name }}</strong>
+                        <span>{{ test.questions|length }} questions · Multiple choice</span>
+                    </span>
+                    <span class="option-arrow" aria-hidden="true">→</span>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        <footer class="test-footer">Results are saved for future review.</footer>
+    </main>
+</body>
+</html>

@@ -589,6 +589,7 @@ def load_workbook_tests():
             def add_test(
                 source_name,
                 display_name,
+                sheet_name,
                 rows,
                 header=None,
                 allow_legacy_layout=True,
@@ -612,6 +613,7 @@ def load_workbook_tests():
                 tests.append({
                     "id": identifier,
                     "name": display_name,
+                    "sheet": sheet_name,
                     "questions": questions,
                     "sequence": sequence,
                 })
@@ -627,6 +629,7 @@ def load_workbook_tests():
                             add_test(
                                 f"{worksheet.title}-{table.displayName}",
                                 f"{worksheet.title} — {table.displayName}",
+                                worksheet.title,
                                 table_rows[1:],
                                 table_rows[0],
                                 allow_legacy_layout=False,
@@ -668,6 +671,7 @@ def load_workbook_tests():
                     tests.append({
                         "id": identifier,
                         "name": display_name,
+                        "sheet": worksheet.title,
                         "questions": questions,
                         "sequence": sequence,
                     })
@@ -1297,7 +1301,42 @@ def test_center():
         tests = load_workbook_tests()
     except RuntimeError:
         abort(503, description="The tests are temporarily unavailable.")
-    return render_template("test_center.html", tests=tests)
+    tests_by_sheet = {}
+    for test in tests:
+        tests_by_sheet.setdefault(test["sheet"], []).append(test)
+    items = []
+    for sheet, sheet_tests in tests_by_sheet.items():
+        if len(sheet_tests) > 1:
+            items.append({
+                "sheet": sheet,
+                "tests": sheet_tests,
+                "question_count": sum(
+                    len(test["questions"]) for test in sheet_tests
+                ),
+            })
+        else:
+            items.append({"test": sheet_tests[0]})
+    return render_template(
+        "test_center.html",
+        items=items,
+        assessment_count=len(tests),
+    )
+
+
+@app.route("/test-center/sheets/<sheet_name>")
+def test_center_sheet(sheet_name):
+    try:
+        tests = load_workbook_tests()
+    except RuntimeError:
+        abort(503, description="The tests are temporarily unavailable.")
+    sheet_tests = [test for test in tests if test["sheet"] == sheet_name]
+    if len(sheet_tests) < 2:
+        abort(404)
+    return render_template(
+        "test_center_group.html",
+        sheet_name=sheet_name,
+        tests=sheet_tests,
+    )
 
 
 TEST_FIVE_AUDIO_SOURCE = (
