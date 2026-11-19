@@ -57,6 +57,13 @@
 					text
 				})
 			});
+			const contentType = response.headers.get('content-type') || '';
+			if (!contentType.includes('application/json')) {
+				if (response.redirected && new URL(response.url).pathname === '/login') {
+					throw new Error('Your session expired. Please sign in again and retry.');
+				}
+				throw new Error(`The transcription endpoint returned an unexpected response (HTTP ${response.status}). Refresh the page and try again.`);
+			}
 			const payload = await response.json();
 			if (!response.ok) {
 				throw new Error(payload.error || 'Transcription failed.');

@@ -84,9 +84,18 @@ def _syllable_starts(phonemes):
     mark_word(len(phonemes))
     return starts
 
-def _convert_word_to_feliponetica(word, phoneme_map):
+def _convert_word_to_feliponetica(word, phoneme_map, pollito_rules=False):
+    if pollito_rules and word.casefold() == "excited":
+        return "ek-sai-ted"
+
     phonemes = _converter()(word)
     syllable_starts = _syllable_starts(phonemes)
+    if pollito_rules:
+        for index in range(1, len(phonemes)):
+            previous_phone = re.sub(r"\d", "", phonemes[index - 1])
+            phone = re.sub(r"\d", "", phonemes[index])
+            if phone == "R" and previous_phone in {"IH", "IY", "EH"}:
+                syllable_starts.add(index)
     for index, phone in enumerate(phonemes):
         if re.sub(r"\d", "", phone) == "DH":
             previous = [re.sub(r"\d", "", phonemes[position]) for position in (index - 2, index - 1) if position >= 0]
@@ -106,23 +115,47 @@ def _convert_word_to_feliponetica(word, phoneme_map):
         next_phone = re.sub(r"\d", "", phonemes[index + 1]) if index + 1 < len(phonemes) else ""
         after_next = re.sub(r"\d", "", phonemes[index + 2]) if index + 2 < len(phonemes) else ""
         after_after = re.sub(r"\d", "", phonemes[index + 3]) if index + 3 < len(phonemes) else ""
+        if (
+            pollito_rules
+            and phone in {"T", "D"}
+            and next_phone == "AH"
+            and after_next == "D"
+            and index + 2 == len(phonemes) - 1
+        ):
+            converted.append(("t" if phone == "T" else "d") + "ed")
+            index += 3
+            continue
         if phone == "Y" and next_phone == "UW" and after_next == "AH" and after_after == "L":
-            converted.append("iuol"); index += 4; continue
+            converted.append("yuol" if pollito_rules else "iuol"); index += 4; continue
         if phone == "Y" and next_phone == "UW" and after_next == "L":
-            converted.append("iuol"); index += 3; continue
+            converted.append("yuol" if pollito_rules else "iuol"); index += 3; continue
         if phone == "Y" and next_phone == "UW":
-            converted.append("iu"); index += 2; continue
+            converted.append("yu" if pollito_rules else "iu"); index += 2; continue
         if phone == "AO" and next_phone == "R":
             converted.append("or"); index += 2; continue
         if phone == "NG" and next_phone == "K":
             converted.append("nk"); index += 2; continue
         if phone in {"UW", "IY", "EY", "AY", "OY"} and next_phone == "L":
             converted.append(phoneme_map.get(phone, phone) + "ol"); index += 2; continue
+        if pollito_rules and next_phone == "L" and phone in _VOWEL_PHONEMES:
+            following_phone = after_next
+            if following_phone not in _VOWEL_PHONEMES:
+                if phone == "AH" and phonemes[index].endswith("0"):
+                    converted.append("o")
+                else:
+                    vowel_spelling = phoneme_map.get(phone, phone)
+                    converted.append(
+                        vowel_spelling
+                        if "o" in vowel_spelling
+                        else vowel_spelling + "o"
+                    )
+                index += 1
+                continue
         converted.append(phoneme_map.get(phone, phone))
         index += 1
     return "".join(converted)
 
-def convert_to_feliponetica(text, phoneme_map=CMU_TO_FELIPONETICA):
+def _convert_text_to_feliponetica(text, phoneme_map, pollito_rules=False):
     converted, position = [], 0
     for match in _WORD_PATTERN.finditer(text):
         converted.append(text[position:match.start()])
@@ -135,13 +168,22 @@ def convert_to_feliponetica(text, phoneme_map=CMU_TO_FELIPONETICA):
             else:
                 converted.append("end")
         else:
-            converted.append(_convert_word_to_feliponetica(word, phoneme_map))
+            converted.append(
+                _convert_word_to_feliponetica(word, phoneme_map, pollito_rules)
+            )
         position = match.end()
     converted.append(text[position:])
     return "".join(converted)
 
+def convert_to_feliponetica(text, phoneme_map=CMU_TO_FELIPONETICA):
+    return _convert_text_to_feliponetica(text, phoneme_map)
+
 def convert_to_feliponetica_pollito(text):
-    return convert_to_feliponetica(text, CMU_TO_FELIPONETICA_POLLITO)
+    return _convert_text_to_feliponetica(
+        text,
+        CMU_TO_FELIPONETICA_POLLITO,
+        pollito_rules=True,
+    )
 
 def _require_login():
     if "username" not in session or "role" not in session:
@@ -237,5 +279,7 @@ def feliponetica_word_api():
 
 @feliponetica_bp.post("/api/feliponetica/transcribe-page")
 def feliponetica_transcribe_page():
-    result, error = _transcribe_payload()
+    if "username" not in session or "role" not in session:
+        return jsonify({"error": "Your session has expired. Please sign in again."}), 401
+    result, error = _transcribe_payload(require_login=False)
     return error or result
