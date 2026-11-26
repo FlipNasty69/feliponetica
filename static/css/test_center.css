@@ -112,8 +112,22 @@ a {
     justify-content: space-between;
 }
 
+body.test-page.landing-page {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.test-shell.landing-shell {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
 .landing-content {
-    width: min(100%, 760px);
+    width: min(100%, 1120px);
     margin: auto;
     padding: 8vh 0;
 }
@@ -146,7 +160,10 @@ a {
 }
 
 .test-selection {
-    margin-top: clamp(32px, 6vh, 64px);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: clamp(14px, 2vw, 24px);
+    margin-top: clamp(24px, 4vh, 40px);
 }
 
 .tactile-button {
@@ -222,16 +239,19 @@ summary:focus-visible {
 .option-copy {
     display: grid;
     flex: 1;
+    min-width: 0;
     gap: 7px;
 }
 
 .option-copy strong {
     font-size: clamp(1rem, 2.3vw, 1.32rem);
+    overflow-wrap: anywhere;
 }
 
 .option-copy > span {
     color: rgba(10, 26, 47, 0.7);
     font-size: 0.88rem;
+    overflow-wrap: anywhere;
 }
 
 .option-arrow {

@@ -1304,22 +1304,19 @@ def test_center():
     tests_by_sheet = {}
     for test in tests:
         tests_by_sheet.setdefault(test["sheet"], []).append(test)
-    items = []
-    for sheet, sheet_tests in tests_by_sheet.items():
-        if len(sheet_tests) > 1:
-            items.append({
-                "sheet": sheet,
-                "tests": sheet_tests,
-                "question_count": sum(
-                    len(test["questions"]) for test in sheet_tests
-                ),
-            })
-        else:
-            items.append({"test": sheet_tests[0]})
+    items = [
+        {
+            "sheet": sheet,
+            "tests": sheet_tests,
+            "question_count": sum(
+                len(test["questions"]) for test in sheet_tests
+            ),
+        }
+        for sheet, sheet_tests in tests_by_sheet.items()
+    ]
     return render_template(
         "test_center.html",
         items=items,
-        assessment_count=len(tests),
     )
 
 
@@ -1330,7 +1327,7 @@ def test_center_sheet(sheet_name):
     except RuntimeError:
         abort(503, description="The tests are temporarily unavailable.")
     sheet_tests = [test for test in tests if test["sheet"] == sheet_name]
-    if len(sheet_tests) < 2:
+    if not sheet_tests:
         abort(404)
     return render_template(
         "test_center_group.html",

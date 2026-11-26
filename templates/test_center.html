@@ -7,37 +7,26 @@
     <title>Test Center | English Course</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/test_center.css') }}">
 </head>
-<body class="test-page">
+<body class="test-page landing-page">
     <main class="test-shell landing-shell">
         <header class="test-header">
             <a class="test-brand" href="{{ url_for('home') }}">English<span>Course</span></a>
             <a class="quiet-link" href="{{ url_for('home') }}">Back to home</a>
         </header>
         <section class="landing-content" aria-labelledby="test-center-title">
-            <p class="test-kicker">ASSESSMENTS · {{ assessment_count }}</p>
+            <p class="test-kicker">WORKSHEETS · {{ items|length }}</p>
             <h1 id="test-center-title">Test Center</h1>
-            <p class="landing-copy">Choose an assessment to begin. No account or sign-in is required. Your score appears when you finish.</p>
-            <div class="test-selection">
+            <p class="landing-copy">Choose a worksheet, then select an assessment to begin. No account or sign-in is required. Your score appears when you finish.</p>
+            <div class="test-selection" aria-label="Worksheets">
                 {% for item in items %}
-                {% if item.sheet is defined %}
                 <a class="test-option tactile-button" href="{{ url_for('test_center_sheet', sheet_name=item.sheet) }}">
                     <span class="option-index">{{ "%02d"|format(loop.index) }}</span>
                     <span class="option-copy">
                         <strong>{{ item.sheet }}</strong>
-                        <span>{{ item.tests|length }} tests · {{ item.question_count }} questions</span>
+                        <span>{{ item.tests|length }} test{% if item.tests|length != 1 %}s{% endif %} · {{ item.question_count }} questions</span>
                     </span>
                     <span class="option-arrow" aria-hidden="true">→</span>
                 </a>
-                {% else %}
-                <a class="test-option tactile-button" href="{{ url_for('final_english_take', test_id=item.test.id) }}">
-                    <span class="option-index">{{ "%02d"|format(loop.index) }}</span>
-                    <span class="option-copy">
-                        <strong>{{ item.test.name }}</strong>
-                        <span>{{ item.test.questions|length }} questions · Multiple choice</span>
-                    </span>
-                    <span class="option-arrow" aria-hidden="true">→</span>
-                </a>
-                {% endif %}
                 {% endfor %}
             </div>
         </section>
